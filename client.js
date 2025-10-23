@@ -785,10 +785,15 @@ async function checkIfPlayer1() {
 // Check if game ended
 async function checkGameEnd(game) {
     if (game.player1.finished && game.player2.finished) {
-        // All players finished! Set results timestamp if not already set
+        // All players finished! Try to sync results display
         if (!game.resultsReadyAt) {
-            await database.ref(`games/${currentGame.gameId}/resultsReadyAt`).set(Date.now());
-            return; // Wait for the timestamp to propagate
+            try {
+                await database.ref(`games/${currentGame.gameId}/resultsReadyAt`).set(Date.now());
+                return; // Wait for the timestamp to propagate
+            } catch (error) {
+                console.warn('⚠️ Could not set results timestamp, showing results immediately:', error);
+                // Continue to show results anyway (fallback to immediate display)
+            }
         }
 
         // Results are ready! Show them now
@@ -824,10 +829,15 @@ async function checkSquadGameEnd(game) {
     const allFinished = game.players.every(p => p.finished);
 
     if (allFinished) {
-        // All players finished! Set results timestamp if not already set
+        // All players finished! Try to sync results display
         if (!game.resultsReadyAt) {
-            await database.ref(`games_squad/${currentGame.gameId}/resultsReadyAt`).set(Date.now());
-            return; // Wait for the timestamp to propagate
+            try {
+                await database.ref(`games_squad/${currentGame.gameId}/resultsReadyAt`).set(Date.now());
+                return; // Wait for the timestamp to propagate
+            } catch (error) {
+                console.warn('⚠️ Could not set results timestamp, showing results immediately:', error);
+                // Continue to show results anyway (fallback to immediate display)
+            }
         }
 
         // Results are ready! Show them now
