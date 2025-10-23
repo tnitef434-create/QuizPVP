@@ -336,6 +336,17 @@ input[type="color"] {
     margin-top: 10px;
 }
 
+.searching-tip {
+    color: #667eea;
+    margin-top: 20px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    background: rgba(102, 126, 234, 0.1);
+    padding: 12px 20px;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
 /* Game Screen */
 .game-header {
     display: flex;

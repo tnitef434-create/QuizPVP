@@ -27,16 +27,28 @@ const firebaseConfig = {
 let database;
 let connectedRef;
 let myConnectionRef;
+let isFirebaseReady = false;
 
 try {
     firebase.initializeApp(firebaseConfig);
     database = firebase.database();
     connectedRef = database.ref('.info/connected');
+    isFirebaseReady = true;
     console.log('✅ Firebase initialized successfully');
     console.log('🌐 Database URL:', firebaseConfig.databaseURL);
+
+    // Test connection
+    database.ref('.info/connected').on('value', (snapshot) => {
+        if (snapshot.val() === true) {
+            console.log('✅ Connected to Firebase!');
+        } else {
+            console.log('⚠️ Not connected to Firebase');
+        }
+    });
 } catch (error) {
     console.error('❌ Firebase initialization error:', error);
-    alert('Failed to connect to game server. Please check your internet connection and refresh the page.');
+    alert('Failed to connect to game server. Please check:\n1. Your Firebase config in client.js is correct\n2. Your internet connection\n3. Firebase Database is enabled in your project\n\nError: ' + error.message);
+    isFirebaseReady = false;
 }
 
 let playerData = {
@@ -271,6 +283,15 @@ function applyAvatarStyle(element, color) {
 // Find match
 async function findMatch() {
     console.log('🔍 Starting matchmaking for player:', playerData.username);
+
+    // Check if Firebase is ready
+    if (!isFirebaseReady || !database) {
+        alert('⚠️ Firebase is not connected!\n\nPlease check:\n1. You updated the Firebase config in client.js\n2. Your Firebase Realtime Database is enabled\n3. Database rules are set to allow read/write\n\nOpen browser console (F12) for more details.');
+        console.error('❌ Firebase not ready. Cannot start matchmaking.');
+        showScreen('menuScreen');
+        return;
+    }
+
     showScreen('searchingScreen');
 
     try {
@@ -279,7 +300,7 @@ async function findMatch() {
         console.log('📡 Checking waiting queue...');
         const snapshot = await waitingRef.once('value');
         const waiting = snapshot.val() || {};
-        console.log('Waiting players:', Object.keys(waiting).length);
+        console.log('✅ Connected to database. Waiting players:', Object.keys(waiting).length);
 
         // Remove stale entries (older than 30 seconds)
         const now = Date.now();
@@ -376,7 +397,25 @@ async function findMatch() {
         }
     } catch (error) {
         console.error('❌ Matchmaking error:', error);
-        alert('Failed to find match. Please check your connection and try again.');
+
+        let errorMessage = '❌ Matchmaking failed!\n\n';
+
+        if (error.code === 'PERMISSION_DENIED') {
+            errorMessage += 'Database permission denied.\n\n';
+            errorMessage += 'Please check:\n';
+            errorMessage += '1. Go to Firebase Console\n';
+            errorMessage += '2. Realtime Database → Rules\n';
+            errorMessage += '3. Set rules to allow read/write:\n';
+            errorMessage += '{\n  "rules": {\n    ".read": true,\n    ".write": true\n  }\n}';
+        } else if (error.message && error.message.includes('Failed to get document')) {
+            errorMessage += 'Cannot connect to Firebase.\n\n';
+            errorMessage += 'Check your Firebase config in client.js';
+        } else {
+            errorMessage += 'Error: ' + error.message + '\n\n';
+            errorMessage += 'Please check browser console (F12) for details.';
+        }
+
+        alert(errorMessage);
         showScreen('menuScreen');
     }
 }
@@ -652,6 +691,24 @@ function closeModal() {
     });
 }
 
+// Cancel search
+function cancelSearch() {
+    console.log('🚫 Search cancelled by user');
+
+    // Remove from waiting queue
+    if (database && playerData.id) {
+        database.ref(`waiting/${playerData.id}`).remove();
+    }
+
+    // Remove game listener
+    if (searchListener) {
+        database.ref('games').off('child_added', searchListener);
+        searchListener = null;
+    }
+
+    showScreen('menuScreen');
+}
+
 // Event listeners
 document.getElementById('joinBtn').addEventListener('click', () => {
     const username = document.getElementById('usernameInput').value.trim();
@@ -684,6 +741,10 @@ document.getElementById('usernameInput').addEventListener('keypress', (e) => {
 
 document.getElementById('findMatchBtn').addEventListener('click', () => {
     findMatch();
+});
+
+document.getElementById('cancelSearchBtn').addEventListener('click', () => {
+    cancelSearch();
 });
 
 document.getElementById('shopBtn').addEventListener('click', () => {
