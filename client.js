@@ -12,15 +12,16 @@
 // 4. Replace this config with your project's config from Project Settings
 // 5. For security in production, implement proper authentication and rules
 
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    // DEMO CONFIG - Replace with your own Firebase project for production!
-    apiKey: "AIzaSyDGxm8Yn7z_PqKF7LrYBvN3J8mK4xQp1Wc",
-    authDomain: "quizpvp-demo.firebaseapp.com",
-    databaseURL: "https://quizpvp-demo-default-rtdb.firebaseio.com",
-    projectId: "quizpvp-demo",
-    storageBucket: "quizpvp-demo.appspot.com",
-    messagingSenderId: "123456789012",
-    appId: "1:123456789012:web:1a2b3c4d5e6f7g8h9i0j"
+  apiKey: "AIzaSyDWrBVl4RtMoKCSYZWdq4lZqoYMlx9RPCs",
+  authDomain: "quizpvp-5a2e2.firebaseapp.com",
+  projectId: "quizpvp-5a2e2",
+  storageBucket: "quizpvp-5a2e2.firebasestorage.app",
+  messagingSenderId: "390766164403",
+  appId: "1:390766164403:web:4c143b8b83cf1fa245f3c6",
+  measurementId: "G-NFPJFZWKXL"
+};
 };
 
 // Initialize Firebase
