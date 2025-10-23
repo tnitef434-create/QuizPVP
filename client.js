@@ -1881,8 +1881,23 @@ async function leaveChat(skipping = false) {
 
 // Handle partner left
 function handlePartnerLeft() {
+    // Clean up listeners first
+    if (chatListener) {
+        database.ref(`chats/${currentChatSession.chatId}/messages`).off('child_added', chatListener);
+        chatListener = null;
+    }
+
+    // Reset session
+    currentChatSession = {
+        chatId: '',
+        partnerId: '',
+        partnerUsername: '',
+        partnerColor: ''
+    };
+
+    // Show alert and return to menu
     alert('Your chat partner has left the conversation.');
-    leaveChat();
+    showScreen('menuScreen');
 }
 
 // Escape HTML to prevent XSS
@@ -2199,6 +2214,56 @@ function inviteFriendToGame() {
     alert('Game invitations coming soon! For now, coordinate a time to both click "Find Match" at the same time.');
 }
 
+// ===== SETTINGS FUNCTIONS =====
+
+// Reset app data (keeps username and account)
+function resetAppData() {
+    if (!confirm('Reset app data? This will clear your local game data but keep your username and account.')) {
+        return;
+    }
+
+    // Keep username and ID
+    const keepData = {
+        username: playerData.username,
+        id: playerData.id,
+        color: playerData.color,
+        points: playerData.points
+    };
+
+    // Clear everything else
+    localStorage.clear();
+
+    // Restore essential data
+    localStorage.setItem('quizpvp_player', JSON.stringify(keepData));
+
+    alert('App data reset! Reloading...');
+    window.location.reload();
+}
+
+// Clear account completely
+function clearAccount() {
+    if (!confirm('Delete everything and start fresh? This cannot be undone!')) {
+        return;
+    }
+
+    if (!confirm('Are you absolutely sure? Your username "' + playerData.username + '" and all progress will be lost!')) {
+        return;
+    }
+
+    // Remove from database
+    if (playerData.id && database) {
+        database.ref(`users/${playerData.id}`).remove();
+        database.ref(`usernames/${playerData.id}`).remove();
+        database.ref(`online/${playerData.id}`).remove();
+    }
+
+    // Clear local storage
+    localStorage.clear();
+
+    alert('Account deleted. Starting fresh...');
+    window.location.reload();
+}
+
 // Event listeners
 document.getElementById('joinBtn').addEventListener('click', async () => {
     const username = document.getElementById('usernameInput').value.trim();
@@ -2402,6 +2467,15 @@ document.getElementById('leaveFriendChatBtn').addEventListener('click', () => {
 
 document.getElementById('inviteFriendToGameBtn').addEventListener('click', () => {
     inviteFriendToGame();
+});
+
+// Settings event listeners
+document.getElementById('settingsBtn').addEventListener('click', () => {
+    showScreen('settingsScreen');
+});
+
+document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+    showScreen('menuScreen');
 });
 
 // Refresh button - forces hard reload to get updates

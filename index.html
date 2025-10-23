@@ -10,7 +10,7 @@
     <div class="background-pattern"></div>
 
     <!-- Version Badge -->
-    <div class="version-badge">v2.6.0</div>
+    <div class="version-badge">v2.7.0</div>
 
     <!-- Refresh Button -->
     <button id="refreshBtn" class="refresh-btn" title="Refresh for updates">
@@ -94,6 +94,7 @@
                 <button id="findMatchBtn" class="btn btn-primary btn-large">Find Match (1v1)</button>
                 <button id="friendsBtn" class="btn btn-secondary">Friends</button>
                 <button id="shopBtn" class="btn btn-secondary">Shop</button>
+                <button id="settingsBtn" class="btn btn-secondary">Settings</button>
             </div>
         </div>
     </div>
@@ -359,6 +360,45 @@
             </div>
 
             <button id="closeShopBtn" class="btn btn-secondary">Back</button>
+        </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settingsScreen" class="screen">
+        <div class="container">
+            <div class="shop-header">
+                <h2>Settings</h2>
+            </div>
+
+            <div class="settings-items">
+                <div class="settings-item">
+                    <div class="settings-item-icon">🔄</div>
+                    <div class="settings-item-info">
+                        <h3>Reset App Data</h3>
+                        <p>Clear all local data and start fresh (keeps your account)</p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="resetAppData()">Reset</button>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-icon">🗑️</div>
+                    <div class="settings-item-info">
+                        <h3>Clear Account</h3>
+                        <p>Delete everything and create a new account</p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="clearAccount()">Clear All</button>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-icon">ℹ️</div>
+                    <div class="settings-item-info">
+                        <h3>App Version</h3>
+                        <p>v2.7.0</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="closeSettingsBtn" class="btn btn-secondary">Back</button>
         </div>
     </div>
 
