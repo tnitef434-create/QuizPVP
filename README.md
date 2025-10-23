@@ -1,11 +1,15 @@
 # QuizPVP - Math Battle Arena
 
-A real-time multiplayer math quiz game where players compete in 1v1 battles to test their arithmetic skills!
+A real-time multiplayer math quiz game where players compete in 1v1 battles! Works entirely in your browser via GitHub Pages - no server setup required!
+
+## Play Now
+
+Just open `index.html` in your browser or visit the GitHub Pages URL once deployed!
 
 ## Features
 
 ### Game Mechanics
-- **Real-time Matchmaking**: Automatically matches you with other online players
+- **Real-time Matchmaking**: Automatically matches you with other online players using Firebase
 - **1v1 Math Quiz**: Face off against opponents in quick 8-question math quizzes
 - **Point System**: Earn 100 points for each victory
 - **Simple Operations**: Questions include addition, subtraction, and multiplication
@@ -23,41 +27,31 @@ Spend your hard-earned points to customize your profile:
 - Responsive design that works on all devices
 - Fun, engaging visual feedback
 
-## Installation
+## How It Works
 
-### Prerequisites
-- Node.js (v14 or higher)
-- npm (comes with Node.js)
+This is a **100% static site** that uses **Firebase Realtime Database** for multiplayer functionality. No backend server needed!
 
-### Setup Instructions
+- Player data (points, color) is stored locally in your browser
+- Matchmaking and game sessions are managed through Firebase
+- All players connect to the same Firebase database to find opponents
 
-1. Clone or download this repository
+## Setup for GitHub Pages
 
-2. Install dependencies:
-```bash
-npm install
-```
+1. Push this code to your GitHub repository
+2. Go to Settings → Pages
+3. Set source to main branch
+4. Your game will be live at: `https://[username].github.io/[repo-name]`
 
-3. Start the server:
-```bash
-npm start
-```
+That's it! Anyone can play just by visiting the URL.
 
-4. Open your browser and navigate to:
-```
-http://localhost:3000
-```
+## Local Testing
 
-### For Development
-Use nodemon for auto-reloading during development:
-```bash
-npm run dev
-```
+Simply open `index.html` in any modern web browser. Open multiple tabs to test multiplayer functionality.
 
 ## How to Play
 
 1. **Enter Username**: Type your desired username on the welcome screen
-2. **Click Join**: This registers you in the system
+2. **Click Join**: This saves your profile locally
 3. **Find Match**: Click "Find Match" to start searching for an opponent
 4. **Answer Questions**: You'll get 8 math questions to solve as fast as you can
 5. **See Results**: After both players finish, see who won and earn your points!
@@ -65,84 +59,100 @@ npm run dev
 
 ## Technology Stack
 
-- **Backend**: Node.js, Express, WebSocket (ws library)
 - **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **Real-time Communication**: WebSocket for instant multiplayer updates
+- **Backend**: Firebase Realtime Database
+- **Hosting**: Works on any static host (GitHub Pages, Netlify, etc.)
 
-## Game Architecture
+## Firebase Configuration
 
-### Server (`server.js`)
-- Manages WebSocket connections
-- Handles player registration and matchmaking
-- Generates random math questions
-- Validates answers and determines winners
-- Manages the shop and point system
+The game uses a pre-configured Firebase project. The configuration is in `client.js`. You can use the included config or replace it with your own Firebase project:
 
-### Client (`public/client.js`)
-- WebSocket client for real-time communication
-- Game state management
-- UI updates and screen transitions
-- Shop functionality
+1. Create a Firebase project at https://firebase.google.com
+2. Enable Realtime Database
+3. Set database rules to allow read/write (for testing)
+4. Replace the config in `client.js` with your project's config
+
+### Recommended Firebase Rules
+
+For production, use these security rules:
+
+```json
+{
+  "rules": {
+    "waiting": {
+      ".read": true,
+      ".write": true,
+      "$playerId": {
+        ".validate": "newData.hasChildren(['username', 'color', 'timestamp'])"
+      }
+    },
+    "games": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
+```
 
 ## Project Structure
 
 ```
 QuizPVP/
-├── server.js              # WebSocket server and game logic
-├── package.json           # Project dependencies
-├── README.md             # This file
-└── public/               # Frontend files
-    ├── index.html        # Main HTML structure
-    ├── style.css         # Styles and animations
-    └── client.js         # Client-side game logic
+├── index.html        # Main HTML structure with all screens
+├── style.css         # Styles and animations
+├── client.js         # Game logic and Firebase integration
+├── package.json      # Project metadata
+└── README.md         # This file
 ```
+
+## Features Breakdown
+
+### Matchmaking System
+- Players join a waiting queue in Firebase
+- First available player is matched automatically
+- Stale entries (>30 seconds) are cleaned up
+- Real-time listener notifies when match is found
+
+### Game Flow
+1. Match found → Questions generated
+2. Both players answer same 8 questions
+3. Answers submitted to Firebase
+4. When both finish → Scores compared
+5. Winner gets 100 points
+6. Game cleanup after 30 seconds
+
+### Persistence
+- Points and colors saved in localStorage
+- Persists across sessions
+- Each player has unique ID
 
 ## Tips for Playing
 
-- Answer quickly but accurately - speed doesn't matter if you get answers wrong!
-- Multiplication questions tend to be worth the same as addition, but might take more thought
+- Answer quickly but accurately - speed doesn't matter if you get them wrong!
+- Multiplication questions are worth the same as addition
 - Save up for the rainbow color - it's the ultimate flex!
-- Practice your mental math to dominate the leaderboard
+- Practice your mental math to dominate
 
-## Future Enhancements
+## Browser Compatibility
 
-Potential features for future versions:
-- Global leaderboard
-- Friend system and private matches
-- Multiple difficulty levels
-- Different game modes (speed rounds, sudden death, etc.)
-- Achievement system
-- Profile statistics and win/loss records
-
-## Development Notes
-
-The game uses a simple but effective architecture:
-- WebSocket ensures real-time, bidirectional communication
-- Game state is managed on both client and server for validation
-- Questions are generated server-side to prevent cheating
-- Points are stored server-side (in-memory for this version)
-
-## Troubleshooting
-
-**Can't connect to the server?**
-- Make sure the server is running (`npm start`)
-- Check that port 3000 is not being used by another application
-
-**Not finding matches?**
-- Open multiple browser windows/tabs to simulate multiple players
-- The game needs at least 2 players in the waiting queue to start a match
-
-**WebSocket connection issues?**
-- Check your firewall settings
-- Ensure WebSocket connections are not being blocked
-
-## License
-
-MIT License - Feel free to use and modify as you wish!
+Works in all modern browsers:
+- Chrome 80+
+- Firefox 75+
+- Safari 13+
+- Edge 80+
 
 ## Contributing
 
-Contributions are welcome! Feel free to submit issues or pull requests.
+Feel free to fork and improve! Some ideas:
+- Global leaderboard
+- Friend system
+- Different difficulty levels
+- More game modes
+- Achievement system
+
+## License
+
+MIT License - Feel free to use and modify!
 
 ---
 
