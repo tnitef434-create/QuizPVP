@@ -65,12 +65,15 @@ let currentGame = {
     currentQuestionIndex: 0,
     opponent: '',
     opponentColor: '',
-    opponentUsername: ''
+    opponentUsername: '',
+    mode: '1v1', // '1v1' or 'squad'
+    players: [] // For squad mode
 };
 
 let gameListener = null;
 let searchListener = null;
 let activePlayersCount = 0;
+let currentMode = '1v1'; // Default mode
 
 // ===== PLAYER PRESENCE & ACTIVE COUNT SYSTEM =====
 
@@ -218,9 +221,23 @@ function loadPlayerData() {
         playerData.points = data.points || 0;
         playerData.color = data.color || '#4A90E2';
         playerData.id = data.id || generateId();
+        playerData.username = data.username || ''; // Load saved username
+
+        // If username exists, skip to menu and setup
+        if (playerData.username && playerData.username.length >= 2) {
+            console.log('✅ Loaded saved username:', playerData.username);
+            updatePlayerDisplay();
+            showScreen('menuScreen');
+            setupPlayerPresence();
+            trackActivePlayerCount();
+            cleanupOldGames();
+            setInterval(cleanupOldGames, 60000);
+            return true; // Username loaded
+        }
     } else {
         playerData.id = generateId();
     }
+    return false; // No username
 }
 
 // Save player data to localStorage
@@ -228,7 +245,8 @@ function savePlayerData() {
     localStorage.setItem('quizpvp_player', JSON.stringify({
         points: playerData.points,
         color: playerData.color,
-        id: playerData.id
+        id: playerData.id,
+        username: playerData.username // Save username too
     }));
 }
 
@@ -280,9 +298,9 @@ function applyAvatarStyle(element, color) {
     }
 }
 
-// Find match
+// Find match (supports both 1v1 and squad modes)
 async function findMatch() {
-    console.log('🔍 Starting matchmaking for player:', playerData.username);
+    console.log(`🔍 Starting ${currentMode} matchmaking for player:`, playerData.username);
 
     // Check if Firebase is ready
     if (!isFirebaseReady || !database) {
@@ -294,13 +312,23 @@ async function findMatch() {
 
     showScreen('searchingScreen');
 
+    // Route to correct matchmaking based on mode
+    if (currentMode === 'squad') {
+        await findSquadMatch();
+    } else {
+        await find1v1Match();
+    }
+}
+
+// Find 1v1 match
+async function find1v1Match() {
     try {
         // Clean up old waiting entries
-        const waitingRef = database.ref('waiting');
-        console.log('📡 Checking waiting queue...');
+        const waitingRef = database.ref('waiting_1v1');
+        console.log('📡 Checking 1v1 queue...');
         const snapshot = await waitingRef.once('value');
         const waiting = snapshot.val() || {};
-        console.log('✅ Connected to database. Waiting players:', Object.keys(waiting).length);
+        console.log('✅ Connected to database. Waiting 1v1 players:', Object.keys(waiting).length);
 
         // Remove stale entries (older than 30 seconds)
         const now = Date.now();
@@ -389,43 +417,154 @@ async function findMatch() {
                     }
 
                     // Remove from waiting
-                    database.ref(`waiting/${playerData.id}`).remove();
+                    database.ref(`waiting_1v1/${playerData.id}`).remove();
 
                     startGame(game.id, game);
                 }
             });
         }
     } catch (error) {
-        console.error('❌ Matchmaking error:', error);
-
-        let errorMessage = '❌ Matchmaking failed!\n\n';
-
-        if (error.code === 'PERMISSION_DENIED') {
-            errorMessage += 'Database permission denied.\n\n';
-            errorMessage += 'Please check:\n';
-            errorMessage += '1. Go to Firebase Console\n';
-            errorMessage += '2. Realtime Database → Rules\n';
-            errorMessage += '3. Set rules to allow read/write:\n';
-            errorMessage += '{\n  "rules": {\n    ".read": true,\n    ".write": true\n  }\n}';
-        } else if (error.message && error.message.includes('Failed to get document')) {
-            errorMessage += 'Cannot connect to Firebase.\n\n';
-            errorMessage += 'Check your Firebase config in client.js';
-        } else {
-            errorMessage += 'Error: ' + error.message + '\n\n';
-            errorMessage += 'Please check browser console (F12) for details.';
-        }
-
-        alert(errorMessage);
-        showScreen('menuScreen');
+        console.error('❌ 1v1 Matchmaking error:', error);
+        handleMatchmakingError(error);
     }
 }
 
-// Start game
+// Find Squad match (4 players)
+async function findSquadMatch() {
+    try {
+        const waitingRef = database.ref('waiting_squad');
+        console.log('📡 Checking squad queue...');
+        const snapshot = await waitingRef.once('value');
+        const waiting = snapshot.val() || {};
+        console.log('✅ Connected to database. Waiting squad players:', Object.keys(waiting).length);
+
+        // Clean up stale entries
+        const now = Date.now();
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 60000) { // 60 sec for squad
+                console.log('🗑️ Removing stale squad player:', key);
+                waitingRef.child(key).remove();
+            }
+        });
+
+        // Check if we have 4 players
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
+
+        console.log('Squad queue:', availablePlayers.length + 1, '/ 4 players');
+
+        if (availablePlayers.length >= 3) {
+            // We have 4 players! (3 + myself)
+            console.log('✅ Squad ready! 4 players found!');
+
+            const squadPlayers = [
+                { id: playerData.id, ...playerData },
+                ...availablePlayers.slice(0, 3).map(([id, data]) => ({ id, ...data }))
+            ];
+
+            // Remove all players from waiting
+            for (const player of squadPlayers) {
+                await waitingRef.child(player.id).remove();
+            }
+
+            // Create squad game
+            const gameId = generateId();
+            const questions = generateQuiz();
+
+            const gameData = {
+                id: gameId,
+                mode: 'squad',
+                players: squadPlayers.map(p => ({
+                    id: p.id,
+                    username: p.username,
+                    color: p.color,
+                    score: 0,
+                    answers: [],
+                    finished: false
+                })),
+                questions: questions,
+                createdAt: Date.now()
+            };
+
+            console.log('🎮 Creating squad game:', gameId);
+            await database.ref(`games_squad/${gameId}`).set(gameData);
+
+            startSquadGame(gameId, gameData);
+        } else {
+            // Add self to waiting
+            console.log(`⏳ Waiting for squad... (${availablePlayers.length + 1}/4 players)`);
+            await waitingRef.child(playerData.id).set({
+                username: playerData.username,
+                color: playerData.color,
+                timestamp: Date.now()
+            });
+
+            // Update searching text
+            document.querySelector('.searching-text').textContent =
+                `Waiting for squad... (${availablePlayers.length + 1}/4 players)`;
+
+            // Clean up old listener
+            if (searchListener) {
+                database.ref('games_squad').off('child_added', searchListener);
+            }
+
+            // Listen for squad game creation
+            searchListener = database.ref('games_squad').on('child_added', (snapshot) => {
+                const game = snapshot.val();
+                console.log('🎮 New squad game detected:', game.id);
+
+                // Check if I'm in this game
+                const imInGame = game.players && game.players.some(p => p.id === playerData.id);
+
+                if (imInGame) {
+                    console.log('✅ Joined squad game!');
+                    if (searchListener) {
+                        database.ref('games_squad').off('child_added', searchListener);
+                        searchListener = null;
+                    }
+
+                    database.ref(`waiting_squad/${playerData.id}`).remove();
+                    startSquadGame(game.id, game);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ Squad matchmaking error:', error);
+        handleMatchmakingError(error);
+    }
+}
+
+// Handle matchmaking errors
+function handleMatchmakingError(error) {
+    let errorMessage = '❌ Matchmaking failed!\n\n';
+
+    if (error.code === 'PERMISSION_DENIED') {
+        errorMessage += 'Database permission denied.\n\n';
+        errorMessage += 'Please check:\n';
+        errorMessage += '1. Go to Firebase Console\n';
+        errorMessage += '2. Realtime Database → Rules\n';
+        errorMessage += '3. Set rules to allow read/write:\n';
+        errorMessage += '{\n  "rules": {\n    ".read": true,\n    ".write": true\n  }\n}';
+    } else if (error.message && error.message.includes('Failed to get document')) {
+        errorMessage += 'Cannot connect to Firebase.\n\n';
+        errorMessage += 'Check your Firebase config in client.js';
+    } else {
+        errorMessage += 'Error: ' + error.message + '\n\n';
+        errorMessage += 'Please check browser console (F12) for details.';
+    }
+
+    alert(errorMessage);
+    showScreen('menuScreen');
+}
+
+// Start game (1v1)
 function startGame(gameId, gameData) {
     currentGame.gameId = gameId;
     currentGame.questions = gameData.questions;
     currentGame.answers = [];
     currentGame.currentQuestionIndex = 0;
+    currentGame.mode = '1v1';
 
     // Determine which player we are
     const isPlayer1 = gameData.player1.id === playerData.id;
@@ -455,6 +594,44 @@ function startGame(gameId, gameData) {
         const game = snapshot.val();
         if (game) {
             checkGameEnd(game);
+        }
+    });
+}
+
+// Start Squad Game (4 players)
+function startSquadGame(gameId, gameData) {
+    currentGame.gameId = gameId;
+    currentGame.questions = gameData.questions;
+    currentGame.answers = [];
+    currentGame.currentQuestionIndex = 0;
+    currentGame.mode = 'squad';
+    currentGame.players = gameData.players;
+
+    showScreen('gameScreen');
+
+    // For now, show simplified squad display (use 1v1 UI)
+    const myPlayerIndex = gameData.players.findIndex(p => p.id === playerData.id);
+    const otherPlayer = gameData.players.find(p => p.id !== playerData.id);
+
+    document.getElementById('yourName').textContent = `${playerData.username} (Squad)`;
+    document.getElementById('opponentName').textContent = `3 Opponents`;
+
+    const yourAvatar = document.getElementById('yourAvatar');
+    const opponentAvatar = document.getElementById('opponentAvatar');
+
+    applyAvatarStyle(yourAvatar, playerData.color);
+    if (otherPlayer) {
+        applyAvatarStyle(opponentAvatar, otherPlayer.color);
+    }
+
+    // Show first question
+    showQuestion();
+
+    // Listen for squad game updates
+    gameListener = database.ref(`games_squad/${gameId}`).on('value', (snapshot) => {
+        const game = snapshot.val();
+        if (game) {
+            checkSquadGameEnd(game);
         }
     });
 }
@@ -501,20 +678,31 @@ async function submitAnswers() {
         }
     });
 
-    // Update Firebase
-    const isPlayer1 = await checkIfPlayer1();
-    const playerKey = isPlayer1 ? 'player1' : 'player2';
+    if (currentGame.mode === 'squad') {
+        // Squad mode: update player in players array
+        const myIndex = currentGame.players.findIndex(p => p.id === playerData.id);
 
-    await database.ref(`games/${currentGame.gameId}/${playerKey}`).update({
-        score: score,
-        answers: currentGame.answers,
-        finished: true
-    });
+        await database.ref(`games_squad/${currentGame.gameId}/players/${myIndex}`).update({
+            score: score,
+            answers: currentGame.answers,
+            finished: true
+        });
+    } else {
+        // 1v1 mode
+        const isPlayer1 = await checkIfPlayer1();
+        const playerKey = isPlayer1 ? 'player1' : 'player2';
+
+        await database.ref(`games/${currentGame.gameId}/${playerKey}`).update({
+            score: score,
+            answers: currentGame.answers,
+            finished: true
+        });
+    }
 
     // Show waiting screen
     showScreen('searchingScreen');
     document.querySelector('.searching-animation h2').textContent = 'Calculating Results...';
-    document.querySelector('.searching-text').textContent = 'Waiting for opponent to finish';
+    document.querySelector('.searching-text').textContent = currentGame.mode === 'squad' ? 'Waiting for all players to finish' : 'Waiting for opponent to finish';
 }
 
 // Check if player1
@@ -553,7 +741,100 @@ function checkGameEnd(game) {
     }
 }
 
-// Show results
+// Check if squad game ended
+function checkSquadGameEnd(game) {
+    // Check if all 4 players finished
+    const allFinished = game.players.every(p => p.finished);
+
+    if (allFinished) {
+        // Game ended!
+        if (gameListener) {
+            database.ref(`games_squad/${currentGame.gameId}`).off('value', gameListener);
+            gameListener = null;
+        }
+
+        // Sort players by score
+        const sortedPlayers = [...game.players].sort((a, b) => b.score - a.score);
+        const myPlayer = game.players.find(p => p.id === playerData.id);
+        const myRank = sortedPlayers.findIndex(p => p.id === playerData.id) + 1;
+
+        // Winner gets 100 points
+        if (myRank === 1) {
+            playerData.points += 100;
+            savePlayerData();
+        }
+
+        showSquadResults(game.players, myPlayer, myRank);
+
+        // Clean up game after 30 seconds
+        setTimeout(() => {
+            database.ref(`games_squad/${currentGame.gameId}`).remove();
+        }, 30000);
+    }
+}
+
+// Show squad results
+function showSquadResults(players, myPlayer, myRank) {
+    showScreen('resultsScreen');
+
+    // Reset searching screen text
+    document.querySelector('.searching-animation h2').textContent = 'Finding Opponent...';
+    document.querySelector('.searching-text').textContent = 'Matching you with another player';
+
+    const resultBanner = document.getElementById('resultBanner');
+
+    if (myRank === 1) {
+        resultBanner.textContent = '🏆 YOU WIN!';
+        resultBanner.className = 'result-banner win';
+    } else if (myRank === 2) {
+        resultBanner.textContent = '🥈 2ND PLACE!';
+        resultBanner.className = 'result-banner draw';
+    } else if (myRank === 3) {
+        resultBanner.textContent = '🥉 3RD PLACE';
+        resultBanner.className = 'result-banner lose';
+    } else {
+        resultBanner.textContent = '4TH PLACE';
+        resultBanner.className = 'result-banner lose';
+    }
+
+    // Show squad scoreboard
+    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+
+    document.getElementById('yourScore').textContent = myPlayer.score;
+    document.getElementById('opponentScore').textContent = `Rank #${myRank}`;
+
+    // Show points earned
+    const pointsEarned = document.getElementById('pointsEarned');
+    if (myRank === 1) {
+        pointsEarned.textContent = '+100 points earned!';
+        pointsEarned.style.display = 'block';
+    } else {
+        pointsEarned.style.display = 'none';
+    }
+
+    // Update player points display
+    updatePlayerDisplay();
+
+    // Show answer review with squad leaderboard
+    const answersReview = document.getElementById('answersReview');
+    answersReview.innerHTML = '<h3 style="margin-bottom: 15px;">Squad Leaderboard</h3>';
+
+    sortedPlayers.forEach((player, index) => {
+        const rank = index + 1;
+        const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '4️⃣';
+        const isMe = player.id === playerData.id;
+
+        const playerItem = document.createElement('div');
+        playerItem.className = `answer-item ${isMe ? 'correct' : ''}`;
+        playerItem.innerHTML = `
+            <span>${rankEmoji} <strong>${player.username}</strong> ${isMe ? '(You)' : ''}</span>
+            <span>${player.score}/8 correct</span>
+        `;
+        answersReview.appendChild(playerItem);
+    });
+}
+
+// Show results (1v1)
 function showResults(myScore, opponentScore, won, draw) {
     showScreen('resultsScreen');
 
@@ -695,16 +976,22 @@ function closeModal() {
 function cancelSearch() {
     console.log('🚫 Search cancelled by user');
 
-    // Remove from waiting queue
+    // Remove from waiting queue (both modes)
     if (database && playerData.id) {
-        database.ref(`waiting/${playerData.id}`).remove();
+        database.ref(`waiting_1v1/${playerData.id}`).remove();
+        database.ref(`waiting_squad/${playerData.id}`).remove();
     }
 
-    // Remove game listener
+    // Remove game listeners
     if (searchListener) {
         database.ref('games').off('child_added', searchListener);
+        database.ref('games_squad').off('child_added', searchListener);
         searchListener = null;
     }
+
+    // Reset searching text
+    document.querySelector('.searching-animation h2').textContent = 'Finding Opponent...';
+    document.querySelector('.searching-text').textContent = 'Matching you with another player';
 
     showScreen('menuScreen');
 }
@@ -719,6 +1006,7 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     }
 
     playerData.username = username;
+    savePlayerData(); // Save username persistently
     updatePlayerDisplay();
     showScreen('menuScreen');
 
@@ -731,6 +1019,7 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     setInterval(cleanupOldGames, 60000); // Every minute
 
     console.log('✅ Player registered:', username);
+    console.log('💾 Username saved to localStorage');
 });
 
 document.getElementById('usernameInput').addEventListener('keypress', (e) => {
@@ -774,6 +1063,45 @@ document.getElementById('backToMenuBtn').addEventListener('click', () => {
 });
 
 document.getElementById('colorPicker').addEventListener('input', updateColorPreview);
+
+// Mode selection
+document.getElementById('mode1v1Btn').addEventListener('click', () => {
+    currentMode = '1v1';
+    document.getElementById('mode1v1Btn').classList.add('active');
+    document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
+    console.log('🎯 Mode switched to: 1v1');
+});
+
+document.getElementById('modeSquadBtn').addEventListener('click', () => {
+    currentMode = 'squad';
+    document.getElementById('modeSquadBtn').classList.add('active');
+    document.getElementById('mode1v1Btn').classList.remove('active');
+    document.getElementById('findMatchBtn').textContent = 'Find Squad (4 players)';
+    console.log('🎯 Mode switched to: Squad');
+});
+
+// Change username button
+document.getElementById('changeUsernameBtn').addEventListener('click', () => {
+    const newUsername = prompt('Enter new username:', playerData.username);
+    if (newUsername && newUsername.trim().length >= 2) {
+        playerData.username = newUsername.trim();
+        savePlayerData();
+        updatePlayerDisplay();
+
+        // Update presence
+        if (database && playerData.id) {
+            database.ref(`online/${playerData.id}`).update({
+                username: playerData.username
+            });
+        }
+
+        alert('✅ Username changed to: ' + playerData.username);
+        console.log('✅ Username changed to:', playerData.username);
+    } else if (newUsername !== null) {
+        alert('Username must be at least 2 characters!');
+    }
+});
 
 // Initialize
 loadPlayerData();
