@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizPVP - Math Battle Arena</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-pattern"></div>
+
+    <!-- Username Entry Screen -->
+    <div id="usernameScreen" class="screen active">
+        <div class="container">
+            <h1 class="game-title">
+                <span class="title-quiz">Quiz</span><span class="title-pvp">PVP</span>
+            </h1>
+            <p class="subtitle">Math Battle Arena</p>
+            <div class="card">
+                <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="15" autocomplete="off">
+                <button id="joinBtn" class="btn btn-primary">Join Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Menu Screen -->
+    <div id="menuScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h1 class="game-title-small">
+                    <span class="title-quiz">Quiz</span><span class="title-pvp">PVP</span>
+                </h1>
+                <div class="player-info">
+                    <div class="player-name" id="playerNameDisplay"></div>
+                    <div class="points-display">
+                        <span class="points-icon">★</span>
+                        <span id="pointsDisplay">0</span> points
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button id="findMatchBtn" class="btn btn-primary btn-large">Find Match</button>
+                <button id="shopBtn" class="btn btn-secondary">Shop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Searching Screen -->
+    <div id="searchingScreen" class="screen">
+        <div class="container">
+            <div class="searching-animation">
+                <div class="spinner"></div>
+                <h2>Finding Opponent...</h2>
+                <p class="searching-text">Matching you with another player</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen">
+        <div class="container">
+            <div class="game-header">
+                <div class="player-card">
+                    <div class="player-avatar" id="yourAvatar"></div>
+                    <div class="player-name" id="yourName"></div>
+                </div>
+                <div class="vs-badge">VS</div>
+                <div class="player-card">
+                    <div class="player-avatar" id="opponentAvatar"></div>
+                    <div class="player-name" id="opponentName"></div>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+                <div class="progress-text"><span id="currentQuestion">1</span> / 8</div>
+            </div>
+
+            <div class="quiz-container">
+                <div class="question-card">
+                    <h2 class="question-text" id="questionText">Loading...</h2>
+                    <input type="number" id="answerInput" placeholder="Your answer" autocomplete="off">
+                    <button id="nextBtn" class="btn btn-primary">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="resultsScreen" class="screen">
+        <div class="container">
+            <div id="resultBanner" class="result-banner"></div>
+
+            <div class="results-card">
+                <div class="score-comparison">
+                    <div class="score-box">
+                        <div class="score-label">Your Score</div>
+                        <div class="score-value" id="yourScore">0</div>
+                    </div>
+                    <div class="score-divider">-</div>
+                    <div class="score-box">
+                        <div class="score-label">Opponent</div>
+                        <div class="score-value" id="opponentScore">0</div>
+                    </div>
+                </div>
+
+                <div id="pointsEarned" class="points-earned"></div>
+
+                <div class="answers-review" id="answersReview"></div>
+
+                <div class="results-buttons">
+                    <button id="playAgainBtn" class="btn btn-primary">Play Again</button>
+                    <button id="backToMenuBtn" class="btn btn-secondary">Back to Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shop Screen -->
+    <div id="shopScreen" class="screen">
+        <div class="container">
+            <div class="shop-header">
+                <h2>Shop</h2>
+                <div class="points-display">
+                    <span class="points-icon">★</span>
+                    <span id="shopPointsDisplay">0</span> points
+                </div>
+            </div>
+
+            <div class="shop-items">
+                <div class="shop-item">
+                    <div class="shop-item-icon">✏️</div>
+                    <div class="shop-item-info">
+                        <h3>Change Username</h3>
+                        <p>Choose a new username</p>
+                    </div>
+                    <div class="shop-item-price">1,000 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="openUsernameChange()">Buy</button>
+                </div>
+
+                <div class="shop-item">
+                    <div class="shop-item-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                    <div class="shop-item-info">
+                        <h3>Custom Color</h3>
+                        <p>Choose any color you like</p>
+                    </div>
+                    <div class="shop-item-price">5,000 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="openColorPicker()">Buy</button>
+                </div>
+
+                <div class="shop-item special">
+                    <div class="shop-item-icon gold-icon"></div>
+                    <div class="shop-item-info">
+                        <h3>Gold Color</h3>
+                        <p>Shine like a champion</p>
+                    </div>
+                    <div class="shop-item-price">10,000 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('gold')">Buy</button>
+                </div>
+
+                <div class="shop-item legendary">
+                    <div class="shop-item-icon rainbow-icon"></div>
+                    <div class="shop-item-info">
+                        <h3>Rainbow Color</h3>
+                        <p>Animated rainbow effect</p>
+                    </div>
+                    <div class="shop-item-price">50,000 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('rainbow')">Buy</button>
+                </div>
+            </div>
+
+            <button id="closeShopBtn" class="btn btn-secondary">Back</button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="usernameModal" class="modal">
+        <div class="modal-content">
+            <h3>Change Username</h3>
+            <p>Cost: 1,000 points</p>
+            <input type="text" id="newUsernameInput" placeholder="New username" maxlength="15">
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="confirmUsernameChange()">Confirm</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="colorModal" class="modal">
+        <div class="modal-content">
+            <h3>Choose Color</h3>
+            <p>Cost: 5,000 points</p>
+            <input type="color" id="colorPicker" value="#4A90E2">
+            <div class="color-preview" id="colorPreview"></div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="confirmColorChange()">Confirm</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+</html>
