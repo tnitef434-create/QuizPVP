@@ -75,6 +75,8 @@ let searchListener = null;
 let activePlayersCount = 0;
 let currentMode = '1v1'; // Default mode
 
+let gameTimer = null;
+let timeRemaining = 80; // 1 minute 20 seconds
 // ===== PLAYER PRESENCE & ACTIVE COUNT SYSTEM =====
 
 // Setup player presence tracking
@@ -589,6 +591,9 @@ function startGame(gameId, gameData) {
     // Show first question
     showQuestion();
 
+    // Start the game timer
+    startGameTimer();
+
     // Listen for game updates
     gameListener = database.ref(`games/${gameId}`).on('value', (snapshot) => {
         const game = snapshot.val();
@@ -627,6 +632,9 @@ function startSquadGame(gameId, gameData) {
     // Show first question
     showQuestion();
 
+    // Start the game timer
+    startGameTimer();
+
     // Listen for squad game updates
     gameListener = database.ref(`games_squad/${gameId}`).on('value', (snapshot) => {
         const game = snapshot.val();
@@ -653,6 +661,66 @@ function showQuestion() {
     document.getElementById('answerInput').focus();
 }
 
+// Start game timer
+function startGameTimer() {
+    timeRemaining = 80; // Reset to 1:20
+    updateTimerDisplay();
+
+    if (gameTimer) {
+        clearInterval(gameTimer);
+    }
+
+    gameTimer = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+
+        if (timeRemaining <= 0) {
+            clearInterval(gameTimer);
+            handleTimeUp();
+        }
+    }, 1000);
+}
+
+// Update timer display
+function updateTimerDisplay() {
+    const timerElement = document.getElementById('gameTimer');
+    if (!timerElement) return;
+
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    const secondsStr = seconds < 10 ? '0' + seconds : seconds;
+    timerElement.textContent = minutes + ':' + secondsStr;
+
+    // Change color based on time remaining
+    timerElement.classList.remove('warning', 'critical');
+    if (timeRemaining <= 10) {
+        timerElement.classList.add('critical');
+    } else if (timeRemaining <= 30) {
+        timerElement.classList.add('warning');
+    }
+}
+
+// Handle when time runs out
+function handleTimeUp() {
+    console.log('⏰ Time is up! Auto-submitting...');
+
+    // Fill remaining answers with empty strings (will be marked as incorrect)
+    while (currentGame.answers.length < currentGame.questions.length) {
+        currentGame.answers.push('');
+    }
+
+    // Submit answers
+    submitAnswers();
+}
+
+// Stop game timer
+function stopGameTimer() {
+    if (gameTimer) {
+        clearInterval(gameTimer);
+        gameTimer = null;
+    }
+}
+
 // Next question
 function nextQuestion() {
     const answer = document.getElementById('answerInput').value;
@@ -670,6 +738,9 @@ function nextQuestion() {
 
 // Submit answers
 async function submitAnswers() {
+    // Stop the timer
+    stopGameTimer();
+
     // Calculate score
     let score = 0;
     currentGame.answers.forEach((answer, index) => {
@@ -712,9 +783,15 @@ async function checkIfPlayer1() {
 }
 
 // Check if game ended
-function checkGameEnd(game) {
+async function checkGameEnd(game) {
     if (game.player1.finished && game.player2.finished) {
-        // Game ended!
+        // All players finished! Set results timestamp if not already set
+        if (!game.resultsReadyAt) {
+            await database.ref(`games/${currentGame.gameId}/resultsReadyAt`).set(Date.now());
+            return; // Wait for the timestamp to propagate
+        }
+
+        // Results are ready! Show them now
         if (gameListener) {
             database.ref(`games/${currentGame.gameId}`).off('value', gameListener);
             gameListener = null;
@@ -742,12 +819,18 @@ function checkGameEnd(game) {
 }
 
 // Check if squad game ended
-function checkSquadGameEnd(game) {
+async function checkSquadGameEnd(game) {
     // Check if all 4 players finished
     const allFinished = game.players.every(p => p.finished);
 
     if (allFinished) {
-        // Game ended!
+        // All players finished! Set results timestamp if not already set
+        if (!game.resultsReadyAt) {
+            await database.ref(`games_squad/${currentGame.gameId}/resultsReadyAt`).set(Date.now());
+            return; // Wait for the timestamp to propagate
+        }
+
+        // Results are ready! Show them now
         if (gameListener) {
             database.ref(`games_squad/${currentGame.gameId}`).off('value', gameListener);
             gameListener = null;
@@ -1079,28 +1162,6 @@ document.getElementById('modeSquadBtn').addEventListener('click', () => {
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Squad (4 players)';
     console.log('🎯 Mode switched to: Squad');
-});
-
-// Change username button
-document.getElementById('changeUsernameBtn').addEventListener('click', () => {
-    const newUsername = prompt('Enter new username:', playerData.username);
-    if (newUsername && newUsername.trim().length >= 2) {
-        playerData.username = newUsername.trim();
-        savePlayerData();
-        updatePlayerDisplay();
-
-        // Update presence
-        if (database && playerData.id) {
-            database.ref(`online/${playerData.id}`).update({
-                username: playerData.username
-            });
-        }
-
-        alert('✅ Username changed to: ' + playerData.username);
-        console.log('✅ Username changed to:', playerData.username);
-    } else if (newUsername !== null) {
-        alert('Username must be at least 2 characters!');
-    }
 });
 
 // Initialize

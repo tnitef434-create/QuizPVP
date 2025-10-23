@@ -1,9 +1,9 @@
 {
   "name": "quizpvp",
-  "version": "2.1.0",
-  "description": "Multiplayer math quiz battle game - Static site with Firebase backend - Now with Squad Mode!",
+  "version": "2.2.0",
+  "description": "Multiplayer math quiz battle game - Static site with Firebase backend - Now with Squad Mode and Game Timer!",
   "main": "index.html",
-  "keywords": ["quiz", "multiplayer", "game", "math", "firebase", "squad"],
+  "keywords": ["quiz", "multiplayer", "game", "math", "firebase", "squad", "timer"],
   "author": "",
   "license": "MIT"
 }
