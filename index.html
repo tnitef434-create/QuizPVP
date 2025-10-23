@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>QuizPVP - Math Battle Arena</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -10,12 +10,7 @@
     <div class="background-pattern"></div>
 
     <!-- Version Badge -->
-    <div class="version-badge">v2.8.0</div>
-
-    <!-- Refresh Button -->
-    <button id="refreshBtn" class="refresh-btn" title="Refresh for updates">
-        <span class="refresh-icon">↻</span>
-    </button>
+    <div class="version-badge">v2.9.0</div>
 
     <!-- Username Entry Screen -->
     <div id="usernameScreen" class="screen active">
@@ -32,51 +27,47 @@
     </div>
 
     <!-- Main Menu Screen -->
+    <!-- Main Menu / Hub Screen -->
     <div id="menuScreen" class="screen">
         <div class="container">
-            <div class="header">
-                <h1 class="game-title-small">
+            <!-- Player Header -->
+            <div class="menu-header">
+                <h1 class="menu-title">
                     <span class="title-quiz">Quiz</span><span class="title-pvp">PVP</span>
                 </h1>
-                <div class="player-info">
-                    <div class="player-name" id="playerNameDisplay"></div>
-                    <div class="points-display">
-                        <span class="points-icon">★</span>
-                        <span id="pointsDisplay">0</span> points
+                <div class="player-card">
+                    <div class="player-name" id="playerNameDisplay">Player</div>
+                    <div class="player-stats">
+                        <span class="stat-badge">
+                            <span class="stat-icon">★</span>
+                            <span id="pointsDisplay">0</span>
+                        </span>
+                        <span class="stat-badge online">
+                            <span class="stat-icon">●</span>
+                            <span id="activePlayerCount">0</span> online
+                        </span>
                     </div>
                 </div>
             </div>
 
-            <!-- Active Players & Connection Status -->
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <span class="stat-icon">👥</span>
-                    <span class="stat-value"><span id="activePlayerCount">0</span> Players Online</span>
+            <!-- Hub Navigation Cards -->
+            <div class="hub-grid">
+                <div class="hub-card" id="playCard" onclick="window.gameNavigation.goToPlay()">
+                    <div class="hub-card-icon">🎮</div>
+                    <div class="hub-card-title">Play</div>
+                    <div class="hub-card-desc">Start a math battle</div>
                 </div>
-                <div class="stat-item">
-                    <span id="connectionStatus" class="connection-status connected">● Online</span>
-                </div>
-            </div>
 
-            <!-- Main Hub Selection -->
-            <div class="hub-selection">
-                <h3>What would you like to do?</h3>
-                <div class="hub-buttons">
-                    <button id="playBtn" class="hub-btn">
-                        <span class="hub-icon">🎮</span>
-                        <span class="hub-title">Play</span>
-                        <span class="hub-desc">Start a game</span>
-                    </button>
-                    <button id="socialBtn" class="hub-btn">
-                        <span class="hub-icon">💬</span>
-                        <span class="hub-title">Social</span>
-                        <span class="hub-desc">Chat & Friends</span>
-                    </button>
-                    <button id="settingsHubBtn" class="hub-btn">
-                        <span class="hub-icon">⚙️</span>
-                        <span class="hub-title">Settings</span>
-                        <span class="hub-desc">Shop & Options</span>
-                    </button>
+                <div class="hub-card" id="socialCard" onclick="window.gameNavigation.goToSocial()">
+                    <div class="hub-card-icon">💬</div>
+                    <div class="hub-card-title">Social</div>
+                    <div class="hub-card-desc">Chat & friends</div>
+                </div>
+
+                <div class="hub-card" id="settingsCard" onclick="window.gameNavigation.goToSettings()">
+                    <div class="hub-card-icon">⚙️</div>
+                    <div class="hub-card-title">Settings</div>
+                    <div class="hub-card-desc">Customize & shop</div>
                 </div>
             </div>
         </div>
@@ -90,19 +81,19 @@
             </div>
 
             <div class="game-type-selection">
-                <button id="mathGameBtn" class="game-type-btn">
+                <div class="game-type-btn" onclick="window.gameNavigation.goToMathMode()">
                     <span class="game-type-icon">➕</span>
                     <span class="game-type-title">Math</span>
                     <span class="game-type-desc">Quick math challenges</span>
-                </button>
-                <button id="rpsGameBtn" class="game-type-btn coming-soon">
+                </div>
+                <div class="game-type-btn coming-soon" onclick="alert('Rock Paper Scissors coming soon!')">
                     <span class="game-type-icon">✊</span>
                     <span class="game-type-title">Rock Paper Scissors</span>
                     <span class="game-type-desc">Coming Soon!</span>
-                </button>
+                </div>
             </div>
 
-            <button id="backToMenuFromPlay" class="btn btn-secondary">Back</button>
+            <button class="btn btn-secondary" onclick="window.gameNavigation.goToMenu()">Back to Menu</button>
         </div>
     </div>
 
@@ -139,7 +130,7 @@
             </div>
 
             <button id="findMatchBtn" class="btn btn-primary btn-large">Find Match (1v1)</button>
-            <button id="backToPlayFromMath" class="btn btn-secondary">Back</button>
+            <button class="btn btn-secondary" onclick="window.gameNavigation.showScreen('playScreen')">Back</button>
         </div>
     </div>
 
@@ -190,7 +181,7 @@
                 </div>
             </div>
 
-            <button id="backToMenuFromSocial" class="btn btn-secondary">Back</button>
+            <button class="btn btn-secondary" onclick="window.gameNavigation.goToMenu()">Back to Menu</button>
         </div>
     </div>
 
@@ -483,12 +474,12 @@
                     <div class="settings-item-icon">ℹ️</div>
                     <div class="settings-item-info">
                         <h3>App Version</h3>
-                        <p>v2.8.2</p>
+                        <p>v2.9.0 - Hub Redesign</p>
                     </div>
                 </div>
             </div>
 
-            <button id="closeSettingsBtn" class="btn btn-secondary">Back</button>
+            <button class="btn btn-secondary" onclick="window.gameNavigation.goToMenu()">Back to Menu</button>
         </div>
     </div>
 

@@ -51,6 +51,71 @@ try {
     isFirebaseReady = false;
 }
 
+// ===== GLOBAL NAVIGATION SYSTEM =====
+// This navigation system uses direct DOM manipulation and is guaranteed to work
+window.gameNavigation = {
+    // Switch screens
+    showScreen: function(screenId) {
+        console.log(`🔄 Navigation: Switching to ${screenId}`);
+
+        try {
+            // Hide all screens
+            const allScreens = document.querySelectorAll('.screen');
+            allScreens.forEach(screen => {
+                screen.classList.remove('active');
+            });
+
+            // Show target screen
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                console.log(`✅ Navigation: Now showing ${screenId}`);
+                return true;
+            } else {
+                console.error(`❌ Navigation: Screen ${screenId} not found`);
+                return false;
+            }
+        } catch (error) {
+            console.error(`❌ Navigation error:`, error);
+            return false;
+        }
+    },
+
+    // Hub navigation functions
+    goToPlay: function() {
+        console.log('🎮 Play button clicked!');
+        this.showScreen('playScreen');
+    },
+
+    goToSocial: function() {
+        console.log('💬 Social button clicked!');
+        this.showScreen('socialScreen');
+        // Load friends data if functions exist
+        if (typeof loadFriendsList === 'function') loadFriendsList();
+        if (typeof loadFriendRequests === 'function') loadFriendRequests();
+    },
+
+    goToSettings: function() {
+        console.log('⚙️ Settings button clicked!');
+        this.showScreen('settingsScreen');
+    },
+
+    goToMenu: function() {
+        console.log('🏠 Going to menu');
+        this.showScreen('menuScreen');
+    },
+
+    goToMathMode: function() {
+        console.log('➕ Math mode selected');
+        this.showScreen('mathModeScreen');
+    }
+};
+
+// Make navigation functions available globally for inline onclick
+window.showScreen = window.gameNavigation.showScreen.bind(window.gameNavigation);
+
+console.log('✅ Global navigation system initialized');
+
 let playerData = {
     username: '',
     points: 0,
