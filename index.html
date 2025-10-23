@@ -10,7 +10,7 @@
     <div class="background-pattern"></div>
 
     <!-- Version Badge -->
-    <div class="version-badge">v2.7.0</div>
+    <div class="version-badge">v2.8.0</div>
 
     <!-- Refresh Button -->
     <button id="refreshBtn" class="refresh-btn" title="Refresh for updates">
@@ -58,44 +58,139 @@
                 </div>
             </div>
 
-            <!-- Mode Selection -->
-            <div class="mode-selection">
-                <h3>Select Game Mode</h3>
-                <div class="mode-buttons">
-                    <button id="modeChatBtn" class="mode-btn">
-                        <span class="mode-icon">💬</span>
-                        <span class="mode-title">Chat</span>
-                        <span class="mode-desc">Chat with random players</span>
+            <!-- Main Hub Selection -->
+            <div class="hub-selection">
+                <h3>What would you like to do?</h3>
+                <div class="hub-buttons">
+                    <button id="playBtn" class="hub-btn">
+                        <span class="hub-icon">🎮</span>
+                        <span class="hub-title">Play</span>
+                        <span class="hub-desc">Start a game</span>
                     </button>
+                    <button id="socialBtn" class="hub-btn">
+                        <span class="hub-icon">💬</span>
+                        <span class="hub-title">Social</span>
+                        <span class="hub-desc">Chat & Friends</span>
+                    </button>
+                    <button id="settingsHubBtn" class="hub-btn">
+                        <span class="hub-icon">⚙️</span>
+                        <span class="hub-title">Settings</span>
+                        <span class="hub-desc">Shop & Options</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Play Screen - Game Type Selection -->
+    <div id="playScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h2>Select Game Type</h2>
+            </div>
+
+            <div class="game-type-selection">
+                <button id="mathGameBtn" class="game-type-btn">
+                    <span class="game-type-icon">➕</span>
+                    <span class="game-type-title">Math</span>
+                    <span class="game-type-desc">Quick math challenges</span>
+                </button>
+                <button id="rpsGameBtn" class="game-type-btn coming-soon">
+                    <span class="game-type-icon">✊</span>
+                    <span class="game-type-title">Rock Paper Scissors</span>
+                    <span class="game-type-desc">Coming Soon!</span>
+                </button>
+            </div>
+
+            <button id="backToMenuFromPlay" class="btn btn-secondary">Back</button>
+        </div>
+    </div>
+
+    <!-- Math Mode Selection -->
+    <div id="mathModeScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h2>Math - Select Mode</h2>
+            </div>
+
+            <div class="mode-selection">
+                <div class="mode-buttons">
                     <button id="mode1v1Btn" class="mode-btn active">
                         <span class="mode-icon">⚔️</span>
                         <span class="mode-title">1v1</span>
                         <span class="mode-desc">Battle one opponent</span>
                     </button>
-                    <button id="modeTriosBtn" class="mode-btn">
+                    <button id="mode1v2Btn" class="mode-btn">
                         <span class="mode-icon">🔺</span>
-                        <span class="mode-title">Trios</span>
+                        <span class="mode-title">1v2</span>
                         <span class="mode-desc">3 players compete</span>
                     </button>
-                    <button id="modeSquadBtn" class="mode-btn">
+                    <button id="mode1v3Btn" class="mode-btn">
                         <span class="mode-icon">👥</span>
-                        <span class="mode-title">Squad</span>
+                        <span class="mode-title">1v3</span>
                         <span class="mode-desc">4 players compete</span>
                     </button>
                     <button id="modeWhoAmIBtn" class="mode-btn mobile-only">
                         <span class="mode-icon">📱</span>
                         <span class="mode-title">Who Am I</span>
-                        <span class="mode-desc">Mobile tilt game (4 players)</span>
+                        <span class="mode-desc">Mobile tilt game</span>
                     </button>
                 </div>
             </div>
 
-            <div class="menu-buttons">
-                <button id="findMatchBtn" class="btn btn-primary btn-large">Find Match (1v1)</button>
-                <button id="friendsBtn" class="btn btn-secondary">Friends</button>
-                <button id="shopBtn" class="btn btn-secondary">Shop</button>
-                <button id="settingsBtn" class="btn btn-secondary">Settings</button>
+            <button id="findMatchBtn" class="btn btn-primary btn-large">Find Match (1v1)</button>
+            <button id="backToPlayFromMath" class="btn btn-secondary">Back</button>
+        </div>
+    </div>
+
+    <!-- Social Screen -->
+    <div id="socialScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h2>Social</h2>
             </div>
+
+            <div class="social-tabs">
+                <button id="chatTabBtn" class="social-tab active">
+                    <span class="tab-icon">💬</span>
+                    <span class="tab-title">Random Chat</span>
+                </button>
+                <button id="friendsTabBtn" class="social-tab">
+                    <span class="tab-icon">👥</span>
+                    <span class="tab-title">Friends</span>
+                    <span id="friendsTabBadge" class="badge" style="display: none;">0</span>
+                </button>
+            </div>
+
+            <!-- Chat Tab Content -->
+            <div id="chatTabContent" class="social-tab-content">
+                <div class="social-description">
+                    <p>Chat with random players from around the world!</p>
+                </div>
+                <button id="startChatBtn" class="btn btn-primary btn-large">Start Chat</button>
+            </div>
+
+            <!-- Friends Tab Content -->
+            <div id="friendsTabContent" class="social-tab-content" style="display: none;">
+                <div class="friends-tabs-inner">
+                    <button id="friendsListTab" class="friends-tab active">Friend List</button>
+                    <button id="friendRequestsTab" class="friends-tab">Requests <span id="requestsCount" class="badge">0</span></button>
+                </div>
+
+                <div id="friendsListContent" class="friends-content">
+                    <div id="friendsList" class="friends-list">
+                        <div class="empty-state">No friends yet. Add friends from chat!</div>
+                    </div>
+                </div>
+
+                <div id="friendRequestsContent" class="friends-content" style="display: none;">
+                    <div id="friendRequestsList" class="friends-list">
+                        <div class="empty-state">No friend requests</div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="backToMenuFromSocial" class="btn btn-secondary">Back</button>
         </div>
     </div>
 
@@ -141,6 +236,20 @@
                     <input type="number" id="answerInput" placeholder="Your answer" autocomplete="off">
                     <button id="nextBtn" class="btn btn-primary">Next</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting for Results Screen -->
+    <div id="waitingResultsScreen" class="screen">
+        <div class="container">
+            <div class="waiting-results-card">
+                <div class="waiting-icon">⏱️</div>
+                <h2 id="waitingResultsTitle">Quiz Complete!</h2>
+                <p id="waitingResultsText">Timer still running...</p>
+                <div class="game-timer-large" id="waitingTimer">1:20</div>
+                <p class="waiting-instruction">Waiting for timer to finish and all players to complete...</p>
+                <button id="viewResultsBtn" class="btn btn-primary btn-large" style="display: none;">View Results</button>
             </div>
         </div>
     </div>
@@ -244,36 +353,6 @@
         </div>
     </div>
 
-    <!-- Friends Screen -->
-    <div id="friendsScreen" class="screen">
-        <div class="container">
-            <div class="shop-header">
-                <h2>Friends</h2>
-                <div class="friends-count">
-                    <span id="friendsCount">0</span> friends
-                </div>
-            </div>
-
-            <div class="friends-tabs">
-                <button id="friendsListTab" class="friends-tab active">Friend List</button>
-                <button id="friendRequestsTab" class="friends-tab">Requests <span id="requestsCount" class="badge">0</span></button>
-            </div>
-
-            <div id="friendsListContent" class="friends-content">
-                <div id="friendsList" class="friends-list">
-                    <div class="empty-state">No friends yet. Add friends from chat!</div>
-                </div>
-            </div>
-
-            <div id="friendRequestsContent" class="friends-content" style="display: none;">
-                <div id="friendRequestsList" class="friends-list">
-                    <div class="empty-state">No friend requests</div>
-                </div>
-            </div>
-
-            <button id="closeFriendsBtn" class="btn btn-secondary">Back</button>
-        </div>
-    </div>
 
     <!-- Friend Chat Screen -->
     <div id="friendChatScreen" class="screen">
@@ -371,6 +450,15 @@
             </div>
 
             <div class="settings-items">
+                <div class="settings-item" onclick="showScreen('shopScreen')" style="cursor: pointer;">
+                    <div class="settings-item-icon">🛒</div>
+                    <div class="settings-item-info">
+                        <h3>Shop</h3>
+                        <p>Buy colors, username changes, and more</p>
+                    </div>
+                    <button class="btn btn-primary btn-small">Open Shop</button>
+                </div>
+
                 <div class="settings-item">
                     <div class="settings-item-icon">🔄</div>
                     <div class="settings-item-info">
@@ -393,7 +481,7 @@
                     <div class="settings-item-icon">ℹ️</div>
                     <div class="settings-item-info">
                         <h3>App Version</h3>
-                        <p>v2.7.0</p>
+                        <p>v2.8.0</p>
                     </div>
                 </div>
             </div>

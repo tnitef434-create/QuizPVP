@@ -77,6 +77,11 @@ let gameListener = null;
 let searchListener = null;
 let activePlayersCount = 0;
 let currentMode = '1v1'; // Default mode
+let resultsReadyToView = false;
+let myGameScore = 0;
+let opponentGameScore = 0;
+let gameWon = false;
+let gameDraw = false;
 
 let gameTimer = null;
 let timeRemaining = 80; // 1 minute 20 seconds
@@ -392,9 +397,9 @@ async function findMatch() {
     showScreen('searchingScreen');
 
     // Route to correct matchmaking based on mode
-    if (currentMode === 'squad') {
+    if (currentMode === '1v3') {
         await findSquadMatch();
-    } else if (currentMode === 'trios') {
+    } else if (currentMode === '1v2') {
         await findTriosMatch();
     } else {
         await find1v1Match();
@@ -803,23 +808,23 @@ function startGame(gameId, gameData) {
     });
 }
 
-// Start Trios Game (3 players)
+// Start 1v2 Game (3 players)
 function startTriosGame(gameId, gameData) {
     currentGame.gameId = gameId;
     currentGame.questions = gameData.questions;
     currentGame.answers = [];
     currentGame.currentQuestionIndex = 0;
-    currentGame.mode = 'trios';
+    currentGame.mode = '1v2';
     currentGame.players = gameData.players;
     currentGame.gameStartedAt = gameData.gameStartedAt || Date.now();
 
     showScreen('gameScreen');
 
-    // Show trios display
+    // Show 1v2 display
     const myPlayerIndex = gameData.players.findIndex(p => p.id === playerData.id);
     const otherPlayer = gameData.players.find(p => p.id !== playerData.id);
 
-    document.getElementById('yourName').textContent = `${playerData.username} (Trios)`;
+    document.getElementById('yourName').textContent = `${playerData.username} (1v2)`;
     document.getElementById('opponentName').textContent = `2 Opponents`;
 
     const yourAvatar = document.getElementById('yourAvatar');
@@ -836,7 +841,7 @@ function startTriosGame(gameId, gameData) {
     // Start the game timer
     startGameTimer();
 
-    // Listen for trios game updates (including timeExpired flag)
+    // Listen for 1v2 game updates (including timeExpired flag)
     gameListener = database.ref(`games_trios/${gameId}`).on('value', (snapshot) => {
         const game = snapshot.val();
         if (game) {
@@ -851,23 +856,23 @@ function startTriosGame(gameId, gameData) {
     });
 }
 
-// Start Squad Game (4 players)
+// Start 1v3 Game (4 players)
 function startSquadGame(gameId, gameData) {
     currentGame.gameId = gameId;
     currentGame.questions = gameData.questions;
     currentGame.answers = [];
     currentGame.currentQuestionIndex = 0;
-    currentGame.mode = 'squad';
+    currentGame.mode = '1v3';
     currentGame.players = gameData.players;
     currentGame.gameStartedAt = gameData.gameStartedAt || Date.now();
 
     showScreen('gameScreen');
 
-    // For now, show simplified squad display (use 1v1 UI)
+    // Show 1v3 display
     const myPlayerIndex = gameData.players.findIndex(p => p.id === playerData.id);
     const otherPlayer = gameData.players.find(p => p.id !== playerData.id);
 
-    document.getElementById('yourName').textContent = `${playerData.username} (Squad)`;
+    document.getElementById('yourName').textContent = `${playerData.username} (1v3)`;
     document.getElementById('opponentName').textContent = `3 Opponents`;
 
     const yourAvatar = document.getElementById('yourAvatar');
@@ -884,7 +889,7 @@ function startSquadGame(gameId, gameData) {
     // Start the game timer
     startGameTimer();
 
-    // Listen for squad game updates (including timeExpired flag)
+    // Listen for 1v3 game updates (including timeExpired flag)
     gameListener = database.ref(`games_squad/${gameId}`).on('value', (snapshot) => {
         const game = snapshot.val();
         if (game) {
@@ -928,12 +933,28 @@ function startGameTimer() {
     gameTimer = setInterval(() => {
         timeRemaining--;
         updateTimerDisplay();
+        updateWaitingTimerDisplay(); // Also update waiting screen timer
 
         if (timeRemaining <= 0) {
             clearInterval(gameTimer);
             handleTimeUp();
+
+            // When timer expires, check if we should show results button
+            checkIfResultsReady();
         }
     }, 1000);
+}
+
+// Check if results are ready to view
+function checkIfResultsReady() {
+    if (resultsReadyToView) {
+        // Show the View Results button
+        const viewBtn = document.getElementById('viewResultsBtn');
+        if (viewBtn) {
+            document.getElementById('waitingResultsText').textContent = 'All players finished and time is up!';
+            viewBtn.style.display = 'block';
+        }
+    }
 }
 
 // Update timer display
@@ -995,6 +1016,25 @@ function stopGameTimer() {
     }
 }
 
+// Update waiting timer display
+function updateWaitingTimerDisplay() {
+    const timerElement = document.getElementById('waitingTimer');
+    if (!timerElement) return;
+
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    const secondsStr = seconds < 10 ? '0' + seconds : seconds;
+    timerElement.textContent = minutes + ':' + secondsStr;
+
+    // Change color based on time remaining
+    timerElement.classList.remove('warning', 'critical');
+    if (timeRemaining <= 10) {
+        timerElement.classList.add('critical');
+    } else if (timeRemaining <= 30) {
+        timerElement.classList.add('warning');
+    }
+}
+
 // Next question
 function nextQuestion() {
     const answer = document.getElementById('answerInput').value;
@@ -1012,8 +1052,8 @@ function nextQuestion() {
 
 // Submit answers
 async function submitAnswers() {
-    // Stop the timer
-    stopGameTimer();
+    // Don't stop the timer - keep it running!
+    // stopGameTimer();
 
     // Calculate score
     let score = 0;
@@ -1023,8 +1063,10 @@ async function submitAnswers() {
         }
     });
 
-    if (currentGame.mode === 'squad') {
-        // Squad mode: update player in players array
+    myGameScore = score; // Store for later
+
+    if (currentGame.mode === '1v3') {
+        // 1v3 mode: update player in players array
         const myIndex = currentGame.players.findIndex(p => p.id === playerData.id);
 
         await database.ref(`games_squad/${currentGame.gameId}/players/${myIndex}`).update({
@@ -1032,8 +1074,8 @@ async function submitAnswers() {
             answers: currentGame.answers,
             finished: true
         });
-    } else if (currentGame.mode === 'trios') {
-        // Trios mode: update player in players array
+    } else if (currentGame.mode === '1v2') {
+        // 1v2 mode: update player in players array
         const myIndex = currentGame.players.findIndex(p => p.id === playerData.id);
 
         await database.ref(`games_trios/${currentGame.gameId}/players/${myIndex}`).update({
@@ -1053,13 +1095,16 @@ async function submitAnswers() {
         });
     }
 
-    // Show waiting screen
-    showScreen('searchingScreen');
-    document.querySelector('.searching-animation h2').textContent = 'Calculating Results...';
-    const waitText = currentGame.mode === 'squad' ? 'Waiting for all 4 players to finish' :
-                     currentGame.mode === 'trios' ? 'Waiting for all 3 players to finish' :
-                     'Waiting for opponent to finish';
-    document.querySelector('.searching-text').textContent = waitText;
+    // Show waiting for results screen with timer still running
+    showScreen('waitingResultsScreen');
+    document.getElementById('waitingResultsTitle').textContent = 'Quiz Complete!';
+    const waitText = currentGame.mode === '1v3' ? 'Waiting for all 4 players to finish...' :
+                     currentGame.mode === '1v2' ? 'Waiting for all 3 players to finish...' :
+                     'Waiting for opponent to finish...';
+    document.getElementById('waitingResultsText').textContent = waitText;
+
+    // Continue updating the timer display on the waiting screen
+    updateWaitingTimerDisplay();
 }
 
 // Check if player1
@@ -1076,6 +1121,7 @@ async function checkGameEnd(game) {
         player1Finished: game.player1.finished,
         player2Finished: game.player2.finished,
         allFinished: allFinished,
+        timeExpired: game.timeExpired,
         resultsReadyAt: game.resultsReadyAt
     });
 
@@ -1098,8 +1144,8 @@ async function checkGameEnd(game) {
             }
         }
 
-        // Results are ready! Show them now
-        console.log('📊 Showing results...');
+        // Results are ready! Store the data but don't show yet
+        console.log('📊 Results ready, waiting for manual view...');
 
         if (gameListener) {
             database.ref(`games/${currentGame.gameId}`).off('value', gameListener);
@@ -1107,23 +1153,23 @@ async function checkGameEnd(game) {
         }
 
         const isPlayer1 = game.player1.id === playerData.id;
-        const myScore = isPlayer1 ? game.player1.score : game.player2.score;
-        const opponentScore = isPlayer1 ? game.player2.score : game.player1.score;
+        myGameScore = isPlayer1 ? game.player1.score : game.player2.score;
+        opponentGameScore = isPlayer1 ? game.player2.score : game.player1.score;
 
-        const won = myScore > opponentScore;
-        const draw = myScore === opponentScore;
+        gameWon = myGameScore > opponentGameScore;
+        gameDraw = myGameScore === opponentGameScore;
 
-        if (won) {
-            playerData.points += 100;
-            savePlayerData();
+        resultsReadyToView = true;
+
+        // Check if timer has expired and show button if so
+        if (timeRemaining <= 0 || game.timeExpired) {
+            checkIfResultsReady();
         }
 
-        showResults(myScore, opponentScore, won, draw);
-
-        // Clean up game after 30 seconds
+        // Clean up game after 60 seconds
         setTimeout(() => {
             database.ref(`games/${currentGame.gameId}`).remove();
-        }, 30000);
+        }, 60000);
     }
 }
 
@@ -2214,6 +2260,25 @@ function inviteFriendToGame() {
     alert('Game invitations coming soon! For now, coordinate a time to both click "Find Match" at the same time.');
 }
 
+// View results manually
+function viewResults() {
+    if (!resultsReadyToView) {
+        alert('Results are not ready yet. Please wait...');
+        return;
+    }
+
+    // Award points if won
+    if (gameWon) {
+        playerData.points += 100;
+        savePlayerData();
+    }
+
+    showResults(myGameScore, opponentGameScore, gameWon, gameDraw);
+
+    // Reset flags
+    resultsReadyToView = false;
+}
+
 // ===== SETTINGS FUNCTIONS =====
 
 // Reset app data (keeps username and account)
@@ -2322,7 +2387,7 @@ document.getElementById('shopBtn').addEventListener('click', () => {
 });
 
 document.getElementById('closeShopBtn').addEventListener('click', () => {
-    showScreen('menuScreen');
+    showScreen('settingsScreen');
 });
 
 document.getElementById('nextBtn').addEventListener('click', () => {
@@ -2345,60 +2410,107 @@ document.getElementById('backToMenuBtn').addEventListener('click', () => {
 
 document.getElementById('colorPicker').addEventListener('input', updateColorPreview);
 
-// Mode selection
+// Hub navigation
+document.getElementById('playBtn').addEventListener('click', () => {
+    showScreen('playScreen');
+});
+
+document.getElementById('socialBtn').addEventListener('click', () => {
+    showScreen('socialScreen');
+    loadFriendsList();
+    loadFriendRequests();
+});
+
+document.getElementById('settingsHubBtn').addEventListener('click', () => {
+    showScreen('settingsScreen');
+});
+
+document.getElementById('backToMenuFromPlay').addEventListener('click', () => {
+    showScreen('menuScreen');
+});
+
+document.getElementById('backToPlayFromMath').addEventListener('click', () => {
+    showScreen('playScreen');
+});
+
+document.getElementById('backToMenuFromSocial').addEventListener('click', () => {
+    showScreen('menuScreen');
+});
+
+// Game type selection
+document.getElementById('mathGameBtn').addEventListener('click', () => {
+    showScreen('mathModeScreen');
+});
+
+document.getElementById('rpsGameBtn').addEventListener('click', () => {
+    alert('Rock Paper Scissors coming soon!');
+});
+
+// Social tabs
+document.getElementById('chatTabBtn').addEventListener('click', () => {
+    document.getElementById('chatTabBtn').classList.add('active');
+    document.getElementById('friendsTabBtn').classList.remove('active');
+    document.getElementById('chatTabContent').style.display = 'block';
+    document.getElementById('friendsTabContent').style.display = 'none';
+});
+
+document.getElementById('friendsTabBtn').addEventListener('click', () => {
+    document.getElementById('friendsTabBtn').classList.add('active');
+    document.getElementById('chatTabBtn').classList.remove('active');
+    document.getElementById('friendsTabContent').style.display = 'block';
+    document.getElementById('chatTabContent').style.display = 'none';
+    loadFriendsList();
+    loadFriendRequests();
+});
+
+document.getElementById('startChatBtn').addEventListener('click', () => {
+    findChatPartner();
+});
+
+// Mode selection (Math modes)
 document.getElementById('mode1v1Btn').addEventListener('click', () => {
     currentMode = '1v1';
     document.getElementById('mode1v1Btn').classList.add('active');
-    document.getElementById('modeTriosBtn').classList.remove('active');
-    document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('mode1v2Btn').classList.remove('active');
+    document.getElementById('mode1v3Btn').classList.remove('active');
     document.getElementById('modeWhoAmIBtn').classList.remove('active');
-    document.getElementById('modeChatBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
     console.log('🎯 Mode switched to: 1v1');
 });
 
-document.getElementById('modeTriosBtn').addEventListener('click', () => {
-    currentMode = 'trios';
-    document.getElementById('modeTriosBtn').classList.add('active');
+document.getElementById('mode1v2Btn').addEventListener('click', () => {
+    currentMode = '1v2';
+    document.getElementById('mode1v2Btn').classList.add('active');
     document.getElementById('mode1v1Btn').classList.remove('active');
-    document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('mode1v3Btn').classList.remove('active');
     document.getElementById('modeWhoAmIBtn').classList.remove('active');
-    document.getElementById('modeChatBtn').classList.remove('active');
-    document.getElementById('findMatchBtn').textContent = 'Find Trios (3 players)';
-    console.log('🎯 Mode switched to: Trios');
+    document.getElementById('findMatchBtn').textContent = 'Find Match (1v2)';
+    console.log('🎯 Mode switched to: 1v2');
 });
 
-document.getElementById('modeSquadBtn').addEventListener('click', () => {
-    currentMode = 'squad';
-    document.getElementById('modeSquadBtn').classList.add('active');
+document.getElementById('mode1v3Btn').addEventListener('click', () => {
+    currentMode = '1v3';
+    document.getElementById('mode1v3Btn').classList.add('active');
     document.getElementById('mode1v1Btn').classList.remove('active');
-    document.getElementById('modeTriosBtn').classList.remove('active');
+    document.getElementById('mode1v2Btn').classList.remove('active');
     document.getElementById('modeWhoAmIBtn').classList.remove('active');
-    document.getElementById('modeChatBtn').classList.remove('active');
-    document.getElementById('findMatchBtn').textContent = 'Find Squad (4 players)';
-    console.log('🎯 Mode switched to: Squad');
+    document.getElementById('findMatchBtn').textContent = 'Find Match (1v3)';
+    console.log('🎯 Mode switched to: 1v3');
 });
 
 document.getElementById('modeWhoAmIBtn').addEventListener('click', () => {
     currentMode = 'whoami';
     document.getElementById('modeWhoAmIBtn').classList.add('active');
     document.getElementById('mode1v1Btn').classList.remove('active');
-    document.getElementById('modeTriosBtn').classList.remove('active');
-    document.getElementById('modeSquadBtn').classList.remove('active');
-    document.getElementById('modeChatBtn').classList.remove('active');
+    document.getElementById('mode1v2Btn').classList.remove('active');
+    document.getElementById('mode1v3Btn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Start Who Am I (Mobile)';
     console.log('🎯 Mode switched to: Who Am I');
 });
 
-document.getElementById('modeChatBtn').addEventListener('click', () => {
-    currentMode = 'chat';
-    document.getElementById('modeChatBtn').classList.add('active');
-    document.getElementById('mode1v1Btn').classList.remove('active');
-    document.getElementById('modeTriosBtn').classList.remove('active');
-    document.getElementById('modeSquadBtn').classList.remove('active');
-    document.getElementById('modeWhoAmIBtn').classList.remove('active');
-    document.getElementById('findMatchBtn').textContent = 'Start Chat';
-    console.log('🎯 Mode switched to: Chat');
+// View Results button
+document.getElementById('viewResultsBtn').addEventListener('click', () => {
+    viewResults();
 });
 
 // Chat event listeners
