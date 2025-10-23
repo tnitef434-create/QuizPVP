@@ -252,10 +252,21 @@ function generateWhoAmIWords() {
 
 // Screen management
 function showScreen(screenId) {
+    console.log(`🔄 Switching to screen: ${screenId}`);
+
+    // Remove active class from all screens
     document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.remove('active');
     });
-    document.getElementById(screenId).classList.add('active');
+
+    // Add active class to target screen
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.add('active');
+        console.log(`✅ Screen switched to: ${screenId}`);
+    } else {
+        console.error(`❌ Screen not found: ${screenId}`);
+    }
 }
 
 // Check if username is taken
@@ -2400,16 +2411,147 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Setup all event listeners - called after DOM is ready
 function setupEventListeners() {
-    // Join button
-    document.getElementById('joinBtn').addEventListener('click', async () => {
-        const username = document.getElementById('usernameInput').value.trim();
+    console.log('🎯 Setting up event listeners...');
 
-        if (username.length < 2) {
+    // Helper function to safely add event listener
+    function safeAddListener(elementId, event, handler, description) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.addEventListener(event, handler);
+            console.log(`✓ ${description || elementId}`);
+            return true;
+        } else {
+            console.warn(`⚠️ Element not found: ${elementId}`);
+            return false;
+        }
+    }
+
+    // === HUB NAVIGATION (CRITICAL) ===
+    console.log('🏠 Setting up Hub Navigation...');
+    safeAddListener('playBtn', 'click', () => {
+        console.log('🎮 Play button clicked');
+        showScreen('playScreen');
+    }, 'Play button');
+
+    safeAddListener('socialBtn', 'click', () => {
+        console.log('💬 Social button clicked');
+        showScreen('socialScreen');
+        loadFriendsList();
+        loadFriendRequests();
+    }, 'Social button');
+
+    safeAddListener('settingsHubBtn', 'click', () => {
+        console.log('⚙️ Settings button clicked');
+        showScreen('settingsScreen');
+    }, 'Settings Hub button');
+
+    // === NAVIGATION BACK BUTTONS ===
+    console.log('⬅️ Setting up Back buttons...');
+    safeAddListener('backToMenuFromPlay', 'click', () => {
+        showScreen('menuScreen');
+    }, 'Back to Menu from Play');
+
+    safeAddListener('backToPlayFromMath', 'click', () => {
+        showScreen('playScreen');
+    }, 'Back to Play from Math');
+
+    safeAddListener('backToMenuFromSocial', 'click', () => {
+        showScreen('menuScreen');
+    }, 'Back to Menu from Social');
+
+    safeAddListener('closeSettingsBtn', 'click', () => {
+        showScreen('menuScreen');
+    }, 'Close Settings');
+
+    // === GAME TYPE SELECTION ===
+    console.log('🎮 Setting up Game Type buttons...');
+    safeAddListener('mathGameBtn', 'click', () => {
+        console.log('➕ Math game selected');
+        showScreen('mathModeScreen');
+    }, 'Math Game button');
+
+    safeAddListener('rpsGameBtn', 'click', () => {
+        alert('Rock Paper Scissors coming soon!');
+    }, 'RPS Game button');
+
+    // === MATH MODE SELECTION ===
+    console.log('🔢 Setting up Math Mode buttons...');
+    safeAddListener('mode1v1Btn', 'click', () => {
+        currentMode = '1v1';
+        document.getElementById('mode1v1Btn').classList.add('active');
+        document.getElementById('mode1v2Btn')?.classList.remove('active');
+        document.getElementById('mode1v3Btn')?.classList.remove('active');
+        document.getElementById('modeWhoAmIBtn')?.classList.remove('active');
+        document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
+        console.log('🎯 Mode switched to: 1v1');
+    }, '1v1 Mode');
+
+    safeAddListener('mode1v2Btn', 'click', () => {
+        currentMode = '1v2';
+        document.getElementById('mode1v2Btn').classList.add('active');
+        document.getElementById('mode1v1Btn')?.classList.remove('active');
+        document.getElementById('mode1v3Btn')?.classList.remove('active');
+        document.getElementById('modeWhoAmIBtn')?.classList.remove('active');
+        document.getElementById('findMatchBtn').textContent = 'Find Match (1v2)';
+        console.log('🎯 Mode switched to: 1v2');
+    }, '1v2 Mode');
+
+    safeAddListener('mode1v3Btn', 'click', () => {
+        currentMode = '1v3';
+        document.getElementById('mode1v3Btn').classList.add('active');
+        document.getElementById('mode1v1Btn')?.classList.remove('active');
+        document.getElementById('mode1v2Btn')?.classList.remove('active');
+        document.getElementById('modeWhoAmIBtn')?.classList.remove('active');
+        document.getElementById('findMatchBtn').textContent = 'Find Match (1v3)';
+        console.log('🎯 Mode switched to: 1v3');
+    }, '1v3 Mode');
+
+    safeAddListener('modeWhoAmIBtn', 'click', () => {
+        currentMode = 'whoami';
+        document.getElementById('modeWhoAmIBtn').classList.add('active');
+        document.getElementById('mode1v1Btn')?.classList.remove('active');
+        document.getElementById('mode1v2Btn')?.classList.remove('active');
+        document.getElementById('mode1v3Btn')?.classList.remove('active');
+        document.getElementById('findMatchBtn').textContent = 'Start Who Am I (Mobile)';
+        console.log('🎯 Mode switched to: Who Am I');
+    }, 'Who Am I Mode');
+
+    // === SOCIAL TABS ===
+    console.log('💬 Setting up Social tabs...');
+    safeAddListener('chatTabBtn', 'click', () => {
+        document.getElementById('chatTabBtn')?.classList.add('active');
+        document.getElementById('friendsTabBtn')?.classList.remove('active');
+        const chatTab = document.getElementById('chatTabContent');
+        const friendsTab = document.getElementById('friendsTabContent');
+        if (chatTab) chatTab.style.display = 'block';
+        if (friendsTab) friendsTab.style.display = 'none';
+    }, 'Chat Tab');
+
+    safeAddListener('friendsTabBtn', 'click', () => {
+        document.getElementById('friendsTabBtn')?.classList.add('active');
+        document.getElementById('chatTabBtn')?.classList.remove('active');
+        const friendsTab = document.getElementById('friendsTabContent');
+        const chatTab = document.getElementById('chatTabContent');
+        if (friendsTab) friendsTab.style.display = 'block';
+        if (chatTab) chatTab.style.display = 'none';
+        loadFriendsList();
+        loadFriendRequests();
+    }, 'Friends Tab');
+
+    safeAddListener('startChatBtn', 'click', () => {
+        findChatPartner();
+    }, 'Start Chat button');
+
+    // === USERNAME & JOIN ===
+    console.log('👤 Setting up Username buttons...');
+    safeAddListener('joinBtn', 'click', async () => {
+        const username = document.getElementById('usernameInput')?.value.trim();
+
+        if (!username || username.length < 2) {
             alert('Please enter a username (at least 2 characters)');
             return;
         }
 
-        // Check if username is taken
         const taken = await isUsernameTaken(username);
         if (taken) {
             alert('This username is already taken. Please choose a different one.');
@@ -2417,271 +2559,171 @@ function setupEventListeners() {
         }
 
         playerData.username = username;
-
-        // Register username in database
         await registerUsername(username, playerData.id);
-
-        savePlayerData(); // Save username persistently
+        savePlayerData();
         updatePlayerDisplay();
         showScreen('menuScreen');
-
-        // Setup player presence and tracking
         setupPlayerPresence();
         trackActivePlayerCount();
         loadFriendsList();
         loadFriendRequests();
-
-        // Clean up old games periodically
         cleanupOldGames();
-        setInterval(cleanupOldGames, 60000); // Every minute
+        setInterval(cleanupOldGames, 60000);
 
         console.log('✅ Player registered:', username);
         console.log('💾 Username saved to localStorage');
-    });
+    }, 'Join button');
 
-    document.getElementById('usernameInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('joinBtn').click();
-        }
-    });
+    const usernameInput = document.getElementById('usernameInput');
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('joinBtn')?.click();
+            }
+        });
+        console.log('✓ Username input Enter key');
+    }
 
-    document.getElementById('findMatchBtn').addEventListener('click', () => {
+    // === GAME BUTTONS ===
+    console.log('🎲 Setting up Game buttons...');
+    safeAddListener('findMatchBtn', 'click', () => {
         findMatch();
-    });
+    }, 'Find Match');
 
-    document.getElementById('cancelSearchBtn').addEventListener('click', () => {
+    safeAddListener('cancelSearchBtn', 'click', () => {
         cancelSearch();
-    });
+    }, 'Cancel Search');
 
-    document.getElementById('shopBtn').addEventListener('click', () => {
-        showScreen('shopScreen');
-    });
-
-    document.getElementById('closeShopBtn').addEventListener('click', () => {
-        showScreen('settingsScreen');
-    });
-
-    document.getElementById('nextBtn').addEventListener('click', () => {
+    safeAddListener('nextBtn', 'click', () => {
         nextQuestion();
-    });
+    }, 'Next Question');
 
-    document.getElementById('answerInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            nextQuestion();
-        }
-    });
+    const answerInput = document.getElementById('answerInput');
+    if (answerInput) {
+        answerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                nextQuestion();
+            }
+        });
+        console.log('✓ Answer input Enter key');
+    }
 
-    document.getElementById('playAgainBtn').addEventListener('click', () => {
+    safeAddListener('playAgainBtn', 'click', () => {
         findMatch();
-    });
+    }, 'Play Again');
 
-    document.getElementById('backToMenuBtn').addEventListener('click', () => {
+    safeAddListener('backToMenuBtn', 'click', () => {
         showScreen('menuScreen');
-    });
+    }, 'Back to Menu from Results');
 
-    document.getElementById('colorPicker').addEventListener('input', updateColorPreview);
-
-    // Hub navigation
-    document.getElementById('playBtn').addEventListener('click', () => {
-        showScreen('playScreen');
-    });
-
-    document.getElementById('socialBtn').addEventListener('click', () => {
-        showScreen('socialScreen');
-        loadFriendsList();
-        loadFriendRequests();
-    });
-
-    document.getElementById('settingsHubBtn').addEventListener('click', () => {
-        showScreen('settingsScreen');
-    });
-
-    document.getElementById('backToMenuFromPlay').addEventListener('click', () => {
-        showScreen('menuScreen');
-    });
-
-    document.getElementById('backToPlayFromMath').addEventListener('click', () => {
-        showScreen('playScreen');
-    });
-
-    document.getElementById('backToMenuFromSocial').addEventListener('click', () => {
-        showScreen('menuScreen');
-    });
-
-    // Game type selection
-    document.getElementById('mathGameBtn').addEventListener('click', () => {
-        showScreen('mathModeScreen');
-    });
-
-    document.getElementById('rpsGameBtn').addEventListener('click', () => {
-        alert('Rock Paper Scissors coming soon!');
-    });
-
-    // Social tabs
-    document.getElementById('chatTabBtn').addEventListener('click', () => {
-        document.getElementById('chatTabBtn').classList.add('active');
-        document.getElementById('friendsTabBtn').classList.remove('active');
-        document.getElementById('chatTabContent').style.display = 'block';
-        document.getElementById('friendsTabContent').style.display = 'none';
-    });
-
-    document.getElementById('friendsTabBtn').addEventListener('click', () => {
-        document.getElementById('friendsTabBtn').classList.add('active');
-        document.getElementById('chatTabBtn').classList.remove('active');
-        document.getElementById('friendsTabContent').style.display = 'block';
-        document.getElementById('chatTabContent').style.display = 'none';
-        loadFriendsList();
-        loadFriendRequests();
-    });
-
-    document.getElementById('startChatBtn').addEventListener('click', () => {
-        findChatPartner();
-    });
-
-    // Mode selection (Math modes)
-    document.getElementById('mode1v1Btn').addEventListener('click', () => {
-        currentMode = '1v1';
-        document.getElementById('mode1v1Btn').classList.add('active');
-        document.getElementById('mode1v2Btn').classList.remove('active');
-        document.getElementById('mode1v3Btn').classList.remove('active');
-        document.getElementById('modeWhoAmIBtn').classList.remove('active');
-        document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
-        console.log('🎯 Mode switched to: 1v1');
-    });
-
-    document.getElementById('mode1v2Btn').addEventListener('click', () => {
-        currentMode = '1v2';
-        document.getElementById('mode1v2Btn').classList.add('active');
-        document.getElementById('mode1v1Btn').classList.remove('active');
-        document.getElementById('mode1v3Btn').classList.remove('active');
-        document.getElementById('modeWhoAmIBtn').classList.remove('active');
-        document.getElementById('findMatchBtn').textContent = 'Find Match (1v2)';
-        console.log('🎯 Mode switched to: 1v2');
-    });
-
-    document.getElementById('mode1v3Btn').addEventListener('click', () => {
-        currentMode = '1v3';
-        document.getElementById('mode1v3Btn').classList.add('active');
-        document.getElementById('mode1v1Btn').classList.remove('active');
-        document.getElementById('mode1v2Btn').classList.remove('active');
-        document.getElementById('modeWhoAmIBtn').classList.remove('active');
-        document.getElementById('findMatchBtn').textContent = 'Find Match (1v3)';
-        console.log('🎯 Mode switched to: 1v3');
-    });
-
-    document.getElementById('modeWhoAmIBtn').addEventListener('click', () => {
-        currentMode = 'whoami';
-        document.getElementById('modeWhoAmIBtn').classList.add('active');
-        document.getElementById('mode1v1Btn').classList.remove('active');
-        document.getElementById('mode1v2Btn').classList.remove('active');
-        document.getElementById('mode1v3Btn').classList.remove('active');
-        document.getElementById('findMatchBtn').textContent = 'Start Who Am I (Mobile)';
-        console.log('🎯 Mode switched to: Who Am I');
-    });
-
-    // View Results button
-    document.getElementById('viewResultsBtn').addEventListener('click', () => {
+    safeAddListener('viewResultsBtn', 'click', () => {
         viewResults();
-    });
+    }, 'View Results');
 
-    // Chat event listeners
-    document.getElementById('sendMessageBtn').addEventListener('click', () => {
+    // === SHOP & SETTINGS ===
+    console.log('🛒 Setting up Shop buttons...');
+    safeAddListener('shopBtn', 'click', () => {
+        showScreen('shopScreen');
+    }, 'Shop button');
+
+    safeAddListener('closeShopBtn', 'click', () => {
+        showScreen('settingsScreen');
+    }, 'Close Shop');
+
+    const colorPicker = document.getElementById('colorPicker');
+    if (colorPicker) {
+        colorPicker.addEventListener('input', updateColorPreview);
+        console.log('✓ Color Picker');
+    }
+
+    // === CHAT BUTTONS ===
+    console.log('💬 Setting up Chat buttons...');
+    safeAddListener('sendMessageBtn', 'click', () => {
         sendChatMessage();
-    });
+    }, 'Send Message');
 
-    document.getElementById('chatInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendChatMessage();
-        }
-    });
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+        console.log('✓ Chat input Enter key');
+    }
 
-    document.getElementById('skipChatBtn').addEventListener('click', () => {
+    safeAddListener('skipChatBtn', 'click', () => {
         skipChatPartner();
-    });
+    }, 'Skip Chat Partner');
 
-    document.getElementById('leaveChatBtn').addEventListener('click', () => {
+    safeAddListener('leaveChatBtn', 'click', () => {
         if (confirm('Leave chat and return to menu?')) {
             leaveChat();
         }
-    });
+    }, 'Leave Chat');
 
-    document.getElementById('addFriendBtn').addEventListener('click', () => {
+    safeAddListener('addFriendBtn', 'click', () => {
         sendFriendRequest();
-    });
+    }, 'Add Friend');
 
-    // Friend system event listeners
-    document.getElementById('friendsBtn').addEventListener('click', () => {
-        showScreen('friendsScreen');
-        loadFriendsList();
-        loadFriendRequests();
-    });
+    // === FRIEND SYSTEM ===
+    console.log('👥 Setting up Friend system...');
+    safeAddListener('friendsListTab', 'click', () => {
+        document.getElementById('friendsListTab')?.classList.add('active');
+        document.getElementById('friendRequestsTab')?.classList.remove('active');
+        const listContent = document.getElementById('friendsListContent');
+        const requestsContent = document.getElementById('friendRequestsContent');
+        if (listContent) listContent.style.display = 'block';
+        if (requestsContent) requestsContent.style.display = 'none';
+    }, 'Friends List Tab');
 
-    document.getElementById('closeFriendsBtn').addEventListener('click', () => {
-        showScreen('menuScreen');
-    });
+    safeAddListener('friendRequestsTab', 'click', () => {
+        document.getElementById('friendRequestsTab')?.classList.add('active');
+        document.getElementById('friendsListTab')?.classList.remove('active');
+        const requestsContent = document.getElementById('friendRequestsContent');
+        const listContent = document.getElementById('friendsListContent');
+        if (requestsContent) requestsContent.style.display = 'block';
+        if (listContent) listContent.style.display = 'none';
+    }, 'Friend Requests Tab');
 
-    document.getElementById('friendsListTab').addEventListener('click', () => {
-        document.getElementById('friendsListTab').classList.add('active');
-        document.getElementById('friendRequestsTab').classList.remove('active');
-        document.getElementById('friendsListContent').style.display = 'block';
-        document.getElementById('friendRequestsContent').style.display = 'none';
-    });
-
-    document.getElementById('friendRequestsTab').addEventListener('click', () => {
-        document.getElementById('friendRequestsTab').classList.add('active');
-        document.getElementById('friendsListTab').classList.remove('active');
-        document.getElementById('friendRequestsContent').style.display = 'block';
-        document.getElementById('friendsListContent').style.display = 'none';
-    });
-
-    document.getElementById('sendFriendMessageBtn').addEventListener('click', () => {
+    safeAddListener('sendFriendMessageBtn', 'click', () => {
         sendFriendMessage();
-    });
+    }, 'Send Friend Message');
 
-    document.getElementById('friendChatInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendFriendMessage();
-        }
-    });
+    const friendChatInput = document.getElementById('friendChatInput');
+    if (friendChatInput) {
+        friendChatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendFriendMessage();
+            }
+        });
+        console.log('✓ Friend chat input Enter key');
+    }
 
-    document.getElementById('leaveFriendChatBtn').addEventListener('click', () => {
+    safeAddListener('leaveFriendChatBtn', 'click', () => {
         showScreen('friendsScreen');
-    });
+    }, 'Leave Friend Chat');
 
-    document.getElementById('inviteFriendToGameBtn').addEventListener('click', () => {
+    safeAddListener('inviteFriendToGameBtn', 'click', () => {
         inviteFriendToGame();
-    });
+    }, 'Invite Friend to Game');
 
-    // Settings event listeners
-    document.getElementById('settingsBtn').addEventListener('click', () => {
-        showScreen('settingsScreen');
-    });
-
-    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
-        showScreen('menuScreen');
-    });
-
-    // Refresh button - forces hard reload to get updates
-    document.getElementById('refreshBtn').addEventListener('click', () => {
+    // === REFRESH BUTTON ===
+    console.log('🔄 Setting up Refresh button...');
+    safeAddListener('refreshBtn', 'click', () => {
         console.log('🔄 Refreshing app...');
-
-        // Show visual feedback
         const btn = document.getElementById('refreshBtn');
-        btn.style.transform = 'rotate(360deg)';
+        if (btn) btn.style.transform = 'rotate(360deg)';
 
-        // Hard refresh after animation
         setTimeout(() => {
-            // Clear cache and reload
             if ('caches' in window) {
                 caches.keys().then(names => {
                     names.forEach(name => caches.delete(name));
                 });
             }
-
-            // Force reload from server (bypass cache)
             window.location.reload(true);
         }, 300);
-    });
+    }, 'Refresh button');
 
-    console.log('🎯 All event listeners attached successfully');
+    console.log('✅ All event listeners attached successfully!');
 }
