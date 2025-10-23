@@ -1,10 +1,22 @@
-# QuizPVP - Math Battle Arena
+# QuizPVP - Math Battle Arena 🎮
 
-A real-time multiplayer math quiz game where players compete in 1v1 battles! Works entirely in your browser via GitHub Pages - no server setup required!
+A **production-ready** real-time multiplayer math quiz game where players from different computers battle in 1v1 math quizzes! Built with Firebase Realtime Database - works entirely in the browser!
 
-## Play Now
+## 🚀 Play Now
 
-Just open `index.html` in your browser or visit the GitHub Pages URL once deployed!
+**[LIVE DEMO](https://yourusername.github.io/QuizPVP)** (Replace with your GitHub Pages URL)
+
+Or test locally by opening `index.html` in your browser!
+
+## ✨ Features (v2.0.0)
+
+- ✅ **Real Cross-PC Multiplayer** - Players on different computers can play together
+- ✅ **Live Player Count** - See how many players are online in real-time
+- ✅ **Connection Status** - Know when you're connected/disconnected
+- ✅ **Automatic Matchmaking** - Find opponents instantly
+- ✅ **Points & Shop System** - Earn points, customize your profile
+- ✅ **Special Effects** - Gold and Rainbow color effects
+- ✅ **Production Ready** - Deploy to GitHub Pages in 5 minutes
 
 ## Features
 
@@ -27,22 +39,39 @@ Spend your hard-earned points to customize your profile:
 - Responsive design that works on all devices
 - Fun, engaging visual feedback
 
-## How It Works
+## 🎯 How It Works
 
-This is a **100% static site** that uses **Firebase Realtime Database** for multiplayer functionality. No backend server needed!
+This is a **100% static site** - no backend server to maintain!
 
-- Player data (points, color) is stored locally in your browser
-- Matchmaking and game sessions are managed through Firebase
-- All players connect to the same Firebase database to find opponents
+- **Firebase Realtime Database** - Handles all multiplayer logic
+- **Player Presence System** - Tracks who's online with automatic cleanup
+- **Cross-PC Communication** - Players on different computers are matched through Firebase
+- **Local Storage** - Points and colors saved in your browser
+- **GitHub Pages** - Free hosting, works from anywhere
 
-## Setup for GitHub Pages
+## 🚀 Quick Start (5 Minutes to Production!)
 
-1. Push this code to your GitHub repository
-2. Go to Settings → Pages
-3. Set source to main branch
-4. Your game will be live at: `https://[username].github.io/[repo-name]`
+### Step 1: Set Up Firebase (Required)
 
-That's it! Anyone can play just by visiting the URL.
+**The game needs Firebase to work.** Don't worry, it's FREE and takes 5 minutes!
+
+📖 **[Follow the Complete Firebase Setup Guide →](FIREBASE_SETUP.md)**
+
+Quick summary:
+1. Create free Firebase project
+2. Enable Realtime Database
+3. Copy your config to `client.js`
+4. Done!
+
+### Step 2: Deploy to GitHub Pages
+
+1. Push your code to GitHub
+2. Go to **Settings → Pages**
+3. Set source to your branch (e.g., `main` or `claude/multiplayer-math-quiz-...`)
+4. Wait 1-2 minutes
+5. Your game is live at: `https://[your-username].github.io/QuizPVP`
+
+**Share the link and start playing!** 🎉
 
 ## Local Testing
 

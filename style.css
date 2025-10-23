@@ -233,6 +233,73 @@ input[type="color"] {
     font-size: 1.4rem;
 }
 
+/* Stats Bar (Active Players & Connection) */
+.stats-bar {
+    background: white;
+    border-radius: 15px;
+    padding: 15px 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.stat-icon {
+    font-size: 1.3rem;
+}
+
+.stat-value {
+    color: #667eea;
+}
+
+#activePlayerCount {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #764ba2;
+}
+
+/* Pulse animation for player count changes */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulse 0.3s ease-in-out;
+}
+
+/* Connection Status */
+.connection-status {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    transition: all 0.3s;
+}
+
+.connection-status.connected {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+}
+
+.connection-status.disconnected {
+    background: rgba(255, 107, 107, 0.1);
+    color: #FF6B6B;
+}
+
 /* Menu Buttons */
 .menu-buttons {
     display: flex;

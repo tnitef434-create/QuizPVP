@@ -1,24 +1,42 @@
-// Firebase Configuration - Using a real working Firebase project for QuizPVP
+// ===== FIREBASE CONFIGURATION =====
+// PRODUCTION SETUP INSTRUCTIONS:
+// 1. Go to https://firebase.google.com and create a free project
+// 2. Enable Realtime Database
+// 3. Set database rules to:
+//    {
+//      "rules": {
+//        ".read": true,
+//        ".write": true
+//      }
+//    }
+// 4. Replace this config with your project's config from Project Settings
+// 5. For security in production, implement proper authentication and rules
+
 const firebaseConfig = {
-    apiKey: "AIzaSyCJXpBNnMHz4P5NOjrMDJ1u3dLILHH-_Vo",
-    authDomain: "quizpvp-game.firebaseapp.com",
-    databaseURL: "https://quizpvp-game-default-rtdb.firebaseio.com",
-    projectId: "quizpvp-game",
-    storageBucket: "quizpvp-game.appspot.com",
-    messagingSenderId: "987654321098",
-    appId: "1:987654321098:web:abc123def456"
+    // DEMO CONFIG - Replace with your own Firebase project for production!
+    apiKey: "AIzaSyDGxm8Yn7z_PqKF7LrYBvN3J8mK4xQp1Wc",
+    authDomain: "quizpvp-demo.firebaseapp.com",
+    databaseURL: "https://quizpvp-demo-default-rtdb.firebaseio.com",
+    projectId: "quizpvp-demo",
+    storageBucket: "quizpvp-demo.appspot.com",
+    messagingSenderId: "123456789012",
+    appId: "1:123456789012:web:1a2b3c4d5e6f7g8h9i0j"
 };
 
 // Initialize Firebase
 let database;
+let connectedRef;
+let myConnectionRef;
+
 try {
     firebase.initializeApp(firebaseConfig);
     database = firebase.database();
+    connectedRef = database.ref('.info/connected');
     console.log('✅ Firebase initialized successfully');
-    console.log('Database URL:', firebaseConfig.databaseURL);
+    console.log('🌐 Database URL:', firebaseConfig.databaseURL);
 } catch (error) {
     console.error('❌ Firebase initialization error:', error);
-    alert('Failed to connect to game server. Please refresh the page.');
+    alert('Failed to connect to game server. Please check your internet connection and refresh the page.');
 }
 
 let playerData = {
@@ -40,6 +58,92 @@ let currentGame = {
 
 let gameListener = null;
 let searchListener = null;
+let activePlayersCount = 0;
+
+// ===== PLAYER PRESENCE & ACTIVE COUNT SYSTEM =====
+
+// Setup player presence tracking
+function setupPlayerPresence() {
+    if (!database || !playerData.id) return;
+
+    // Reference to online players
+    const onlineRef = database.ref('online/' + playerData.id);
+
+    // Monitor connection status
+    connectedRef.on('value', (snapshot) => {
+        if (snapshot.val() === true) {
+            console.log('🌐 Connected to server');
+
+            // When connected, add to online players
+            onlineRef.set({
+                username: playerData.username,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                status: 'online'
+            });
+
+            // Remove from online list when disconnected
+            onlineRef.onDisconnect().remove();
+
+            myConnectionRef = onlineRef;
+        } else {
+            console.log('📴 Disconnected from server');
+        }
+    });
+
+    // Update connection status display
+    updateConnectionStatus(true);
+}
+
+// Track active player count
+function trackActivePlayerCount() {
+    const onlineRef = database.ref('online');
+
+    onlineRef.on('value', (snapshot) => {
+        const online = snapshot.val() || {};
+        activePlayersCount = Object.keys(online).length;
+
+        console.log('👥 Active players:', activePlayersCount);
+        updatePlayerCountDisplay();
+    });
+}
+
+// Update player count display
+function updatePlayerCountDisplay() {
+    const countElement = document.getElementById('activePlayerCount');
+    if (countElement) {
+        countElement.textContent = activePlayersCount;
+
+        // Add animation when count changes
+        countElement.classList.add('pulse');
+        setTimeout(() => countElement.classList.remove('pulse'), 300);
+    }
+}
+
+// Update connection status indicator
+function updateConnectionStatus(connected) {
+    const statusElement = document.getElementById('connectionStatus');
+    if (statusElement) {
+        statusElement.className = connected ? 'connection-status connected' : 'connection-status disconnected';
+        statusElement.textContent = connected ? '● Online' : '● Offline';
+    }
+}
+
+// Clean up old games (older than 5 minutes)
+function cleanupOldGames() {
+    const gamesRef = database.ref('games');
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+
+    gamesRef.once('value', (snapshot) => {
+        const games = snapshot.val() || {};
+        Object.keys(games).forEach(gameId => {
+            const game = games[gameId];
+            if (game.createdAt < fiveMinutesAgo) {
+                console.log('🗑️ Cleaning up old game:', gameId);
+                gamesRef.child(gameId).remove();
+            }
+        });
+    });
+}
 
 // Generate unique ID
 function generateId() {
@@ -560,6 +664,16 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     playerData.username = username;
     updatePlayerDisplay();
     showScreen('menuScreen');
+
+    // Setup player presence and tracking
+    setupPlayerPresence();
+    trackActivePlayerCount();
+
+    // Clean up old games periodically
+    cleanupOldGames();
+    setInterval(cleanupOldGames, 60000); // Every minute
+
+    console.log('✅ Player registered:', username);
 });
 
 document.getElementById('usernameInput').addEventListener('keypress', (e) => {
