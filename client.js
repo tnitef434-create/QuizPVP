@@ -1659,5 +1659,27 @@ document.getElementById('modeWhoAmIBtn').addEventListener('click', () => {
     console.log('🎯 Mode switched to: Who Am I');
 });
 
+// Refresh button - forces hard reload to get updates
+document.getElementById('refreshBtn').addEventListener('click', () => {
+    console.log('🔄 Refreshing app...');
+
+    // Show visual feedback
+    const btn = document.getElementById('refreshBtn');
+    btn.style.transform = 'rotate(360deg)';
+
+    // Hard refresh after animation
+    setTimeout(() => {
+        // Clear cache and reload
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => caches.delete(name));
+            });
+        }
+
+        // Force reload from server (bypass cache)
+        window.location.reload(true);
+    }, 300);
+});
+
 // Initialize
 loadPlayerData();
