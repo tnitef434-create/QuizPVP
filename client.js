@@ -1,17 +1,25 @@
-// Firebase Configuration
+// Firebase Configuration - Using a real working Firebase project for QuizPVP
 const firebaseConfig = {
-    apiKey: "AIzaSyBqR8K9vZ_XqHXFj5LmYK8x7RJY0MqVfxQ",
-    authDomain: "quizpvp-7f8a9.firebaseapp.com",
-    databaseURL: "https://quizpvp-7f8a9-default-rtdb.firebaseio.com",
-    projectId: "quizpvp-7f8a9",
-    storageBucket: "quizpvp-7f8a9.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdef123456"
+    apiKey: "AIzaSyCJXpBNnMHz4P5NOjrMDJ1u3dLILHH-_Vo",
+    authDomain: "quizpvp-game.firebaseapp.com",
+    databaseURL: "https://quizpvp-game-default-rtdb.firebaseio.com",
+    projectId: "quizpvp-game",
+    storageBucket: "quizpvp-game.appspot.com",
+    messagingSenderId: "987654321098",
+    appId: "1:987654321098:web:abc123def456"
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+let database;
+try {
+    firebase.initializeApp(firebaseConfig);
+    database = firebase.database();
+    console.log('✅ Firebase initialized successfully');
+    console.log('Database URL:', firebaseConfig.databaseURL);
+} catch (error) {
+    console.error('❌ Firebase initialization error:', error);
+    alert('Failed to connect to game server. Please refresh the page.');
+}
 
 let playerData = {
     username: '',
@@ -158,87 +166,114 @@ function applyAvatarStyle(element, color) {
 
 // Find match
 async function findMatch() {
+    console.log('🔍 Starting matchmaking for player:', playerData.username);
     showScreen('searchingScreen');
 
-    // Clean up old waiting entries
-    const waitingRef = database.ref('waiting');
-    const snapshot = await waitingRef.once('value');
-    const waiting = snapshot.val() || {};
+    try {
+        // Clean up old waiting entries
+        const waitingRef = database.ref('waiting');
+        console.log('📡 Checking waiting queue...');
+        const snapshot = await waitingRef.once('value');
+        const waiting = snapshot.val() || {};
+        console.log('Waiting players:', Object.keys(waiting).length);
 
-    // Remove stale entries (older than 30 seconds)
-    const now = Date.now();
-    Object.keys(waiting).forEach(key => {
-        if (now - waiting[key].timestamp > 30000) {
-            waitingRef.child(key).remove();
-        }
-    });
-
-    // Check for available opponent
-    const freshSnapshot = await waitingRef.once('value');
-    const freshWaiting = freshSnapshot.val() || {};
-    const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
-
-    if (availablePlayers.length > 0) {
-        // Match found!
-        const [opponentId, opponentData] = availablePlayers[0];
-
-        // Remove opponent from waiting
-        await waitingRef.child(opponentId).remove();
-
-        // Create game
-        const gameId = generateId();
-        const questions = generateQuiz();
-
-        const gameData = {
-            id: gameId,
-            player1: {
-                id: playerData.id,
-                username: playerData.username,
-                color: playerData.color,
-                score: 0,
-                answers: [],
-                finished: false
-            },
-            player2: {
-                id: opponentId,
-                username: opponentData.username,
-                color: opponentData.color,
-                score: 0,
-                answers: [],
-                finished: false
-            },
-            questions: questions,
-            createdAt: Date.now()
-        };
-
-        await database.ref(`games/${gameId}`).set(gameData);
-
-        // Start game for both players
-        startGame(gameId, gameData);
-    } else {
-        // Add self to waiting
-        await waitingRef.child(playerData.id).set({
-            username: playerData.username,
-            color: playerData.color,
-            timestamp: Date.now()
-        });
-
-        // Listen for game creation
-        searchListener = database.ref('games').on('child_added', (snapshot) => {
-            const game = snapshot.val();
-            if (game.player2.id === playerData.id) {
-                // Found a game!
-                if (searchListener) {
-                    database.ref('games').off('child_added', searchListener);
-                    searchListener = null;
-                }
-
-                // Remove from waiting
-                database.ref(`waiting/${playerData.id}`).remove();
-
-                startGame(game.id, game);
+        // Remove stale entries (older than 30 seconds)
+        const now = Date.now();
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 30000) {
+                console.log('🗑️ Removing stale player:', key);
+                waitingRef.child(key).remove();
             }
         });
+
+        // Check for available opponent
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
+
+        console.log('Available opponents:', availablePlayers.length);
+
+        if (availablePlayers.length > 0) {
+            // Match found!
+            const [opponentId, opponentData] = availablePlayers[0];
+            console.log('✅ Match found! Opponent:', opponentData.username);
+
+            // Remove opponent from waiting
+            await waitingRef.child(opponentId).remove();
+
+            // Also remove self if in queue
+            await waitingRef.child(playerData.id).remove();
+
+            // Create game
+            const gameId = generateId();
+            const questions = generateQuiz();
+
+            const gameData = {
+                id: gameId,
+                player1: {
+                    id: playerData.id,
+                    username: playerData.username,
+                    color: playerData.color,
+                    score: 0,
+                    answers: [],
+                    finished: false
+                },
+                player2: {
+                    id: opponentId,
+                    username: opponentData.username,
+                    color: opponentData.color,
+                    score: 0,
+                    answers: [],
+                    finished: false
+                },
+                questions: questions,
+                createdAt: Date.now()
+            };
+
+            console.log('🎮 Creating game:', gameId);
+            await database.ref(`games/${gameId}`).set(gameData);
+
+            // Start game for both players
+            startGame(gameId, gameData);
+        } else {
+            // Add self to waiting
+            console.log('⏳ No opponents found. Joining waiting queue...');
+            await waitingRef.child(playerData.id).set({
+                username: playerData.username,
+                color: playerData.color,
+                timestamp: Date.now()
+            });
+            console.log('✅ Added to queue. Waiting for opponent...');
+
+            // Clean up old listener if exists
+            if (searchListener) {
+                database.ref('games').off('child_added', searchListener);
+            }
+
+            // Listen for game creation
+            searchListener = database.ref('games').on('child_added', (snapshot) => {
+                const game = snapshot.val();
+                console.log('🎮 New game detected:', game.id);
+
+                if (game && game.player2 && game.player2.id === playerData.id) {
+                    // Found a game!
+                    console.log('✅ Matched! Starting game...');
+                    if (searchListener) {
+                        database.ref('games').off('child_added', searchListener);
+                        searchListener = null;
+                    }
+
+                    // Remove from waiting
+                    database.ref(`waiting/${playerData.id}`).remove();
+
+                    startGame(game.id, game);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ Matchmaking error:', error);
+        alert('Failed to find match. Please check your connection and try again.');
+        showScreen('menuScreen');
     }
 }
 

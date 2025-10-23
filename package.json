@@ -1,6 +1,6 @@
 {
   "name": "quizpvp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Multiplayer math quiz battle game - Static site with Firebase backend",
   "main": "index.html",
   "keywords": ["quiz", "multiplayer", "game", "math", "firebase"],
