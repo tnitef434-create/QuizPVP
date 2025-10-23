@@ -15,12 +15,12 @@
 const firebaseConfig = {
   apiKey: "AIzaSyDWrBVl4RtMoKCSYZWdq4lZqoYMlx9RPCs",
   authDomain: "quizpvp-5a2e2.firebaseapp.com",
+  databaseURL: "https://quizpvp-5a2e2-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "quizpvp-5a2e2",
   storageBucket: "quizpvp-5a2e2.firebasestorage.app",
   messagingSenderId: "390766164403",
   appId: "1:390766164403:web:4c143b8b83cf1fa245f3c6",
   measurementId: "G-NFPJFZWKXL"
-};
 };
 
 // Initialize Firebase
