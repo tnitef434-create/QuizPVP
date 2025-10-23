@@ -55,7 +55,9 @@ let playerData = {
     username: '',
     points: 0,
     color: '#4A90E2',
-    id: ''
+    id: '',
+    friends: [],
+    friendRequests: []
 };
 
 let currentGame = {
@@ -251,8 +253,29 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.add('active');
 }
 
+// Check if username is taken
+async function isUsernameTaken(username) {
+    try {
+        const snapshot = await database.ref('usernames').orderByValue().equalTo(username).once('value');
+        return snapshot.exists();
+    } catch (error) {
+        console.error('Error checking username:', error);
+        return false;
+    }
+}
+
+// Register username
+async function registerUsername(username, userId) {
+    try {
+        await database.ref(`usernames/${userId}`).set(username);
+        console.log('✅ Username registered:', username);
+    } catch (error) {
+        console.error('Error registering username:', error);
+    }
+}
+
 // Load player data from localStorage
-function loadPlayerData() {
+async function loadPlayerData() {
     const saved = localStorage.getItem('quizpvp_player');
     if (saved) {
         const data = JSON.parse(saved);
@@ -260,6 +283,8 @@ function loadPlayerData() {
         playerData.color = data.color || '#4A90E2';
         playerData.id = data.id || generateId();
         playerData.username = data.username || ''; // Load saved username
+        playerData.friends = data.friends || [];
+        playerData.friendRequests = data.friendRequests || [];
 
         // If username exists, skip to menu and setup
         if (playerData.username && playerData.username.length >= 2) {
@@ -268,6 +293,8 @@ function loadPlayerData() {
             showScreen('menuScreen');
             setupPlayerPresence();
             trackActivePlayerCount();
+            loadFriendsList();
+            loadFriendRequests();
             cleanupOldGames();
             setInterval(cleanupOldGames, 60000);
             return true; // Username loaded
@@ -284,7 +311,9 @@ function savePlayerData() {
         points: playerData.points,
         color: playerData.color,
         id: playerData.id,
-        username: playerData.username // Save username too
+        username: playerData.username, // Save username too
+        friends: playerData.friends || [],
+        friendRequests: playerData.friendRequests || []
     }));
 }
 
@@ -1041,19 +1070,37 @@ async function checkIfPlayer1() {
 
 // Check if game ended
 async function checkGameEnd(game) {
-    if (game.player1.finished && game.player2.finished) {
-        // All players finished! Try to sync results display
+    const allFinished = game.player1.finished && game.player2.finished;
+
+    console.log('🎮 Game state:', {
+        player1Finished: game.player1.finished,
+        player2Finished: game.player2.finished,
+        allFinished: allFinished,
+        resultsReadyAt: game.resultsReadyAt
+    });
+
+    if (allFinished) {
+        // Use transaction to ensure only one client sets resultsReadyAt
         if (!game.resultsReadyAt) {
             try {
-                await database.ref(`games/${currentGame.gameId}/resultsReadyAt`).set(Date.now());
-                return; // Wait for the timestamp to propagate
+                const ref = database.ref(`games/${currentGame.gameId}/resultsReadyAt`);
+                await ref.transaction((current) => {
+                    if (current === null) {
+                        return Date.now();
+                    }
+                    return current; // Already set
+                });
+                console.log('✅ Results timestamp set');
+                return; // Wait for it to propagate and trigger this function again
             } catch (error) {
-                console.warn('⚠️ Could not set results timestamp, showing results immediately:', error);
-                // Continue to show results anyway (fallback to immediate display)
+                console.warn('⚠️ Could not set results timestamp:', error);
+                // Continue anyway
             }
         }
 
         // Results are ready! Show them now
+        console.log('📊 Showing results...');
+
         if (gameListener) {
             database.ref(`games/${currentGame.gameId}`).off('value', gameListener);
             gameListener = null;
@@ -1726,6 +1773,14 @@ function startChatSession(chatId, chatData) {
     const chatMessages = document.getElementById('chatMessages');
     chatMessages.innerHTML = '<div class="chat-welcome">Say hello to ' + partner.username + '!</div>';
 
+    // Show/hide Add Friend button
+    const addFriendBtn = document.getElementById('addFriendBtn');
+    if (playerData.friends.includes(partner.id)) {
+        addFriendBtn.style.display = 'none';
+    } else {
+        addFriendBtn.style.display = 'block';
+    }
+
     // Focus on input
     document.getElementById('chatInput').value = '';
     document.getElementById('chatInput').focus();
@@ -1845,8 +1900,307 @@ function formatTime(timestamp) {
     return `${hours}:${minutes}`;
 }
 
+// ===== FRIEND SYSTEM FUNCTIONS =====
+
+// Send friend request
+async function sendFriendRequest() {
+    const partnerId = currentChatSession.partnerId;
+    const partnerUsername = currentChatSession.partnerUsername;
+    const partnerColor = currentChatSession.partnerColor;
+
+    try {
+        // Add friend request to partner's list
+        await database.ref(`users/${partnerId}/friendRequests/${playerData.id}`).set({
+            id: playerData.id,
+            username: playerData.username,
+            color: playerData.color,
+            timestamp: Date.now()
+        });
+
+        document.getElementById('addFriendBtn').textContent = 'Request Sent';
+        document.getElementById('addFriendBtn').disabled = true;
+
+        alert(`Friend request sent to ${partnerUsername}!`);
+    } catch (error) {
+        console.error('Error sending friend request:', error);
+        alert('Failed to send friend request');
+    }
+}
+
+// Load friends list
+async function loadFriendsList() {
+    try {
+        const snapshot = await database.ref(`users/${playerData.id}/friends`).once('value');
+        const friends = snapshot.val() || {};
+
+        playerData.friends = Object.keys(friends);
+        savePlayerData();
+
+        updateFriendsDisplay(friends);
+    } catch (error) {
+        console.error('Error loading friends:', error);
+    }
+}
+
+// Load friend requests
+async function loadFriendRequests() {
+    try {
+        const snapshot = await database.ref(`users/${playerData.id}/friendRequests`).once('value');
+        const requests = snapshot.val() || {};
+
+        playerData.friendRequests = Object.keys(requests);
+        savePlayerData();
+
+        updateFriendRequestsDisplay(requests);
+        updateRequestsCount(Object.keys(requests).length);
+    } catch (error) {
+        console.error('Error loading friend requests:', error);
+    }
+}
+
+// Update friends display
+function updateFriendsDisplay(friends) {
+    const friendsList = document.getElementById('friendsList');
+    friendsList.innerHTML = '';
+
+    const friendsArray = Object.values(friends);
+    document.getElementById('friendsCount').textContent = friendsArray.length;
+
+    if (friendsArray.length === 0) {
+        friendsList.innerHTML = '<div class="empty-state">No friends yet. Add friends from chat!</div>';
+        return;
+    }
+
+    friendsArray.forEach(friend => {
+        const friendItem = document.createElement('div');
+        friendItem.className = 'friend-item';
+
+        // Check if friend is online
+        database.ref(`online/${friend.id}`).once('value', (snapshot) => {
+            const isOnline = snapshot.exists();
+            const statusClass = isOnline ? '' : 'offline';
+            const statusText = isOnline ? 'Online' : 'Offline';
+
+            friendItem.innerHTML = `
+                <div class="friend-info">
+                    <div class="player-avatar" style="background: ${getColorStyle(friend.color)}"></div>
+                    <div class="friend-details">
+                        <div class="friend-name">${escapeHtml(friend.username)}</div>
+                        <div class="friend-status ${statusClass}">${statusText}</div>
+                    </div>
+                </div>
+                <div class="friend-actions">
+                    <button class="btn btn-primary btn-small" onclick="openFriendChat('${friend.id}')">Chat</button>
+                    <button class="btn btn-secondary btn-small" onclick="removeFriend('${friend.id}')">Remove</button>
+                </div>
+            `;
+        });
+
+        friendsList.appendChild(friendItem);
+    });
+}
+
+// Update friend requests display
+function updateFriendRequestsDisplay(requests) {
+    const requestsList = document.getElementById('friendRequestsList');
+    requestsList.innerHTML = '';
+
+    const requestsArray = Object.values(requests);
+
+    if (requestsArray.length === 0) {
+        requestsList.innerHTML = '<div class="empty-state">No friend requests</div>';
+        return;
+    }
+
+    requestsArray.forEach(request => {
+        const requestItem = document.createElement('div');
+        requestItem.className = 'friend-request-item';
+        requestItem.innerHTML = `
+            <div class="friend-info">
+                <div class="player-avatar" style="background: ${getColorStyle(request.color)}"></div>
+                <div class="friend-details">
+                    <div class="friend-name">${escapeHtml(request.username)}</div>
+                    <div class="friend-status">Wants to be friends</div>
+                </div>
+            </div>
+            <div class="request-actions">
+                <button class="btn btn-primary btn-small" onclick="acceptFriendRequest('${request.id}', '${escapeHtml(request.username)}', '${request.color}')">Accept</button>
+                <button class="btn btn-secondary btn-small" onclick="rejectFriendRequest('${request.id}')">Reject</button>
+            </div>
+        `;
+        requestsList.appendChild(requestItem);
+    });
+}
+
+// Update requests count badge
+function updateRequestsCount(count) {
+    document.getElementById('requestsCount').textContent = count;
+    if (count > 0) {
+        document.getElementById('requestsCount').style.display = 'inline';
+    } else {
+        document.getElementById('requestsCount').style.display = 'none';
+    }
+}
+
+// Accept friend request
+async function acceptFriendRequest(friendId, friendUsername, friendColor) {
+    try {
+        // Add to my friends
+        await database.ref(`users/${playerData.id}/friends/${friendId}`).set({
+            id: friendId,
+            username: friendUsername,
+            color: friendColor
+        });
+
+        // Add me to their friends
+        await database.ref(`users/${friendId}/friends/${playerData.id}`).set({
+            id: playerData.id,
+            username: playerData.username,
+            color: playerData.color
+        });
+
+        // Remove friend request
+        await database.ref(`users/${playerData.id}/friendRequests/${friendId}`).remove();
+
+        alert(`You are now friends with ${friendUsername}!`);
+
+        // Reload lists
+        loadFriendsList();
+        loadFriendRequests();
+    } catch (error) {
+        console.error('Error accepting friend request:', error);
+        alert('Failed to accept friend request');
+    }
+}
+
+// Reject friend request
+async function rejectFriendRequest(friendId) {
+    try {
+        await database.ref(`users/${playerData.id}/friendRequests/${friendId}`).remove();
+        loadFriendRequests();
+    } catch (error) {
+        console.error('Error rejecting friend request:', error);
+    }
+}
+
+// Remove friend
+async function removeFriend(friendId) {
+    if (!confirm('Remove this friend?')) return;
+
+    try {
+        // Remove from my friends
+        await database.ref(`users/${playerData.id}/friends/${friendId}`).remove();
+
+        // Remove me from their friends
+        await database.ref(`users/${friendId}/friends/${playerData.id}`).remove();
+
+        loadFriendsList();
+    } catch (error) {
+        console.error('Error removing friend:', error);
+        alert('Failed to remove friend');
+    }
+}
+
+// Open friend chat
+async function openFriendChat(friendId) {
+    try {
+        // Get friend data
+        const snapshot = await database.ref(`users/${playerData.id}/friends/${friendId}`).once('value');
+        const friend = snapshot.val();
+
+        if (!friend) {
+            alert('Friend not found');
+            return;
+        }
+
+        // Create or get existing direct message channel
+        const channelId = [playerData.id, friendId].sort().join('_');
+
+        showScreen('friendChatScreen');
+
+        // Update UI
+        document.getElementById('friendChatName').textContent = friend.username;
+        const friendChatAvatar = document.getElementById('friendChatAvatar');
+        applyAvatarStyle(friendChatAvatar, friend.color);
+
+        // Check if friend is online
+        database.ref(`online/${friendId}`).on('value', (snapshot) => {
+            const isOnline = snapshot.exists();
+            const statusEl = document.getElementById('friendChatStatus');
+            statusEl.textContent = isOnline ? 'Online' : 'Offline';
+            statusEl.className = isOnline ? 'chat-status' : 'chat-status offline';
+        });
+
+        // Clear previous messages
+        const messagesDiv = document.getElementById('friendChatMessages');
+        messagesDiv.innerHTML = '';
+
+        // Load message history
+        database.ref(`directMessages/${channelId}`).on('child_added', (snapshot) => {
+            const message = snapshot.val();
+            displayFriendMessage(message);
+        });
+
+        // Store current chat info for sending messages
+        currentChatSession.chatId = channelId;
+        currentChatSession.partnerId = friendId;
+        currentChatSession.partnerUsername = friend.username;
+
+    } catch (error) {
+        console.error('Error opening friend chat:', error);
+        alert('Failed to open chat');
+    }
+}
+
+// Display friend message
+function displayFriendMessage(message) {
+    const messagesDiv = document.getElementById('friendChatMessages');
+    const messageDiv = document.createElement('div');
+
+    const isMe = message.senderId === playerData.id;
+    messageDiv.className = `chat-message ${isMe ? 'mine' : 'theirs'}`;
+
+    messageDiv.innerHTML = `
+        <div class="message-sender">${isMe ? 'You' : currentChatSession.partnerUsername}</div>
+        <div class="message-text">${escapeHtml(message.text)}</div>
+        <div class="message-time">${formatTime(message.timestamp)}</div>
+    `;
+
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// Send friend message
+async function sendFriendMessage() {
+    const input = document.getElementById('friendChatInput');
+    const text = input.value.trim();
+
+    if (!text) return;
+
+    const message = {
+        senderId: playerData.id,
+        senderUsername: playerData.username,
+        text: text,
+        timestamp: Date.now()
+    };
+
+    try {
+        await database.ref(`directMessages/${currentChatSession.chatId}`).push(message);
+        input.value = '';
+        input.focus();
+    } catch (error) {
+        console.error('Failed to send message:', error);
+        alert('Failed to send message');
+    }
+}
+
+// Invite friend to game
+function inviteFriendToGame() {
+    alert('Game invitations coming soon! For now, coordinate a time to both click "Find Match" at the same time.');
+}
+
 // Event listeners
-document.getElementById('joinBtn').addEventListener('click', () => {
+document.getElementById('joinBtn').addEventListener('click', async () => {
     const username = document.getElementById('usernameInput').value.trim();
 
     if (username.length < 2) {
@@ -1854,7 +2208,18 @@ document.getElementById('joinBtn').addEventListener('click', () => {
         return;
     }
 
+    // Check if username is taken
+    const taken = await isUsernameTaken(username);
+    if (taken) {
+        alert('This username is already taken. Please choose a different one.');
+        return;
+    }
+
     playerData.username = username;
+
+    // Register username in database
+    await registerUsername(username, playerData.id);
+
     savePlayerData(); // Save username persistently
     updatePlayerDisplay();
     showScreen('menuScreen');
@@ -1862,6 +2227,8 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     // Setup player presence and tracking
     setupPlayerPresence();
     trackActivePlayerCount();
+    loadFriendsList();
+    loadFriendRequests();
 
     // Clean up old games periodically
     cleanupOldGames();
@@ -1988,6 +2355,53 @@ document.getElementById('leaveChatBtn').addEventListener('click', () => {
     if (confirm('Leave chat and return to menu?')) {
         leaveChat();
     }
+});
+
+document.getElementById('addFriendBtn').addEventListener('click', () => {
+    sendFriendRequest();
+});
+
+// Friend system event listeners
+document.getElementById('friendsBtn').addEventListener('click', () => {
+    showScreen('friendsScreen');
+    loadFriendsList();
+    loadFriendRequests();
+});
+
+document.getElementById('closeFriendsBtn').addEventListener('click', () => {
+    showScreen('menuScreen');
+});
+
+document.getElementById('friendsListTab').addEventListener('click', () => {
+    document.getElementById('friendsListTab').classList.add('active');
+    document.getElementById('friendRequestsTab').classList.remove('active');
+    document.getElementById('friendsListContent').style.display = 'block';
+    document.getElementById('friendRequestsContent').style.display = 'none';
+});
+
+document.getElementById('friendRequestsTab').addEventListener('click', () => {
+    document.getElementById('friendRequestsTab').classList.add('active');
+    document.getElementById('friendsListTab').classList.remove('active');
+    document.getElementById('friendRequestsContent').style.display = 'block';
+    document.getElementById('friendsListContent').style.display = 'none';
+});
+
+document.getElementById('sendFriendMessageBtn').addEventListener('click', () => {
+    sendFriendMessage();
+});
+
+document.getElementById('friendChatInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendFriendMessage();
+    }
+});
+
+document.getElementById('leaveFriendChatBtn').addEventListener('click', () => {
+    showScreen('friendsScreen');
+});
+
+document.getElementById('inviteFriendToGameBtn').addEventListener('click', () => {
+    inviteFriendToGame();
 });
 
 // Refresh button - forces hard reload to get updates
