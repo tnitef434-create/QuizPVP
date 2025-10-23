@@ -1798,6 +1798,7 @@ async function findChatPartner() {
 // Start chat session
 function startChatSession(chatId, chatData) {
     currentChatSession.chatId = chatId;
+    currentChatSession.partnerLeft = false; // Reset partner left flag
 
     const isUser1 = chatData.user1.id === playerData.id;
     const partner = isUser1 ? chatData.user2 : chatData.user1;
@@ -1827,9 +1828,20 @@ function startChatSession(chatId, chatData) {
         addFriendBtn.style.display = 'block';
     }
 
-    // Focus on input
-    document.getElementById('chatInput').value = '';
-    document.getElementById('chatInput').focus();
+    // Re-enable chat input and send button (in case they were disabled from previous session)
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendMessageBtn');
+
+    chatInput.disabled = false;
+    chatInput.placeholder = 'Type a message...';
+    chatInput.style.background = '';
+    chatInput.style.cursor = '';
+    chatInput.value = '';
+    chatInput.focus();
+
+    sendBtn.disabled = false;
+    sendBtn.style.opacity = '';
+    sendBtn.style.cursor = '';
 
     // Listen for new messages
     chatListener = database.ref(`chats/${chatId}/messages`).on('child_added', (snapshot) => {
@@ -1865,9 +1877,40 @@ function displayChatMessage(message) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// Display system message in chat
+function displaySystemMessage(text) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+
+    messageDiv.className = 'chat-message system';
+    messageDiv.style.textAlign = 'center';
+    messageDiv.style.margin = '20px auto';
+    messageDiv.style.maxWidth = '80%';
+    messageDiv.style.background = 'rgba(102, 126, 234, 0.1)';
+    messageDiv.style.border = '1px solid rgba(102, 126, 234, 0.3)';
+    messageDiv.style.padding = '12px 20px';
+    messageDiv.style.borderRadius = '20px';
+    messageDiv.style.color = '#667eea';
+    messageDiv.style.fontWeight = '500';
+
+    messageDiv.innerHTML = `
+        <div class="message-text">${escapeHtml(text)}</div>
+    `;
+
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
 // Send chat message
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
+
+    // Don't send if input is disabled (partner left)
+    if (input.disabled) {
+        console.log('💬 Cannot send message - partner has left');
+        return;
+    }
+
     const text = input.value.trim();
 
     if (!text) return;
@@ -1927,23 +1970,34 @@ async function leaveChat(skipping = false) {
 
 // Handle partner left
 function handlePartnerLeft() {
-    // Clean up listeners first
-    if (chatListener) {
-        database.ref(`chats/${currentChatSession.chatId}/messages`).off('child_added', chatListener);
-        chatListener = null;
+    // Don't process if already handled
+    if (currentChatSession.partnerLeft) return;
+
+    // Mark that partner has left
+    currentChatSession.partnerLeft = true;
+
+    // Display in-chat system message
+    displaySystemMessage('Your chat partner has left the conversation.');
+
+    // Disable chat input and send button
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendMessageBtn');
+
+    if (chatInput) {
+        chatInput.disabled = true;
+        chatInput.placeholder = 'Chat partner has left...';
+        chatInput.style.background = '#f5f5f5';
+        chatInput.style.cursor = 'not-allowed';
     }
 
-    // Reset session
-    currentChatSession = {
-        chatId: '',
-        partnerId: '',
-        partnerUsername: '',
-        partnerColor: ''
-    };
+    if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = '0.5';
+        sendBtn.style.cursor = 'not-allowed';
+    }
 
-    // Show alert and return to menu
-    alert('Your chat partner has left the conversation.');
-    showScreen('menuScreen');
+    // Keep skip and leave buttons enabled (they still work)
+    console.log('💬 Partner left - chat disabled, skip/leave still available');
 }
 
 // Escape HTML to prevent XSS
@@ -2329,288 +2383,305 @@ function clearAccount() {
     window.location.reload();
 }
 
-// Event listeners
-document.getElementById('joinBtn').addEventListener('click', async () => {
-    const username = document.getElementById('usernameInput').value.trim();
+// Event listeners are now set up in setupEventListeners() function, called after DOMContentLoaded
 
-    if (username.length < 2) {
-        alert('Please enter a username (at least 2 characters)');
-        return;
-    }
+// Initialize - ALL event listeners must be inside DOMContentLoaded
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 QuizPVP initializing...');
 
-    // Check if username is taken
-    const taken = await isUsernameTaken(username);
-    if (taken) {
-        alert('This username is already taken. Please choose a different one.');
-        return;
-    }
+    // Load player data first
+    await loadPlayerData();
 
-    playerData.username = username;
+    // Now attach all event listeners (DOM is ready)
+    setupEventListeners();
 
-    // Register username in database
-    await registerUsername(username, playerData.id);
-
-    savePlayerData(); // Save username persistently
-    updatePlayerDisplay();
-    showScreen('menuScreen');
-
-    // Setup player presence and tracking
-    setupPlayerPresence();
-    trackActivePlayerCount();
-    loadFriendsList();
-    loadFriendRequests();
-
-    // Clean up old games periodically
-    cleanupOldGames();
-    setInterval(cleanupOldGames, 60000); // Every minute
-
-    console.log('✅ Player registered:', username);
-    console.log('💾 Username saved to localStorage');
+    console.log('✅ QuizPVP ready!');
 });
 
-document.getElementById('usernameInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        document.getElementById('joinBtn').click();
-    }
-});
+// Setup all event listeners - called after DOM is ready
+function setupEventListeners() {
+    // Join button
+    document.getElementById('joinBtn').addEventListener('click', async () => {
+        const username = document.getElementById('usernameInput').value.trim();
 
-document.getElementById('findMatchBtn').addEventListener('click', () => {
-    findMatch();
-});
-
-document.getElementById('cancelSearchBtn').addEventListener('click', () => {
-    cancelSearch();
-});
-
-document.getElementById('shopBtn').addEventListener('click', () => {
-    showScreen('shopScreen');
-});
-
-document.getElementById('closeShopBtn').addEventListener('click', () => {
-    showScreen('settingsScreen');
-});
-
-document.getElementById('nextBtn').addEventListener('click', () => {
-    nextQuestion();
-});
-
-document.getElementById('answerInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        nextQuestion();
-    }
-});
-
-document.getElementById('playAgainBtn').addEventListener('click', () => {
-    findMatch();
-});
-
-document.getElementById('backToMenuBtn').addEventListener('click', () => {
-    showScreen('menuScreen');
-});
-
-document.getElementById('colorPicker').addEventListener('input', updateColorPreview);
-
-// Hub navigation
-document.getElementById('playBtn').addEventListener('click', () => {
-    showScreen('playScreen');
-});
-
-document.getElementById('socialBtn').addEventListener('click', () => {
-    showScreen('socialScreen');
-    loadFriendsList();
-    loadFriendRequests();
-});
-
-document.getElementById('settingsHubBtn').addEventListener('click', () => {
-    showScreen('settingsScreen');
-});
-
-document.getElementById('backToMenuFromPlay').addEventListener('click', () => {
-    showScreen('menuScreen');
-});
-
-document.getElementById('backToPlayFromMath').addEventListener('click', () => {
-    showScreen('playScreen');
-});
-
-document.getElementById('backToMenuFromSocial').addEventListener('click', () => {
-    showScreen('menuScreen');
-});
-
-// Game type selection
-document.getElementById('mathGameBtn').addEventListener('click', () => {
-    showScreen('mathModeScreen');
-});
-
-document.getElementById('rpsGameBtn').addEventListener('click', () => {
-    alert('Rock Paper Scissors coming soon!');
-});
-
-// Social tabs
-document.getElementById('chatTabBtn').addEventListener('click', () => {
-    document.getElementById('chatTabBtn').classList.add('active');
-    document.getElementById('friendsTabBtn').classList.remove('active');
-    document.getElementById('chatTabContent').style.display = 'block';
-    document.getElementById('friendsTabContent').style.display = 'none';
-});
-
-document.getElementById('friendsTabBtn').addEventListener('click', () => {
-    document.getElementById('friendsTabBtn').classList.add('active');
-    document.getElementById('chatTabBtn').classList.remove('active');
-    document.getElementById('friendsTabContent').style.display = 'block';
-    document.getElementById('chatTabContent').style.display = 'none';
-    loadFriendsList();
-    loadFriendRequests();
-});
-
-document.getElementById('startChatBtn').addEventListener('click', () => {
-    findChatPartner();
-});
-
-// Mode selection (Math modes)
-document.getElementById('mode1v1Btn').addEventListener('click', () => {
-    currentMode = '1v1';
-    document.getElementById('mode1v1Btn').classList.add('active');
-    document.getElementById('mode1v2Btn').classList.remove('active');
-    document.getElementById('mode1v3Btn').classList.remove('active');
-    document.getElementById('modeWhoAmIBtn').classList.remove('active');
-    document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
-    console.log('🎯 Mode switched to: 1v1');
-});
-
-document.getElementById('mode1v2Btn').addEventListener('click', () => {
-    currentMode = '1v2';
-    document.getElementById('mode1v2Btn').classList.add('active');
-    document.getElementById('mode1v1Btn').classList.remove('active');
-    document.getElementById('mode1v3Btn').classList.remove('active');
-    document.getElementById('modeWhoAmIBtn').classList.remove('active');
-    document.getElementById('findMatchBtn').textContent = 'Find Match (1v2)';
-    console.log('🎯 Mode switched to: 1v2');
-});
-
-document.getElementById('mode1v3Btn').addEventListener('click', () => {
-    currentMode = '1v3';
-    document.getElementById('mode1v3Btn').classList.add('active');
-    document.getElementById('mode1v1Btn').classList.remove('active');
-    document.getElementById('mode1v2Btn').classList.remove('active');
-    document.getElementById('modeWhoAmIBtn').classList.remove('active');
-    document.getElementById('findMatchBtn').textContent = 'Find Match (1v3)';
-    console.log('🎯 Mode switched to: 1v3');
-});
-
-document.getElementById('modeWhoAmIBtn').addEventListener('click', () => {
-    currentMode = 'whoami';
-    document.getElementById('modeWhoAmIBtn').classList.add('active');
-    document.getElementById('mode1v1Btn').classList.remove('active');
-    document.getElementById('mode1v2Btn').classList.remove('active');
-    document.getElementById('mode1v3Btn').classList.remove('active');
-    document.getElementById('findMatchBtn').textContent = 'Start Who Am I (Mobile)';
-    console.log('🎯 Mode switched to: Who Am I');
-});
-
-// View Results button
-document.getElementById('viewResultsBtn').addEventListener('click', () => {
-    viewResults();
-});
-
-// Chat event listeners
-document.getElementById('sendMessageBtn').addEventListener('click', () => {
-    sendChatMessage();
-});
-
-document.getElementById('chatInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendChatMessage();
-    }
-});
-
-document.getElementById('skipChatBtn').addEventListener('click', () => {
-    skipChatPartner();
-});
-
-document.getElementById('leaveChatBtn').addEventListener('click', () => {
-    if (confirm('Leave chat and return to menu?')) {
-        leaveChat();
-    }
-});
-
-document.getElementById('addFriendBtn').addEventListener('click', () => {
-    sendFriendRequest();
-});
-
-// Friend system event listeners
-document.getElementById('friendsBtn').addEventListener('click', () => {
-    showScreen('friendsScreen');
-    loadFriendsList();
-    loadFriendRequests();
-});
-
-document.getElementById('closeFriendsBtn').addEventListener('click', () => {
-    showScreen('menuScreen');
-});
-
-document.getElementById('friendsListTab').addEventListener('click', () => {
-    document.getElementById('friendsListTab').classList.add('active');
-    document.getElementById('friendRequestsTab').classList.remove('active');
-    document.getElementById('friendsListContent').style.display = 'block';
-    document.getElementById('friendRequestsContent').style.display = 'none';
-});
-
-document.getElementById('friendRequestsTab').addEventListener('click', () => {
-    document.getElementById('friendRequestsTab').classList.add('active');
-    document.getElementById('friendsListTab').classList.remove('active');
-    document.getElementById('friendRequestsContent').style.display = 'block';
-    document.getElementById('friendsListContent').style.display = 'none';
-});
-
-document.getElementById('sendFriendMessageBtn').addEventListener('click', () => {
-    sendFriendMessage();
-});
-
-document.getElementById('friendChatInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendFriendMessage();
-    }
-});
-
-document.getElementById('leaveFriendChatBtn').addEventListener('click', () => {
-    showScreen('friendsScreen');
-});
-
-document.getElementById('inviteFriendToGameBtn').addEventListener('click', () => {
-    inviteFriendToGame();
-});
-
-// Settings event listeners
-document.getElementById('settingsBtn').addEventListener('click', () => {
-    showScreen('settingsScreen');
-});
-
-document.getElementById('closeSettingsBtn').addEventListener('click', () => {
-    showScreen('menuScreen');
-});
-
-// Refresh button - forces hard reload to get updates
-document.getElementById('refreshBtn').addEventListener('click', () => {
-    console.log('🔄 Refreshing app...');
-
-    // Show visual feedback
-    const btn = document.getElementById('refreshBtn');
-    btn.style.transform = 'rotate(360deg)';
-
-    // Hard refresh after animation
-    setTimeout(() => {
-        // Clear cache and reload
-        if ('caches' in window) {
-            caches.keys().then(names => {
-                names.forEach(name => caches.delete(name));
-            });
+        if (username.length < 2) {
+            alert('Please enter a username (at least 2 characters)');
+            return;
         }
 
-        // Force reload from server (bypass cache)
-        window.location.reload(true);
-    }, 300);
-});
+        // Check if username is taken
+        const taken = await isUsernameTaken(username);
+        if (taken) {
+            alert('This username is already taken. Please choose a different one.');
+            return;
+        }
 
-// Initialize
-loadPlayerData();
+        playerData.username = username;
+
+        // Register username in database
+        await registerUsername(username, playerData.id);
+
+        savePlayerData(); // Save username persistently
+        updatePlayerDisplay();
+        showScreen('menuScreen');
+
+        // Setup player presence and tracking
+        setupPlayerPresence();
+        trackActivePlayerCount();
+        loadFriendsList();
+        loadFriendRequests();
+
+        // Clean up old games periodically
+        cleanupOldGames();
+        setInterval(cleanupOldGames, 60000); // Every minute
+
+        console.log('✅ Player registered:', username);
+        console.log('💾 Username saved to localStorage');
+    });
+
+    document.getElementById('usernameInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('joinBtn').click();
+        }
+    });
+
+    document.getElementById('findMatchBtn').addEventListener('click', () => {
+        findMatch();
+    });
+
+    document.getElementById('cancelSearchBtn').addEventListener('click', () => {
+        cancelSearch();
+    });
+
+    document.getElementById('shopBtn').addEventListener('click', () => {
+        showScreen('shopScreen');
+    });
+
+    document.getElementById('closeShopBtn').addEventListener('click', () => {
+        showScreen('settingsScreen');
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        nextQuestion();
+    });
+
+    document.getElementById('answerInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            nextQuestion();
+        }
+    });
+
+    document.getElementById('playAgainBtn').addEventListener('click', () => {
+        findMatch();
+    });
+
+    document.getElementById('backToMenuBtn').addEventListener('click', () => {
+        showScreen('menuScreen');
+    });
+
+    document.getElementById('colorPicker').addEventListener('input', updateColorPreview);
+
+    // Hub navigation
+    document.getElementById('playBtn').addEventListener('click', () => {
+        showScreen('playScreen');
+    });
+
+    document.getElementById('socialBtn').addEventListener('click', () => {
+        showScreen('socialScreen');
+        loadFriendsList();
+        loadFriendRequests();
+    });
+
+    document.getElementById('settingsHubBtn').addEventListener('click', () => {
+        showScreen('settingsScreen');
+    });
+
+    document.getElementById('backToMenuFromPlay').addEventListener('click', () => {
+        showScreen('menuScreen');
+    });
+
+    document.getElementById('backToPlayFromMath').addEventListener('click', () => {
+        showScreen('playScreen');
+    });
+
+    document.getElementById('backToMenuFromSocial').addEventListener('click', () => {
+        showScreen('menuScreen');
+    });
+
+    // Game type selection
+    document.getElementById('mathGameBtn').addEventListener('click', () => {
+        showScreen('mathModeScreen');
+    });
+
+    document.getElementById('rpsGameBtn').addEventListener('click', () => {
+        alert('Rock Paper Scissors coming soon!');
+    });
+
+    // Social tabs
+    document.getElementById('chatTabBtn').addEventListener('click', () => {
+        document.getElementById('chatTabBtn').classList.add('active');
+        document.getElementById('friendsTabBtn').classList.remove('active');
+        document.getElementById('chatTabContent').style.display = 'block';
+        document.getElementById('friendsTabContent').style.display = 'none';
+    });
+
+    document.getElementById('friendsTabBtn').addEventListener('click', () => {
+        document.getElementById('friendsTabBtn').classList.add('active');
+        document.getElementById('chatTabBtn').classList.remove('active');
+        document.getElementById('friendsTabContent').style.display = 'block';
+        document.getElementById('chatTabContent').style.display = 'none';
+        loadFriendsList();
+        loadFriendRequests();
+    });
+
+    document.getElementById('startChatBtn').addEventListener('click', () => {
+        findChatPartner();
+    });
+
+    // Mode selection (Math modes)
+    document.getElementById('mode1v1Btn').addEventListener('click', () => {
+        currentMode = '1v1';
+        document.getElementById('mode1v1Btn').classList.add('active');
+        document.getElementById('mode1v2Btn').classList.remove('active');
+        document.getElementById('mode1v3Btn').classList.remove('active');
+        document.getElementById('modeWhoAmIBtn').classList.remove('active');
+        document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
+        console.log('🎯 Mode switched to: 1v1');
+    });
+
+    document.getElementById('mode1v2Btn').addEventListener('click', () => {
+        currentMode = '1v2';
+        document.getElementById('mode1v2Btn').classList.add('active');
+        document.getElementById('mode1v1Btn').classList.remove('active');
+        document.getElementById('mode1v3Btn').classList.remove('active');
+        document.getElementById('modeWhoAmIBtn').classList.remove('active');
+        document.getElementById('findMatchBtn').textContent = 'Find Match (1v2)';
+        console.log('🎯 Mode switched to: 1v2');
+    });
+
+    document.getElementById('mode1v3Btn').addEventListener('click', () => {
+        currentMode = '1v3';
+        document.getElementById('mode1v3Btn').classList.add('active');
+        document.getElementById('mode1v1Btn').classList.remove('active');
+        document.getElementById('mode1v2Btn').classList.remove('active');
+        document.getElementById('modeWhoAmIBtn').classList.remove('active');
+        document.getElementById('findMatchBtn').textContent = 'Find Match (1v3)';
+        console.log('🎯 Mode switched to: 1v3');
+    });
+
+    document.getElementById('modeWhoAmIBtn').addEventListener('click', () => {
+        currentMode = 'whoami';
+        document.getElementById('modeWhoAmIBtn').classList.add('active');
+        document.getElementById('mode1v1Btn').classList.remove('active');
+        document.getElementById('mode1v2Btn').classList.remove('active');
+        document.getElementById('mode1v3Btn').classList.remove('active');
+        document.getElementById('findMatchBtn').textContent = 'Start Who Am I (Mobile)';
+        console.log('🎯 Mode switched to: Who Am I');
+    });
+
+    // View Results button
+    document.getElementById('viewResultsBtn').addEventListener('click', () => {
+        viewResults();
+    });
+
+    // Chat event listeners
+    document.getElementById('sendMessageBtn').addEventListener('click', () => {
+        sendChatMessage();
+    });
+
+    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendChatMessage();
+        }
+    });
+
+    document.getElementById('skipChatBtn').addEventListener('click', () => {
+        skipChatPartner();
+    });
+
+    document.getElementById('leaveChatBtn').addEventListener('click', () => {
+        if (confirm('Leave chat and return to menu?')) {
+            leaveChat();
+        }
+    });
+
+    document.getElementById('addFriendBtn').addEventListener('click', () => {
+        sendFriendRequest();
+    });
+
+    // Friend system event listeners
+    document.getElementById('friendsBtn').addEventListener('click', () => {
+        showScreen('friendsScreen');
+        loadFriendsList();
+        loadFriendRequests();
+    });
+
+    document.getElementById('closeFriendsBtn').addEventListener('click', () => {
+        showScreen('menuScreen');
+    });
+
+    document.getElementById('friendsListTab').addEventListener('click', () => {
+        document.getElementById('friendsListTab').classList.add('active');
+        document.getElementById('friendRequestsTab').classList.remove('active');
+        document.getElementById('friendsListContent').style.display = 'block';
+        document.getElementById('friendRequestsContent').style.display = 'none';
+    });
+
+    document.getElementById('friendRequestsTab').addEventListener('click', () => {
+        document.getElementById('friendRequestsTab').classList.add('active');
+        document.getElementById('friendsListTab').classList.remove('active');
+        document.getElementById('friendRequestsContent').style.display = 'block';
+        document.getElementById('friendsListContent').style.display = 'none';
+    });
+
+    document.getElementById('sendFriendMessageBtn').addEventListener('click', () => {
+        sendFriendMessage();
+    });
+
+    document.getElementById('friendChatInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendFriendMessage();
+        }
+    });
+
+    document.getElementById('leaveFriendChatBtn').addEventListener('click', () => {
+        showScreen('friendsScreen');
+    });
+
+    document.getElementById('inviteFriendToGameBtn').addEventListener('click', () => {
+        inviteFriendToGame();
+    });
+
+    // Settings event listeners
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+        showScreen('settingsScreen');
+    });
+
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+        showScreen('menuScreen');
+    });
+
+    // Refresh button - forces hard reload to get updates
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        console.log('🔄 Refreshing app...');
+
+        // Show visual feedback
+        const btn = document.getElementById('refreshBtn');
+        btn.style.transform = 'rotate(360deg)';
+
+        // Hard refresh after animation
+        setTimeout(() => {
+            // Clear cache and reload
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name));
+                });
+            }
+
+            // Force reload from server (bypass cache)
+            window.location.reload(true);
+        }, 300);
+    });
+
+    console.log('🎯 All event listeners attached successfully');
+}
