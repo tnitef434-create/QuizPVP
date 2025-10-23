@@ -10,7 +10,7 @@
     <div class="background-pattern"></div>
 
     <!-- Version Badge -->
-    <div class="version-badge">v2.4.1</div>
+    <div class="version-badge">v2.5.0</div>
 
     <!-- Refresh Button -->
     <button id="refreshBtn" class="refresh-btn" title="Refresh for updates">
@@ -81,6 +81,11 @@
                         <span class="mode-icon">📱</span>
                         <span class="mode-title">Who Am I</span>
                         <span class="mode-desc">Mobile tilt game (4 players)</span>
+                    </button>
+                    <button id="modeChatBtn" class="mode-btn">
+                        <span class="mode-icon">💬</span>
+                        <span class="mode-title">Chat</span>
+                        <span class="mode-desc">Chat with random players</span>
                     </button>
                 </div>
             </div>
@@ -201,6 +206,35 @@
             <div class="whoami-turn-info">
                 <div id="whoamiPlayerTurn">Your Turn!</div>
                 <div id="whoamiProgress">Word <span id="whoamiWordNum">1</span>/10</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chatScreen" class="screen">
+        <div class="container">
+            <div class="chat-header">
+                <div class="chat-partner-info">
+                    <div class="player-avatar" id="chatPartnerAvatar"></div>
+                    <div>
+                        <div class="player-name" id="chatPartnerName">Finding partner...</div>
+                        <div class="chat-status" id="chatStatus">Connecting...</div>
+                    </div>
+                </div>
+                <button id="skipChatBtn" class="btn btn-secondary btn-small">Skip</button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-welcome">Say hello!</div>
+            </div>
+
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" placeholder="Type a message..." maxlength="200" autocomplete="off">
+                <button id="sendMessageBtn" class="btn btn-primary">Send</button>
+            </div>
+
+            <div class="chat-actions">
+                <button id="leaveChatBtn" class="btn btn-secondary">Leave Chat</button>
             </div>
         </div>
     </div>

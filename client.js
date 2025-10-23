@@ -67,7 +67,8 @@ let currentGame = {
     opponentColor: '',
     opponentUsername: '',
     mode: '1v1', // '1v1' or 'squad'
-    players: [] // For squad mode
+    players: [], // For squad mode
+    gameStartedAt: 0 // Server timestamp when game started
 };
 
 let gameListener = null;
@@ -86,6 +87,17 @@ let whoAmIWrong = 0;
 let whoAmITimer = null;
 let orientationListener = null;
 let isMobile = false;
+
+// ===== CHAT MODE VARIABLES =====
+let currentChatSession = {
+    chatId: '',
+    partnerId: '',
+    partnerUsername: '',
+    partnerColor: ''
+};
+let chatListener = null;
+let chatSearchListener = null;
+
 // ===== PLAYER PRESENCE & ACTIVE COUNT SYSTEM =====
 
 // Setup player presence tracking
@@ -342,6 +354,12 @@ async function findMatch() {
         return;
     }
 
+    // Handle Chat mode
+    if (currentMode === 'chat') {
+        await findChatPartner();
+        return;
+    }
+
     showScreen('searchingScreen');
 
     // Route to correct matchmaking based on mode
@@ -414,7 +432,9 @@ async function find1v1Match() {
                     finished: false
                 },
                 questions: questions,
-                createdAt: Date.now()
+                createdAt: Date.now(),
+                gameStartedAt: firebase.database.ServerValue.TIMESTAMP,
+                timeExpired: false
             };
 
             console.log('🎮 Creating game:', gameId);
@@ -518,7 +538,9 @@ async function findTriosMatch() {
                     finished: false
                 })),
                 questions: questions,
-                createdAt: Date.now()
+                createdAt: Date.now(),
+                gameStartedAt: firebase.database.ServerValue.TIMESTAMP,
+                timeExpired: false
             };
 
             console.log('🎮 Creating trios game:', gameId);
@@ -624,7 +646,9 @@ async function findSquadMatch() {
                     finished: false
                 })),
                 questions: questions,
-                createdAt: Date.now()
+                createdAt: Date.now(),
+                gameStartedAt: firebase.database.ServerValue.TIMESTAMP,
+                timeExpired: false
             };
 
             console.log('🎮 Creating squad game:', gameId);
@@ -705,6 +729,7 @@ function startGame(gameId, gameData) {
     currentGame.answers = [];
     currentGame.currentQuestionIndex = 0;
     currentGame.mode = '1v1';
+    currentGame.gameStartedAt = gameData.gameStartedAt || Date.now();
 
     // Determine which player we are
     const isPlayer1 = gameData.player1.id === playerData.id;
@@ -732,10 +757,18 @@ function startGame(gameId, gameData) {
     // Start the game timer
     startGameTimer();
 
-    // Listen for game updates
+    // Listen for game updates (including timeExpired flag)
     gameListener = database.ref(`games/${gameId}`).on('value', (snapshot) => {
         const game = snapshot.val();
         if (game) {
+            // Check if time expired and force finish all players
+            if (game.timeExpired && !game.player1.finished && game.player1.id === playerData.id) {
+                console.log('⏰ Time expired detected! Auto-submitting...');
+                handleTimeUp();
+            } else if (game.timeExpired && !game.player2.finished && game.player2.id === playerData.id) {
+                console.log('⏰ Time expired detected! Auto-submitting...');
+                handleTimeUp();
+            }
             checkGameEnd(game);
         }
     });
@@ -749,6 +782,7 @@ function startTriosGame(gameId, gameData) {
     currentGame.currentQuestionIndex = 0;
     currentGame.mode = 'trios';
     currentGame.players = gameData.players;
+    currentGame.gameStartedAt = gameData.gameStartedAt || Date.now();
 
     showScreen('gameScreen');
 
@@ -773,10 +807,16 @@ function startTriosGame(gameId, gameData) {
     // Start the game timer
     startGameTimer();
 
-    // Listen for trios game updates
+    // Listen for trios game updates (including timeExpired flag)
     gameListener = database.ref(`games_trios/${gameId}`).on('value', (snapshot) => {
         const game = snapshot.val();
         if (game) {
+            // Check if time expired and force finish
+            const myPlayer = game.players.find(p => p.id === playerData.id);
+            if (game.timeExpired && myPlayer && !myPlayer.finished) {
+                console.log('⏰ Time expired detected! Auto-submitting...');
+                handleTimeUp();
+            }
             checkTriosGameEnd(game);
         }
     });
@@ -790,6 +830,7 @@ function startSquadGame(gameId, gameData) {
     currentGame.currentQuestionIndex = 0;
     currentGame.mode = 'squad';
     currentGame.players = gameData.players;
+    currentGame.gameStartedAt = gameData.gameStartedAt || Date.now();
 
     showScreen('gameScreen');
 
@@ -814,10 +855,16 @@ function startSquadGame(gameId, gameData) {
     // Start the game timer
     startGameTimer();
 
-    // Listen for squad game updates
+    // Listen for squad game updates (including timeExpired flag)
     gameListener = database.ref(`games_squad/${gameId}`).on('value', (snapshot) => {
         const game = snapshot.val();
         if (game) {
+            // Check if time expired and force finish
+            const myPlayer = game.players.find(p => p.id === playerData.id);
+            if (game.timeExpired && myPlayer && !myPlayer.finished) {
+                console.log('⏰ Time expired detected! Auto-submitting...');
+                handleTimeUp();
+            }
             checkSquadGameEnd(game);
         }
     });
@@ -880,8 +927,27 @@ function updateTimerDisplay() {
 }
 
 // Handle when time runs out
-function handleTimeUp() {
+async function handleTimeUp() {
     console.log('⏰ Time is up! Auto-submitting...');
+
+    // Set timeExpired flag in database (only if not already set)
+    try {
+        const gameRef = currentGame.mode === 'squad'
+            ? database.ref(`games_squad/${currentGame.gameId}`)
+            : currentGame.mode === 'trios'
+            ? database.ref(`games_trios/${currentGame.gameId}`)
+            : database.ref(`games/${currentGame.gameId}`);
+
+        // Use transaction to ensure only one client sets this
+        await gameRef.child('timeExpired').transaction((current) => {
+            if (current === null || current === false) {
+                return true;
+            }
+            return current; // Already set, don't change
+        });
+    } catch (error) {
+        console.warn('⚠️ Could not set timeExpired flag:', error);
+    }
 
     // Fill remaining answers with empty strings (will be marked as incorrect)
     while (currentGame.answers.length < currentGame.questions.length) {
@@ -1550,6 +1616,235 @@ function endWhoAmIGame() {
     showScreen('menuScreen');
 }
 
+// ===== CHAT MODE FUNCTIONS =====
+
+// Find chat partner
+async function findChatPartner() {
+    try {
+        showScreen('searchingScreen');
+        document.querySelector('.searching-animation h2').textContent = 'Finding Chat Partner...';
+        document.querySelector('.searching-text').textContent = 'Matching you with someone to chat';
+
+        const waitingRef = database.ref('waiting_chat');
+        const snapshot = await waitingRef.once('value');
+        const waiting = snapshot.val() || {};
+
+        // Clean up stale entries
+        const now = Date.now();
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 30000) {
+                waitingRef.child(key).remove();
+            }
+        });
+
+        // Check for available chat partner
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePartners = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
+
+        if (availablePartners.length > 0) {
+            // Partner found!
+            const [partnerId, partnerData] = availablePartners[0];
+            console.log('✅ Chat partner found:', partnerData.username);
+
+            // Remove partner from waiting
+            await waitingRef.child(partnerId).remove();
+            await waitingRef.child(playerData.id).remove();
+
+            // Create chat session
+            const chatId = generateId();
+            const chatData = {
+                id: chatId,
+                user1: {
+                    id: playerData.id,
+                    username: playerData.username,
+                    color: playerData.color
+                },
+                user2: {
+                    id: partnerId,
+                    username: partnerData.username,
+                    color: partnerData.color
+                },
+                messages: [],
+                createdAt: Date.now(),
+                active: true
+            };
+
+            await database.ref(`chats/${chatId}`).set(chatData);
+            startChatSession(chatId, chatData);
+        } else {
+            // Add self to waiting
+            console.log('⏳ Waiting for chat partner...');
+            await waitingRef.child(playerData.id).set({
+                username: playerData.username,
+                color: playerData.color,
+                timestamp: Date.now()
+            });
+
+            // Listen for chat creation
+            chatSearchListener = database.ref('chats').on('child_added', (snapshot) => {
+                const chat = snapshot.val();
+                if (chat && (chat.user1.id === playerData.id || chat.user2.id === playerData.id)) {
+                    console.log('✅ Joined chat!');
+                    if (chatSearchListener) {
+                        database.ref('chats').off('child_added', chatSearchListener);
+                        chatSearchListener = null;
+                    }
+                    database.ref(`waiting_chat/${playerData.id}`).remove();
+                    startChatSession(chat.id, chat);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ Chat matching error:', error);
+        alert('Failed to find chat partner: ' + error.message);
+        showScreen('menuScreen');
+    }
+}
+
+// Start chat session
+function startChatSession(chatId, chatData) {
+    currentChatSession.chatId = chatId;
+
+    const isUser1 = chatData.user1.id === playerData.id;
+    const partner = isUser1 ? chatData.user2 : chatData.user1;
+
+    currentChatSession.partnerId = partner.id;
+    currentChatSession.partnerUsername = partner.username;
+    currentChatSession.partnerColor = partner.color;
+
+    showScreen('chatScreen');
+
+    // Update partner display
+    document.getElementById('chatPartnerName').textContent = partner.username;
+    document.getElementById('chatStatus').textContent = 'Online';
+
+    const partnerAvatar = document.getElementById('chatPartnerAvatar');
+    applyAvatarStyle(partnerAvatar, partner.color);
+
+    // Clear messages
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.innerHTML = '<div class="chat-welcome">Say hello to ' + partner.username + '!</div>';
+
+    // Focus on input
+    document.getElementById('chatInput').value = '';
+    document.getElementById('chatInput').focus();
+
+    // Listen for new messages
+    chatListener = database.ref(`chats/${chatId}/messages`).on('child_added', (snapshot) => {
+        const message = snapshot.val();
+        if (message) {
+            displayChatMessage(message);
+        }
+    });
+
+    // Listen for partner leaving
+    database.ref(`chats/${chatId}/active`).on('value', (snapshot) => {
+        if (snapshot.val() === false) {
+            handlePartnerLeft();
+        }
+    });
+}
+
+// Display chat message
+function displayChatMessage(message) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+
+    const isMe = message.senderId === playerData.id;
+    messageDiv.className = `chat-message ${isMe ? 'mine' : 'theirs'}`;
+
+    messageDiv.innerHTML = `
+        <div class="message-sender">${isMe ? 'You' : currentChatSession.partnerUsername}</div>
+        <div class="message-text">${escapeHtml(message.text)}</div>
+        <div class="message-time">${formatTime(message.timestamp)}</div>
+    `;
+
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Send chat message
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+
+    if (!text) return;
+
+    const message = {
+        senderId: playerData.id,
+        senderUsername: playerData.username,
+        text: text,
+        timestamp: Date.now()
+    };
+
+    try {
+        await database.ref(`chats/${currentChatSession.chatId}/messages`).push(message);
+        input.value = '';
+        input.focus();
+    } catch (error) {
+        console.error('❌ Failed to send message:', error);
+        alert('Failed to send message');
+    }
+}
+
+// Skip to next chat partner
+async function skipChatPartner() {
+    if (confirm('Skip to next chat partner?')) {
+        await leaveChat(true);
+        findChatPartner();
+    }
+}
+
+// Leave chat
+async function leaveChat(skipping = false) {
+    // Clean up listeners
+    if (chatListener) {
+        database.ref(`chats/${currentChatSession.chatId}/messages`).off('child_added', chatListener);
+        chatListener = null;
+    }
+
+    // Mark chat as inactive
+    try {
+        await database.ref(`chats/${currentChatSession.chatId}/active`).set(false);
+    } catch (error) {
+        console.warn('⚠️ Could not mark chat inactive:', error);
+    }
+
+    // Reset session
+    currentChatSession = {
+        chatId: '',
+        partnerId: '',
+        partnerUsername: '',
+        partnerColor: ''
+    };
+
+    if (!skipping) {
+        showScreen('menuScreen');
+    }
+}
+
+// Handle partner left
+function handlePartnerLeft() {
+    alert('Your chat partner has left the conversation.');
+    leaveChat();
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Format timestamp
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
 // Event listeners
 document.getElementById('joinBtn').addEventListener('click', () => {
     const username = document.getElementById('usernameInput').value.trim();
@@ -1625,6 +1920,7 @@ document.getElementById('mode1v1Btn').addEventListener('click', () => {
     document.getElementById('modeTriosBtn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
     document.getElementById('modeWhoAmIBtn').classList.remove('active');
+    document.getElementById('modeChatBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
     console.log('🎯 Mode switched to: 1v1');
 });
@@ -1635,6 +1931,7 @@ document.getElementById('modeTriosBtn').addEventListener('click', () => {
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
     document.getElementById('modeWhoAmIBtn').classList.remove('active');
+    document.getElementById('modeChatBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Trios (3 players)';
     console.log('🎯 Mode switched to: Trios');
 });
@@ -1645,6 +1942,7 @@ document.getElementById('modeSquadBtn').addEventListener('click', () => {
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('modeTriosBtn').classList.remove('active');
     document.getElementById('modeWhoAmIBtn').classList.remove('active');
+    document.getElementById('modeChatBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Squad (4 players)';
     console.log('🎯 Mode switched to: Squad');
 });
@@ -1655,8 +1953,41 @@ document.getElementById('modeWhoAmIBtn').addEventListener('click', () => {
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('modeTriosBtn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('modeChatBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Start Who Am I (Mobile)';
     console.log('🎯 Mode switched to: Who Am I');
+});
+
+document.getElementById('modeChatBtn').addEventListener('click', () => {
+    currentMode = 'chat';
+    document.getElementById('modeChatBtn').classList.add('active');
+    document.getElementById('mode1v1Btn').classList.remove('active');
+    document.getElementById('modeTriosBtn').classList.remove('active');
+    document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('modeWhoAmIBtn').classList.remove('active');
+    document.getElementById('findMatchBtn').textContent = 'Start Chat';
+    console.log('🎯 Mode switched to: Chat');
+});
+
+// Chat event listeners
+document.getElementById('sendMessageBtn').addEventListener('click', () => {
+    sendChatMessage();
+});
+
+document.getElementById('chatInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendChatMessage();
+    }
+});
+
+document.getElementById('skipChatBtn').addEventListener('click', () => {
+    skipChatPartner();
+});
+
+document.getElementById('leaveChatBtn').addEventListener('click', () => {
+    if (confirm('Leave chat and return to menu?')) {
+        leaveChat();
+    }
 });
 
 // Refresh button - forces hard reload to get updates
