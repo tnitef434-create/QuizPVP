@@ -10,7 +10,7 @@
     <div class="background-pattern"></div>
 
     <!-- Version Badge -->
-    <div class="version-badge">v2.3.0</div>
+    <div class="version-badge">v2.4.0</div>
 
     <!-- Username Entry Screen -->
     <div id="usernameScreen" class="screen active">
@@ -71,6 +71,11 @@
                         <span class="mode-icon">👥</span>
                         <span class="mode-title">Squad</span>
                         <span class="mode-desc">4 players compete</span>
+                    </button>
+                    <button id="modeWhoAmIBtn" class="mode-btn mobile-only">
+                        <span class="mode-icon">📱</span>
+                        <span class="mode-title">Who Am I</span>
+                        <span class="mode-desc">Mobile tilt game (4 players)</span>
                     </button>
                 </div>
             </div>
@@ -154,6 +159,43 @@
                     <button id="playAgainBtn" class="btn btn-primary">Play Again</button>
                     <button id="backToMenuBtn" class="btn btn-secondary">Back to Menu</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Who Am I Game Screen -->
+    <div id="whoAmIScreen" class="screen">
+        <div class="container landscape-game">
+            <div class="whoami-header">
+                <div class="whoami-timer" id="whoamiTimer">1:00</div>
+                <div class="whoami-score">
+                    <span id="whoamiCorrect">0</span> ✓ / <span id="whoamiWrong">0</span> ✗
+                </div>
+            </div>
+
+            <div class="whoami-word-card">
+                <div class="whoami-word" id="whoamiWord">Loading...</div>
+                <div class="whoami-instructions">
+                    <div class="tilt-instruction">
+                        <span class="arrow up">↑</span>
+                        <span>Tilt UP for Correct</span>
+                    </div>
+                    <div class="tilt-instruction">
+                        <span class="arrow down">↓</span>
+                        <span>Tilt DOWN for Wrong/Skip</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="whoami-orientation-warning" id="orientationWarning">
+                <div class="warning-icon">📱</div>
+                <h3>Please rotate your device</h3>
+                <p>This game requires landscape mode</p>
+            </div>
+
+            <div class="whoami-turn-info">
+                <div id="whoamiPlayerTurn">Your Turn!</div>
+                <div id="whoamiProgress">Word <span id="whoamiWordNum">1</span>/10</div>
             </div>
         </div>
     </div>

@@ -77,6 +77,15 @@ let currentMode = '1v1'; // Default mode
 
 let gameTimer = null;
 let timeRemaining = 80; // 1 minute 20 seconds
+
+// ===== WHO AM I GAME VARIABLES =====
+let whoAmIWords = [];
+let whoAmICurrentWordIndex = 0;
+let whoAmICorrect = 0;
+let whoAmIWrong = 0;
+let whoAmITimer = null;
+let orientationListener = null;
+let isMobile = false;
 // ===== PLAYER PRESENCE & ACTIVE COUNT SYSTEM =====
 
 // Setup player presence tracking
@@ -207,6 +216,21 @@ function generateQuiz() {
     return questions;
 }
 
+// ===== WHO AM I WORD BANK =====
+const whoAmIWordBank = [
+    'DOG', 'CAT', 'PIZZA', 'BATMAN', 'DOCTOR', 'TEACHER', 'SINGER', 'SOCCER', 'NINJA', 'PIRATE',
+    'ASTRONAUT', 'CHEF', 'PILOT', 'MUSICIAN', 'DANCER', 'ACTOR', 'PRESIDENT', 'SUPERHERO', 'ROBOT', 'ZOMBIE',
+    'VAMPIRE', 'WIZARD', 'PRINCESS', 'KING', 'QUEEN', 'KNIGHT', 'DRAGON', 'UNICORN', 'MERMAID', 'ALIEN',
+    'COWBOY', 'DETECTIVE', 'SPY', 'ATHLETE', 'FIREFIGHTER', 'POLICE', 'SOLDIER', 'NURSE', 'SCIENTIST', 'ARTIST',
+    'PHOTOGRAPHER', 'WRITER', 'MAGICIAN', 'CLOWN', 'FARMER', 'CARPENTER', 'MECHANIC', 'BARBER', 'FISHERMAN', 'HUNTER'
+];
+
+// Generate Who Am I words
+function generateWhoAmIWords() {
+    const shuffled = [...whoAmIWordBank].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 10);
+}
+
 // Screen management
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(screen => {
@@ -309,6 +333,12 @@ async function findMatch() {
         alert('⚠️ Firebase is not connected!\n\nPlease check:\n1. You updated the Firebase config in client.js\n2. Your Firebase Realtime Database is enabled\n3. Database rules are set to allow read/write\n\nOpen browser console (F12) for more details.');
         console.error('❌ Firebase not ready. Cannot start matchmaking.');
         showScreen('menuScreen');
+        return;
+    }
+
+    // Handle Who Am I mode separately (no matchmaking needed)
+    if (currentMode === 'whoami') {
+        startWhoAmIGame();
         return;
     }
 
@@ -1353,6 +1383,173 @@ function cancelSearch() {
     showScreen('menuScreen');
 }
 
+// ===== WHO AM I GAME FUNCTIONS =====
+
+// Detect if device is mobile
+function detectMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+}
+
+// Request device orientation permission (iOS 13+)
+async function requestOrientationPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            return permission === 'granted';
+        } catch (error) {
+            console.error('Error requesting orientation permission:', error);
+            return false;
+        }
+    }
+    return true; // No permission needed on Android
+}
+
+// Start Who Am I game
+async function startWhoAmIGame() {
+    if (!detectMobile()) {
+        alert('📱 Who Am I mode is only available on mobile devices!');
+        showScreen('menuScreen');
+        return;
+    }
+
+    // Request orientation permission
+    const hasPermission = await requestOrientationPermission();
+    if (!hasPermission) {
+        alert('Please allow device orientation access to play this mode.');
+        showScreen('menuScreen');
+        return;
+    }
+
+    // Initialize game
+    whoAmIWords = generateWhoAmIWords();
+    whoAmICurrentWordIndex = 0;
+    whoAmICorrect = 0;
+    whoAmIWrong = 0;
+
+    showScreen('whoAmIScreen');
+    updateWhoAmIDisplay();
+    startWhoAmITimer();
+    setupOrientationListener();
+}
+
+// Update Who Am I display
+function updateWhoAmIDisplay() {
+    if (whoAmICurrentWordIndex < whoAmIWords.length) {
+        document.getElementById('whoamiWord').textContent = whoAmIWords[whoAmICurrentWordIndex];
+        document.getElementById('whoamiWordNum').textContent = whoAmICurrentWordIndex + 1;
+    } else {
+        endWhoAmIGame();
+    }
+
+    document.getElementById('whoamiCorrect').textContent = whoAmICorrect;
+    document.getElementById('whoamiWrong').textContent = whoAmIWrong;
+}
+
+// Start Who Am I timer (60 seconds)
+function startWhoAmITimer() {
+    timeRemaining = 60;
+    updateWhoAmITimerDisplay();
+
+    if (whoAmITimer) {
+        clearInterval(whoAmITimer);
+    }
+
+    whoAmITimer = setInterval(() => {
+        timeRemaining--;
+        updateWhoAmITimerDisplay();
+
+        if (timeRemaining <= 0) {
+            clearInterval(whoAmITimer);
+            endWhoAmIGame();
+        }
+    }, 1000);
+}
+
+// Update Who Am I timer display
+function updateWhoAmITimerDisplay() {
+    const timerElement = document.getElementById('whoamiTimer');
+    if (!timerElement) return;
+
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    const secondsStr = seconds < 10 ? '0' + seconds : seconds;
+    timerElement.textContent = minutes + ':' + secondsStr;
+}
+
+// Setup orientation listener
+function setupOrientationListener() {
+    let lastTilt = 0;
+    const tiltThreshold = 30; // Degrees to trigger
+
+    orientationListener = (event) => {
+        const beta = event.beta; // Front-to-back tilt (-180 to 180)
+
+        // Tilt UP (phone tilted back) = Correct
+        if (beta < -tiltThreshold && lastTilt >= -tiltThreshold) {
+            handleWhoAmICorrect();
+        }
+        // Tilt DOWN (phone tilted forward) = Wrong/Skip
+        else if (beta > tiltThreshold && lastTilt <= tiltThreshold) {
+            handleWhoAmIWrong();
+        }
+
+        lastTilt = beta;
+    };
+
+    window.addEventListener('deviceorientation', orientationListener);
+}
+
+// Handle correct answer
+function handleWhoAmICorrect() {
+    whoAmICorrect++;
+    whoAmICurrentWordIndex++;
+
+    // Vibrate for feedback (if supported)
+    if (navigator.vibrate) {
+        navigator.vibrate(100);
+    }
+
+    updateWhoAmIDisplay();
+}
+
+// Handle wrong/skip answer
+function handleWhoAmIWrong() {
+    whoAmIWrong++;
+    whoAmICurrentWordIndex++;
+
+    // Vibrate for feedback (if supported)
+    if (navigator.vibrate) {
+        navigator.vibrate([50, 50, 50]);
+    }
+
+    updateWhoAmIDisplay();
+}
+
+// End Who Am I game
+function endWhoAmIGame() {
+    // Stop timer
+    if (whoAmITimer) {
+        clearInterval(whoAmITimer);
+    }
+
+    // Remove orientation listener
+    if (orientationListener) {
+        window.removeEventListener('deviceorientation', orientationListener);
+        orientationListener = null;
+    }
+
+    // Show results
+    alert(`Game Over!\n\nCorrect: ${whoAmICorrect}\nWrong/Skipped: ${whoAmIWrong}\n\nScore: ${whoAmICorrect * 10} points`);
+
+    // Award points
+    playerData.points += whoAmICorrect * 10;
+    savePlayerData();
+    updatePlayerDisplay();
+
+    showScreen('menuScreen');
+}
+
 // Event listeners
 document.getElementById('joinBtn').addEventListener('click', () => {
     const username = document.getElementById('usernameInput').value.trim();
@@ -1427,6 +1624,7 @@ document.getElementById('mode1v1Btn').addEventListener('click', () => {
     document.getElementById('mode1v1Btn').classList.add('active');
     document.getElementById('modeTriosBtn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('modeWhoAmIBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
     console.log('🎯 Mode switched to: 1v1');
 });
@@ -1436,6 +1634,7 @@ document.getElementById('modeTriosBtn').addEventListener('click', () => {
     document.getElementById('modeTriosBtn').classList.add('active');
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('modeWhoAmIBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Trios (3 players)';
     console.log('🎯 Mode switched to: Trios');
 });
@@ -1445,8 +1644,19 @@ document.getElementById('modeSquadBtn').addEventListener('click', () => {
     document.getElementById('modeSquadBtn').classList.add('active');
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('modeTriosBtn').classList.remove('active');
+    document.getElementById('modeWhoAmIBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Squad (4 players)';
     console.log('🎯 Mode switched to: Squad');
+});
+
+document.getElementById('modeWhoAmIBtn').addEventListener('click', () => {
+    currentMode = 'whoami';
+    document.getElementById('modeWhoAmIBtn').classList.add('active');
+    document.getElementById('mode1v1Btn').classList.remove('active');
+    document.getElementById('modeTriosBtn').classList.remove('active');
+    document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('findMatchBtn').textContent = 'Start Who Am I (Mobile)';
+    console.log('🎯 Mode switched to: Who Am I');
 });
 
 // Initialize
