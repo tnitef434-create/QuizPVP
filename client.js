@@ -317,6 +317,8 @@ async function findMatch() {
     // Route to correct matchmaking based on mode
     if (currentMode === 'squad') {
         await findSquadMatch();
+    } else if (currentMode === 'trios') {
+        await findTriosMatch();
     } else {
         await find1v1Match();
     }
@@ -427,6 +429,112 @@ async function find1v1Match() {
         }
     } catch (error) {
         console.error('❌ 1v1 Matchmaking error:', error);
+        handleMatchmakingError(error);
+    }
+}
+
+// Find Trios match (3 players)
+async function findTriosMatch() {
+    try {
+        const waitingRef = database.ref('waiting_trios');
+        console.log('📡 Checking trios queue...');
+        const snapshot = await waitingRef.once('value');
+        const waiting = snapshot.val() || {};
+        console.log('✅ Connected to database. Waiting trios players:', Object.keys(waiting).length);
+
+        // Clean up stale entries
+        const now = Date.now();
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 60000) { // 60 sec for trios
+                console.log('🗑️ Removing stale trios player:', key);
+                waitingRef.child(key).remove();
+            }
+        });
+
+        // Check if we have 3 players
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
+
+        console.log('Trios queue:', availablePlayers.length + 1, '/ 3 players');
+
+        if (availablePlayers.length >= 2) {
+            // We have 3 players! (2 + myself)
+            console.log('✅ Trios ready! 3 players found!');
+
+            const triosPlayers = [
+                { id: playerData.id, ...playerData },
+                ...availablePlayers.slice(0, 2).map(([id, data]) => ({ id, ...data }))
+            ];
+
+            // Remove all players from waiting
+            for (const player of triosPlayers) {
+                await waitingRef.child(player.id).remove();
+            }
+
+            // Create trios game
+            const gameId = generateId();
+            const questions = generateQuiz();
+
+            const gameData = {
+                id: gameId,
+                mode: 'trios',
+                players: triosPlayers.map(p => ({
+                    id: p.id,
+                    username: p.username,
+                    color: p.color,
+                    score: 0,
+                    answers: [],
+                    finished: false
+                })),
+                questions: questions,
+                createdAt: Date.now()
+            };
+
+            console.log('🎮 Creating trios game:', gameId);
+            await database.ref(`games_trios/${gameId}`).set(gameData);
+
+            startTriosGame(gameId, gameData);
+        } else {
+            // Add self to waiting
+            console.log(`⏳ Waiting for trios... (${availablePlayers.length + 1}/3 players)`);
+            await waitingRef.child(playerData.id).set({
+                username: playerData.username,
+                color: playerData.color,
+                timestamp: Date.now()
+            });
+
+            // Update searching text
+            document.querySelector('.searching-text').textContent =
+                `Waiting for trios... (${availablePlayers.length + 1}/3 players)`;
+
+            // Clean up old listener
+            if (searchListener) {
+                database.ref('games_trios').off('child_added', searchListener);
+            }
+
+            // Listen for trios game creation
+            searchListener = database.ref('games_trios').on('child_added', (snapshot) => {
+                const game = snapshot.val();
+                console.log('🎮 New trios game detected:', game.id);
+
+                // Check if I'm in this game
+                const imInGame = game.players && game.players.some(p => p.id === playerData.id);
+
+                if (imInGame) {
+                    console.log('✅ Joined trios game!');
+                    if (searchListener) {
+                        database.ref('games_trios').off('child_added', searchListener);
+                        searchListener = null;
+                    }
+
+                    database.ref(`waiting_trios/${playerData.id}`).remove();
+                    startTriosGame(game.id, game);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ Trios matchmaking error:', error);
         handleMatchmakingError(error);
     }
 }
@@ -603,6 +711,47 @@ function startGame(gameId, gameData) {
     });
 }
 
+// Start Trios Game (3 players)
+function startTriosGame(gameId, gameData) {
+    currentGame.gameId = gameId;
+    currentGame.questions = gameData.questions;
+    currentGame.answers = [];
+    currentGame.currentQuestionIndex = 0;
+    currentGame.mode = 'trios';
+    currentGame.players = gameData.players;
+
+    showScreen('gameScreen');
+
+    // Show trios display
+    const myPlayerIndex = gameData.players.findIndex(p => p.id === playerData.id);
+    const otherPlayer = gameData.players.find(p => p.id !== playerData.id);
+
+    document.getElementById('yourName').textContent = `${playerData.username} (Trios)`;
+    document.getElementById('opponentName').textContent = `2 Opponents`;
+
+    const yourAvatar = document.getElementById('yourAvatar');
+    const opponentAvatar = document.getElementById('opponentAvatar');
+
+    applyAvatarStyle(yourAvatar, playerData.color);
+    if (otherPlayer) {
+        applyAvatarStyle(opponentAvatar, otherPlayer.color);
+    }
+
+    // Show first question
+    showQuestion();
+
+    // Start the game timer
+    startGameTimer();
+
+    // Listen for trios game updates
+    gameListener = database.ref(`games_trios/${gameId}`).on('value', (snapshot) => {
+        const game = snapshot.val();
+        if (game) {
+            checkTriosGameEnd(game);
+        }
+    });
+}
+
 // Start Squad Game (4 players)
 function startSquadGame(gameId, gameData) {
     currentGame.gameId = gameId;
@@ -758,6 +907,15 @@ async function submitAnswers() {
             answers: currentGame.answers,
             finished: true
         });
+    } else if (currentGame.mode === 'trios') {
+        // Trios mode: update player in players array
+        const myIndex = currentGame.players.findIndex(p => p.id === playerData.id);
+
+        await database.ref(`games_trios/${currentGame.gameId}/players/${myIndex}`).update({
+            score: score,
+            answers: currentGame.answers,
+            finished: true
+        });
     } else {
         // 1v1 mode
         const isPlayer1 = await checkIfPlayer1();
@@ -773,7 +931,10 @@ async function submitAnswers() {
     // Show waiting screen
     showScreen('searchingScreen');
     document.querySelector('.searching-animation h2').textContent = 'Calculating Results...';
-    document.querySelector('.searching-text').textContent = currentGame.mode === 'squad' ? 'Waiting for all players to finish' : 'Waiting for opponent to finish';
+    const waitText = currentGame.mode === 'squad' ? 'Waiting for all 4 players to finish' :
+                     currentGame.mode === 'trios' ? 'Waiting for all 3 players to finish' :
+                     'Waiting for opponent to finish';
+    document.querySelector('.searching-text').textContent = waitText;
 }
 
 // Check if player1
@@ -823,6 +984,49 @@ async function checkGameEnd(game) {
     }
 }
 
+// Check if trios game ended
+async function checkTriosGameEnd(game) {
+    // Check if all 3 players finished
+    const allFinished = game.players.every(p => p.finished);
+
+    if (allFinished) {
+        // All players finished! Try to sync results display
+        if (!game.resultsReadyAt) {
+            try {
+                await database.ref(`games_trios/${currentGame.gameId}/resultsReadyAt`).set(Date.now());
+                return; // Wait for the timestamp to propagate
+            } catch (error) {
+                console.warn('⚠️ Could not set results timestamp, showing results immediately:', error);
+                // Continue to show results anyway (fallback to immediate display)
+            }
+        }
+
+        // Results are ready! Show them now
+        if (gameListener) {
+            database.ref(`games_trios/${currentGame.gameId}`).off('value', gameListener);
+            gameListener = null;
+        }
+
+        // Sort players by score
+        const sortedPlayers = [...game.players].sort((a, b) => b.score - a.score);
+        const myPlayer = game.players.find(p => p.id === playerData.id);
+        const myRank = sortedPlayers.findIndex(p => p.id === playerData.id) + 1;
+
+        // Winner gets 100 points
+        if (myRank === 1) {
+            playerData.points += 100;
+            savePlayerData();
+        }
+
+        showTriosResults(game.players, myPlayer, myRank);
+
+        // Clean up game after 30 seconds
+        setTimeout(() => {
+            database.ref(`games_trios/${currentGame.gameId}`).remove();
+        }, 30000);
+    }
+}
+
 // Check if squad game ended
 async function checkSquadGameEnd(game) {
     // Check if all 4 players finished
@@ -864,6 +1068,64 @@ async function checkSquadGameEnd(game) {
             database.ref(`games_squad/${currentGame.gameId}`).remove();
         }, 30000);
     }
+}
+
+// Show trios results
+function showTriosResults(players, myPlayer, myRank) {
+    showScreen('resultsScreen');
+
+    // Reset searching screen text
+    document.querySelector('.searching-animation h2').textContent = 'Finding Opponent...';
+    document.querySelector('.searching-text').textContent = 'Matching you with another player';
+
+    const resultBanner = document.getElementById('resultBanner');
+
+    if (myRank === 1) {
+        resultBanner.textContent = '🏆 YOU WIN!';
+        resultBanner.className = 'result-banner win';
+    } else if (myRank === 2) {
+        resultBanner.textContent = '🥈 2ND PLACE!';
+        resultBanner.className = 'result-banner draw';
+    } else {
+        resultBanner.textContent = '🥉 3RD PLACE';
+        resultBanner.className = 'result-banner lose';
+    }
+
+    // Show trios scoreboard
+    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+
+    document.getElementById('yourScore').textContent = myPlayer.score;
+    document.getElementById('opponentScore').textContent = `Rank #${myRank}`;
+
+    // Show points earned
+    const pointsEarned = document.getElementById('pointsEarned');
+    if (myRank === 1) {
+        pointsEarned.textContent = '+100 points earned!';
+        pointsEarned.style.display = 'block';
+    } else {
+        pointsEarned.style.display = 'none';
+    }
+
+    // Update player points display
+    updatePlayerDisplay();
+
+    // Show answer review with trios leaderboard
+    const answersReview = document.getElementById('answersReview');
+    answersReview.innerHTML = '<h3 style="margin-bottom: 15px;">Trios Leaderboard</h3>';
+
+    sortedPlayers.forEach((player, index) => {
+        const rank = index + 1;
+        const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+        const isMe = player.id === playerData.id;
+
+        const playerItem = document.createElement('div');
+        playerItem.className = `answer-item ${isMe ? 'correct' : ''}`;
+        playerItem.innerHTML = `
+            <span>${rankEmoji} <strong>${player.username}</strong> ${isMe ? '(You)' : ''}</span>
+            <span>${player.score}/8 correct</span>
+        `;
+        answersReview.appendChild(playerItem);
+    });
 }
 
 // Show squad results
@@ -1069,15 +1331,17 @@ function closeModal() {
 function cancelSearch() {
     console.log('🚫 Search cancelled by user');
 
-    // Remove from waiting queue (both modes)
+    // Remove from waiting queue (all modes)
     if (database && playerData.id) {
         database.ref(`waiting_1v1/${playerData.id}`).remove();
+        database.ref(`waiting_trios/${playerData.id}`).remove();
         database.ref(`waiting_squad/${playerData.id}`).remove();
     }
 
     // Remove game listeners
     if (searchListener) {
         database.ref('games').off('child_added', searchListener);
+        database.ref('games_trios').off('child_added', searchListener);
         database.ref('games_squad').off('child_added', searchListener);
         searchListener = null;
     }
@@ -1161,15 +1425,26 @@ document.getElementById('colorPicker').addEventListener('input', updateColorPrev
 document.getElementById('mode1v1Btn').addEventListener('click', () => {
     currentMode = '1v1';
     document.getElementById('mode1v1Btn').classList.add('active');
+    document.getElementById('modeTriosBtn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
     console.log('🎯 Mode switched to: 1v1');
+});
+
+document.getElementById('modeTriosBtn').addEventListener('click', () => {
+    currentMode = 'trios';
+    document.getElementById('modeTriosBtn').classList.add('active');
+    document.getElementById('mode1v1Btn').classList.remove('active');
+    document.getElementById('modeSquadBtn').classList.remove('active');
+    document.getElementById('findMatchBtn').textContent = 'Find Trios (3 players)';
+    console.log('🎯 Mode switched to: Trios');
 });
 
 document.getElementById('modeSquadBtn').addEventListener('click', () => {
     currentMode = 'squad';
     document.getElementById('modeSquadBtn').classList.add('active');
     document.getElementById('mode1v1Btn').classList.remove('active');
+    document.getElementById('modeTriosBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Squad (4 players)';
     console.log('🎯 Mode switched to: Squad');
 });
