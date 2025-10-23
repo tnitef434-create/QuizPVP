@@ -12,7 +12,6 @@
 // 4. Replace this config with your project's config from Project Settings
 // 5. For security in production, implement proper authentication and rules
 
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDWrBVl4RtMoKCSYZWdq4lZqoYMlx9RPCs",
   authDomain: "quizpvp-5a2e2.firebaseapp.com",
