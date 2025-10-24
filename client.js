@@ -171,6 +171,34 @@ function handleTabSwitchLoss() {
     }, 500);
 }
 
+// V3.0 - Track player count per mode
+function trackModePlayerCounts() {
+    if (!database) return;
+
+    // Track 1v1 players
+    database.ref('waiting_1v1').on('value', (snapshot) => {
+        const count = snapshot.numChildren();
+        const el = document.getElementById('count1v1');
+        if (el) el.textContent = count;
+    });
+
+    // Track 1v2 players
+    database.ref('waiting_trios').on('value', (snapshot) => {
+        const count = snapshot.numChildren();
+        const el = document.getElementById('count1v2');
+        if (el) el.textContent = count;
+    });
+
+    // Track 1v3 players
+    database.ref('waiting_squad').on('value', (snapshot) => {
+        const count = snapshot.numChildren();
+        const el = document.getElementById('count1v3');
+        if (el) el.textContent = count;
+    });
+
+    console.log('✅ Mode player count tracking initialized');
+}
+
 console.log('✅ V3.0 features initialized');
 
 let playerData = {
@@ -226,6 +254,9 @@ let currentChatSession = {
 };
 let chatListener = null;
 let chatSearchListener = null;
+
+// V3.0 - Track search type for proper cancel navigation
+let currentSearchType = 'game'; // 'game' or 'chat'
 
 // ===== PLAYER PRESENCE & ACTIVE COUNT SYSTEM =====
 
@@ -431,6 +462,7 @@ async function loadPlayerData() {
             showScreen('menuScreen');
             setupPlayerPresence();
             trackActivePlayerCount();
+            trackModePlayerCounts(); // V3.0
             loadFriendsList();
             loadFriendRequests();
             cleanupOldGames();
@@ -506,6 +538,9 @@ function applyAvatarStyle(element, color) {
 // Find match (supports both 1v1 and squad modes)
 async function findMatch() {
     console.log(`🔍 Starting ${currentMode} matchmaking for player:`, playerData.username);
+
+    // Track that we're searching for game (for cancel button)
+    currentSearchType = 'game';
 
     // Check if Firebase is ready
     if (!isFirebaseReady || !database) {
@@ -1649,7 +1684,7 @@ function closeModal() {
     });
 }
 
-// V3.0 - Cancel search (returns to play screen, not hub)
+// V3.0 - Cancel search (smart navigation based on search type)
 function cancelSearch() {
     console.log('🚫 Search cancelled by user');
 
@@ -1669,12 +1704,34 @@ function cancelSearch() {
         searchListener = null;
     }
 
+    // Remove chat listeners
+    if (chatSearchListener) {
+        database.ref('chats').off('child_added', chatSearchListener);
+        chatSearchListener = null;
+    }
+
     // Reset searching text
     document.querySelector('.searching-animation h2').textContent = 'Finding Opponent...';
     document.querySelector('.searching-text').textContent = 'Matching you with another player';
 
-    // V3.0: Return to math mode screen (not hub)
-    showScreen('mathModeScreen');
+    // V3.0: Smart navigation based on what was being searched for
+    if (currentSearchType === 'chat') {
+        console.log('📱 Returning to Social (Chat tab)');
+        showScreen('socialScreen');
+        // Make sure chat tab is active
+        document.getElementById('chatTabBtn')?.classList.add('active');
+        document.getElementById('friendsTabBtn')?.classList.remove('active');
+        const chatTab = document.getElementById('chatTabContent');
+        const friendsTab = document.getElementById('friendsTabContent');
+        if (chatTab) chatTab.style.display = 'block';
+        if (friendsTab) friendsTab.style.display = 'none';
+    } else {
+        console.log('🎮 Returning to Math Mode selection');
+        showScreen('mathModeScreen');
+    }
+
+    // Reset search type
+    currentSearchType = 'game';
 }
 
 // ===== WHO AM I GAME FUNCTIONS =====
@@ -1893,6 +1950,9 @@ async function destroyCurrentChat() {
 // V3.0 - Completely rebuilt chat system
 async function findChatPartner() {
     try {
+        // Track that we're searching for chat (for cancel button)
+        currentSearchType = 'chat';
+
         // Clean up any existing chat session first
         await destroyCurrentChat();
 
@@ -2762,6 +2822,7 @@ function setupEventListeners() {
         showScreen('menuScreen');
         setupPlayerPresence();
         trackActivePlayerCount();
+        trackModePlayerCounts(); // V3.0
         loadFriendsList();
         loadFriendRequests();
         cleanupOldGames();
