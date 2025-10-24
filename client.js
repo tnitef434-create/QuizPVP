@@ -1135,6 +1135,116 @@ function checkIfResultsReady() {
     }
 }
 
+// V3.0: Vote to Skip Timer System
+let voteSkipListener = null;
+let hasVoted = false;
+
+function setupVoteToSkipTimer() {
+    console.log('⏭️ Setting up vote to skip timer system');
+    hasVoted = false;
+
+    // Show the vote container
+    const voteContainer = document.getElementById('voteSkipContainer');
+    if (voteContainer) {
+        voteContainer.style.display = 'block';
+    }
+
+    // Determine total player count
+    const totalPlayers = currentGame.mode === '1v3' ? 4 : currentGame.mode === '1v2' ? 3 : 2;
+
+    // Update vote count display
+    document.getElementById('voteCount').textContent = `0/${totalPlayers} voted`;
+
+    // Get the appropriate game reference
+    const gameRef = currentGame.mode === 'squad'
+        ? database.ref(`games_squad/${currentGame.gameId}`)
+        : currentGame.mode === 'trios'
+        ? database.ref(`games_trios/${currentGame.gameId}`)
+        : database.ref(`games/${currentGame.gameId}`);
+
+    // Listen for vote changes
+    voteSkipListener = gameRef.child('skipVotes').on('value', (snapshot) => {
+        const votes = snapshot.val() || {};
+        const voteCount = Object.keys(votes).length;
+
+        console.log(`📊 Skip votes: ${voteCount}/${totalPlayers}`);
+
+        // Update UI
+        document.getElementById('voteCount').textContent = `${voteCount}/${totalPlayers} voted`;
+
+        // Check if this player voted
+        if (votes[playerData.id]) {
+            const voteBtn = document.getElementById('voteSkipBtn');
+            if (voteBtn) {
+                voteBtn.textContent = '✓ You Voted to Skip';
+                voteBtn.classList.add('voted');
+                voteBtn.disabled = true;
+            }
+        }
+
+        // If all players voted, skip timer immediately
+        if (voteCount >= totalPlayers) {
+            console.log('🎉 All players voted! Skipping timer...');
+            skipTimerFromVote();
+        }
+    });
+}
+
+async function voteToSkipTimer() {
+    if (hasVoted) return;
+
+    console.log('⏭️ Player voted to skip timer');
+    hasVoted = true;
+
+    // Get the appropriate game reference
+    const gameRef = currentGame.mode === 'squad'
+        ? database.ref(`games_squad/${currentGame.gameId}`)
+        : currentGame.mode === 'trios'
+        ? database.ref(`games_trios/${currentGame.gameId}`)
+        : database.ref(`games/${currentGame.gameId}`);
+
+    // Record vote
+    await gameRef.child(`skipVotes/${playerData.id}`).set(true);
+
+    showNotification('Vote Recorded', 'Waiting for other players...', '⏭️');
+}
+
+function skipTimerFromVote() {
+    console.log('⏩ Skipping timer due to unanimous vote');
+
+    // Clean up vote listener
+    if (voteSkipListener) {
+        const gameRef = currentGame.mode === 'squad'
+            ? database.ref(`games_squad/${currentGame.gameId}`)
+            : currentGame.mode === 'trios'
+            ? database.ref(`games_trios/${currentGame.gameId}`)
+            : database.ref(`games/${currentGame.gameId}`);
+
+        gameRef.child('skipVotes').off('value', voteSkipListener);
+        voteSkipListener = null;
+    }
+
+    // Hide vote container
+    const voteContainer = document.getElementById('voteSkipContainer');
+    if (voteContainer) {
+        voteContainer.style.display = 'none';
+    }
+
+    // Show notification
+    showNotification('Timer Skipped!', 'All players voted. Showing results...', '🎉');
+
+    // Mark results as ready and show them
+    resultsReadyToView = true;
+    setTimeout(() => {
+        checkIfResultsReady();
+        // Auto-click view results button
+        const viewBtn = document.getElementById('viewResultsBtn');
+        if (viewBtn && viewBtn.style.display !== 'none') {
+            viewBtn.click();
+        }
+    }, 1500);
+}
+
 // Update timer display
 function updateTimerDisplay() {
     const timerElement = document.getElementById('gameTimer');
@@ -1280,6 +1390,11 @@ async function submitAnswers() {
                      currentGame.mode === '1v2' ? 'Waiting for all 3 players to finish...' :
                      'Waiting for opponent to finish...';
     document.getElementById('waitingResultsText').textContent = waitText;
+
+    // V3.0: Show vote to skip timer container if timer is still running
+    if (timeRemaining > 0) {
+        setupVoteToSkipTimer();
+    }
 
     // Continue updating the timer display on the waiting screen
     updateWaitingTimerDisplay();
@@ -1662,29 +1777,44 @@ function confirmColorChange() {
     alert('Color changed successfully!');
 }
 
-function purchaseColor(colorType) {
+function purchaseColor(colorType, customCost = null) {
     let cost = 0;
     let colorValue = '';
+    let colorName = '';
 
-    if (colorType === 'gold') {
+    // V3.0: Support direct hex color purchases
+    if (colorType.startsWith('#')) {
+        cost = customCost || 100;
+        colorValue = colorType;
+        colorName = `this color`;
+    } else if (colorType === 'gold') {
         cost = 10000;
         colorValue = 'gold';
+        colorName = 'Gold';
     } else if (colorType === 'rainbow') {
         cost = 50000;
         colorValue = 'rainbow';
+        colorName = 'Rainbow';
     }
 
     if (playerData.points < cost) {
-        alert(`Not enough points! You need ${cost.toLocaleString()} points.`);
+        showNotification('Not Enough Points', `You need ${cost.toLocaleString()} points`, '❌');
         return;
     }
 
-    if (confirm(`Purchase ${colorType} color for ${colorType.toLocaleString()} points?`)) {
+    if (confirm(`Purchase ${colorName} color for ${cost.toLocaleString()} points?`)) {
         playerData.points -= cost;
         playerData.color = colorValue;
         savePlayerData();
         updatePlayerDisplay();
-        alert(`${colorType} color purchased successfully!`);
+
+        // Update shop points display
+        const shopPointsEl = document.getElementById('shopPointsDisplay');
+        if (shopPointsEl) {
+            shopPointsEl.textContent = playerData.points.toLocaleString();
+        }
+
+        showNotification('Purchase Successful!', `${colorName} color equipped!`, '✨');
     }
 }
 
@@ -2361,7 +2491,8 @@ function updateFriendsDisplay(friends) {
                     </div>
                 </div>
                 <div class="friend-actions">
-                    <button class="btn btn-primary btn-small" onclick="openFriendChat('${friend.id}')">Chat</button>
+                    <button class="btn btn-primary btn-small" onclick="inviteFriendTo1v1('${friend.id}', '${escapeHtml(friend.username)}')">⚔️ 1v1</button>
+                    <button class="btn btn-primary btn-small" onclick="openFriendChat('${friend.id}')">💬 Chat</button>
                     <button class="btn btn-secondary btn-small" onclick="removeFriend('${friend.id}')">Remove</button>
                 </div>
             `;
@@ -2565,9 +2696,131 @@ async function sendFriendMessage() {
     }
 }
 
-// Invite friend to game
-function inviteFriendToGame() {
-    alert('Game invitations coming soon! For now, coordinate a time to both click "Find Match" at the same time.');
+// V3.0: Invite friend to 1v1 game
+async function inviteFriendTo1v1(friendId, friendUsername) {
+    try {
+        // Check if friend is online
+        const onlineSnapshot = await database.ref(`online/${friendId}`).once('value');
+        if (!onlineSnapshot.exists()) {
+            showNotification('Friend Offline', `${friendUsername} is not online right now`, '😔');
+            return;
+        }
+
+        // Create game invite
+        const inviteId = `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await database.ref(`gameInvites/${friendId}/${inviteId}`).set({
+            from: playerData.id,
+            fromUsername: playerData.username,
+            fromColor: playerData.color,
+            mode: '1v1',
+            timestamp: Date.now()
+        });
+
+        showNotification('Invite Sent!', `Waiting for ${friendUsername} to accept...`, '⚔️');
+
+        // Listen for invite acceptance
+        const inviteRef = database.ref(`gameInvites/${friendId}/${inviteId}`);
+        inviteRef.on('value', async (snapshot) => {
+            const invite = snapshot.val();
+            if (invite && invite.accepted) {
+                // Clean up listener
+                inviteRef.off();
+
+                // Create the game
+                const gameId = invite.gameId;
+                showNotification('Invite Accepted!', 'Starting game...', '🎮');
+
+                setTimeout(() => {
+                    database.ref(`games/${gameId}`).once('value', (gameSnapshot) => {
+                        const game = gameSnapshot.val();
+                        if (game) {
+                            startGame(gameId, game);
+                        }
+                    });
+                }, 1000);
+            }
+        });
+
+    } catch (error) {
+        console.error('Failed to send invite:', error);
+        showNotification('Invite Failed', 'Could not send game invite', '❌');
+    }
+}
+
+// Listen for incoming game invites
+function setupGameInviteListener() {
+    if (!database || !playerData.id) return;
+
+    database.ref(`gameInvites/${playerData.id}`).on('child_added', async (snapshot) => {
+        const inviteId = snapshot.key;
+        const invite = snapshot.val();
+
+        // Skip if already accepted or expired (older than 2 minutes)
+        if (invite.accepted || Date.now() - invite.timestamp > 120000) {
+            await database.ref(`gameInvites/${playerData.id}/${inviteId}`).remove();
+            return;
+        }
+
+        // Show notification with accept/decline options
+        const accept = confirm(`${invite.fromUsername} invited you to a 1v1 game! Accept?`);
+
+        if (accept) {
+            // Create the game
+            const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const questions = generateQuestions(10);
+
+            await database.ref(`games/${gameId}`).set({
+                id: gameId,
+                mode: '1v1',
+                player1: {
+                    id: invite.from,
+                    username: invite.fromUsername,
+                    color: invite.fromColor,
+                    score: 0,
+                    answers: {},
+                    finished: false
+                },
+                player2: {
+                    id: playerData.id,
+                    username: playerData.username,
+                    color: playerData.color,
+                    score: 0,
+                    answers: {},
+                    finished: false
+                },
+                questions: questions,
+                startTime: Date.now(),
+                timeLimit: 80,
+                timeExpired: false
+            });
+
+            // Mark invite as accepted and add game ID
+            await database.ref(`gameInvites/${playerData.id}/${inviteId}`).update({
+                accepted: true,
+                gameId: gameId
+            });
+
+            // Start the game for this player
+            showNotification('Game Starting!', 'Get ready!', '🎮');
+            setTimeout(() => {
+                database.ref(`games/${gameId}`).once('value', (gameSnapshot) => {
+                    const game = gameSnapshot.val();
+                    if (game) {
+                        startGame(gameId, game);
+                    }
+                });
+            }, 1000);
+
+            // Clean up invite after a delay
+            setTimeout(async () => {
+                await database.ref(`gameInvites/${playerData.id}/${inviteId}`).remove();
+            }, 5000);
+        } else {
+            // Decline - remove the invite
+            await database.ref(`gameInvites/${playerData.id}/${inviteId}`).remove();
+            showNotification('Invite Declined', 'You declined the game invite', 'ℹ️');
+        }
+    });
 }
 
 // View results manually
@@ -2575,6 +2828,24 @@ function viewResults() {
     if (!resultsReadyToView) {
         alert('Results are not ready yet. Please wait...');
         return;
+    }
+
+    // V3.0: Clean up vote listener
+    if (voteSkipListener) {
+        const gameRef = currentGame.mode === 'squad'
+            ? database.ref(`games_squad/${currentGame.gameId}`)
+            : currentGame.mode === 'trios'
+            ? database.ref(`games_trios/${currentGame.gameId}`)
+            : database.ref(`games/${currentGame.gameId}`);
+
+        gameRef.child('skipVotes').off('value', voteSkipListener);
+        voteSkipListener = null;
+    }
+
+    // Hide vote container
+    const voteContainer = document.getElementById('voteSkipContainer');
+    if (voteContainer) {
+        voteContainer.style.display = 'none';
     }
 
     // Award points if won
@@ -2669,6 +2940,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load player data first
     await loadPlayerData();
+
+    // V3.0: Setup game invite listener
+    setupGameInviteListener();
 
     // Now attach all event listeners (DOM is ready)
     setupEventListeners();
@@ -2887,6 +3161,11 @@ function setupEventListeners() {
     safeAddListener('viewResultsBtn', 'click', () => {
         viewResults();
     }, 'View Results');
+
+    // V3.0: Vote to skip timer button
+    safeAddListener('voteSkipBtn', 'click', () => {
+        voteToSkipTimer();
+    }, 'Vote to Skip Timer');
 
     // === SHOP & SETTINGS ===
     console.log('🛒 Setting up Shop buttons...');

@@ -664,6 +664,16 @@ input[type="color"] {
                 linear-gradient(135deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff) border-box;
 }
 
+.shop-item.affordable {
+    border: 2px solid #4CAF50;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fff0 100%);
+}
+
+.shop-item.affordable .shop-item-price {
+    color: #4CAF50;
+    font-weight: 700;
+}
+
 .shop-item-icon {
     width: 50px;
     height: 50px;
@@ -2270,6 +2280,43 @@ input[type="color"] {
     background: linear-gradient(90deg, #4CAF50, #8BC34A);
     height: 100%;
     transition: width 0.3s;
+}
+
+.vote-status {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    margin: 12px 0;
+    font-weight: 500;
+}
+
+.vote-count {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.1rem;
+    margin: 12px 0;
+    font-weight: 600;
+}
+
+.vote-icon {
+    font-size: 1.2rem;
+    margin-right: 8px;
+}
+
+#voteSkipBtn {
+    margin: 12px 0;
+    font-size: 1.1rem;
+    padding: 12px 24px;
+    transition: all 0.3s;
+}
+
+#voteSkipBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #666;
+}
+
+#voteSkipBtn.voted {
+    background: #4CAF50;
+    cursor: default;
 }
 
 /* Shop Item Cards (V3.0 - More Items) */

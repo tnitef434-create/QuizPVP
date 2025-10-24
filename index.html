@@ -262,6 +262,16 @@
                 <p id="waitingResultsText">Timer still running...</p>
                 <div class="game-timer-large" id="waitingTimer">1:20</div>
                 <p class="waiting-instruction">Waiting for timer to finish and all players to complete...</p>
+
+                <!-- V3.0: Vote to Skip Timer System -->
+                <div id="voteSkipContainer" class="vote-skip-container" style="display: none;">
+                    <p class="vote-status" id="voteStatus">Players can vote to skip the timer!</p>
+                    <button id="voteSkipBtn" class="btn btn-secondary">
+                        <span class="vote-icon">⏭️</span> Vote to Skip Timer
+                    </button>
+                    <p class="vote-count" id="voteCount">0/2 voted</p>
+                </div>
+
                 <button id="viewResultsBtn" class="btn btn-primary btn-large" style="display: none;">View Results</button>
             </div>
         </div>
@@ -412,6 +422,67 @@
             </div>
 
             <div class="shop-items">
+                <!-- V3.0: Affordable Color Presets -->
+                <div class="shop-item affordable">
+                    <div class="shop-item-icon" style="background: #FF5252;"></div>
+                    <div class="shop-item-info">
+                        <h3>Red Color</h3>
+                        <p>Bold and vibrant red</p>
+                    </div>
+                    <div class="shop-item-price">100 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#FF5252', 100)">Buy</button>
+                </div>
+
+                <div class="shop-item affordable">
+                    <div class="shop-item-icon" style="background: #2196F3;"></div>
+                    <div class="shop-item-info">
+                        <h3>Blue Color</h3>
+                        <p>Cool ocean blue</p>
+                    </div>
+                    <div class="shop-item-price">100 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#2196F3', 100)">Buy</button>
+                </div>
+
+                <div class="shop-item affordable">
+                    <div class="shop-item-icon" style="background: #4CAF50;"></div>
+                    <div class="shop-item-info">
+                        <h3>Green Color</h3>
+                        <p>Fresh emerald green</p>
+                    </div>
+                    <div class="shop-item-price">100 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#4CAF50', 100)">Buy</button>
+                </div>
+
+                <div class="shop-item affordable">
+                    <div class="shop-item-icon" style="background: #9C27B0;"></div>
+                    <div class="shop-item-info">
+                        <h3>Purple Color</h3>
+                        <p>Royal purple</p>
+                    </div>
+                    <div class="shop-item-price">150 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#9C27B0', 150)">Buy</button>
+                </div>
+
+                <div class="shop-item affordable">
+                    <div class="shop-item-icon" style="background: #E91E63;"></div>
+                    <div class="shop-item-info">
+                        <h3>Pink Color</h3>
+                        <p>Sweet bubblegum pink</p>
+                    </div>
+                    <div class="shop-item-price">150 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#E91E63', 150)">Buy</button>
+                </div>
+
+                <div class="shop-item affordable">
+                    <div class="shop-item-icon" style="background: #FF9800;"></div>
+                    <div class="shop-item-info">
+                        <h3>Orange Color</h3>
+                        <p>Warm sunset orange</p>
+                    </div>
+                    <div class="shop-item-price">150 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#FF9800', 150)">Buy</button>
+                </div>
+
                 <div class="shop-item">
                     <div class="shop-item-icon">✏️</div>
                     <div class="shop-item-info">
