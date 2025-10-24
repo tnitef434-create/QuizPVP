@@ -96,15 +96,6 @@ let currentMode = '1v1'; // Default mode
 let gameTimer = null;
 let timeRemaining = 80; // 1 minute 20 seconds
 
-// ===== WHO AM I GAME VARIABLES =====
-let whoAmIWords = [];
-let whoAmICurrentWordIndex = 0;
-let whoAmICorrect = 0;
-let whoAmIWrong = 0;
-let whoAmITimer = null;
-let orientationListener = null;
-let isMobile = false;
-
 // ===== CHAT MODE VARIABLES =====
 let currentChatSession = {
     chatId: '',
@@ -245,21 +236,6 @@ function generateQuiz() {
     return questions;
 }
 
-// ===== WHO AM I WORD BANK =====
-const whoAmIWordBank = [
-    'DOG', 'CAT', 'PIZZA', 'BATMAN', 'DOCTOR', 'TEACHER', 'SINGER', 'SOCCER', 'NINJA', 'PIRATE',
-    'ASTRONAUT', 'CHEF', 'PILOT', 'MUSICIAN', 'DANCER', 'ACTOR', 'PRESIDENT', 'SUPERHERO', 'ROBOT', 'ZOMBIE',
-    'VAMPIRE', 'WIZARD', 'PRINCESS', 'KING', 'QUEEN', 'KNIGHT', 'DRAGON', 'UNICORN', 'MERMAID', 'ALIEN',
-    'COWBOY', 'DETECTIVE', 'SPY', 'ATHLETE', 'FIREFIGHTER', 'POLICE', 'SOLDIER', 'NURSE', 'SCIENTIST', 'ARTIST',
-    'PHOTOGRAPHER', 'WRITER', 'MAGICIAN', 'CLOWN', 'FARMER', 'CARPENTER', 'MECHANIC', 'BARBER', 'FISHERMAN', 'HUNTER'
-];
-
-// Generate Who Am I words
-function generateWhoAmIWords() {
-    const shuffled = [...whoAmIWordBank].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 10);
-}
-
 // Screen management
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(screen => {
@@ -362,12 +338,6 @@ async function findMatch() {
         alert('⚠️ Firebase is not connected!\n\nPlease check:\n1. You updated the Firebase config in client.js\n2. Your Firebase Realtime Database is enabled\n3. Database rules are set to allow read/write\n\nOpen browser console (F12) for more details.');
         console.error('❌ Firebase not ready. Cannot start matchmaking.');
         showScreen('menuScreen');
-        return;
-    }
-
-    // Handle Who Am I mode separately (no matchmaking needed)
-    if (currentMode === 'whoami') {
-        startWhoAmIGame();
         return;
     }
 
@@ -1472,173 +1442,6 @@ function cancelSearch() {
     showScreen('menuScreen');
 }
 
-// ===== WHO AM I GAME FUNCTIONS =====
-
-// Detect if device is mobile
-function detectMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-}
-
-// Request device orientation permission (iOS 13+)
-async function requestOrientationPermission() {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        try {
-            const permission = await DeviceOrientationEvent.requestPermission();
-            return permission === 'granted';
-        } catch (error) {
-            console.error('Error requesting orientation permission:', error);
-            return false;
-        }
-    }
-    return true; // No permission needed on Android
-}
-
-// Start Who Am I game
-async function startWhoAmIGame() {
-    if (!detectMobile()) {
-        alert('📱 Who Am I mode is only available on mobile devices!');
-        showScreen('menuScreen');
-        return;
-    }
-
-    // Request orientation permission
-    const hasPermission = await requestOrientationPermission();
-    if (!hasPermission) {
-        alert('Please allow device orientation access to play this mode.');
-        showScreen('menuScreen');
-        return;
-    }
-
-    // Initialize game
-    whoAmIWords = generateWhoAmIWords();
-    whoAmICurrentWordIndex = 0;
-    whoAmICorrect = 0;
-    whoAmIWrong = 0;
-
-    showScreen('whoAmIScreen');
-    updateWhoAmIDisplay();
-    startWhoAmITimer();
-    setupOrientationListener();
-}
-
-// Update Who Am I display
-function updateWhoAmIDisplay() {
-    if (whoAmICurrentWordIndex < whoAmIWords.length) {
-        document.getElementById('whoamiWord').textContent = whoAmIWords[whoAmICurrentWordIndex];
-        document.getElementById('whoamiWordNum').textContent = whoAmICurrentWordIndex + 1;
-    } else {
-        endWhoAmIGame();
-    }
-
-    document.getElementById('whoamiCorrect').textContent = whoAmICorrect;
-    document.getElementById('whoamiWrong').textContent = whoAmIWrong;
-}
-
-// Start Who Am I timer (60 seconds)
-function startWhoAmITimer() {
-    timeRemaining = 60;
-    updateWhoAmITimerDisplay();
-
-    if (whoAmITimer) {
-        clearInterval(whoAmITimer);
-    }
-
-    whoAmITimer = setInterval(() => {
-        timeRemaining--;
-        updateWhoAmITimerDisplay();
-
-        if (timeRemaining <= 0) {
-            clearInterval(whoAmITimer);
-            endWhoAmIGame();
-        }
-    }, 1000);
-}
-
-// Update Who Am I timer display
-function updateWhoAmITimerDisplay() {
-    const timerElement = document.getElementById('whoamiTimer');
-    if (!timerElement) return;
-
-    const minutes = Math.floor(timeRemaining / 60);
-    const seconds = timeRemaining % 60;
-    const secondsStr = seconds < 10 ? '0' + seconds : seconds;
-    timerElement.textContent = minutes + ':' + secondsStr;
-}
-
-// Setup orientation listener
-function setupOrientationListener() {
-    let lastTilt = 0;
-    const tiltThreshold = 30; // Degrees to trigger
-
-    orientationListener = (event) => {
-        const beta = event.beta; // Front-to-back tilt (-180 to 180)
-
-        // Tilt UP (phone tilted back) = Correct
-        if (beta < -tiltThreshold && lastTilt >= -tiltThreshold) {
-            handleWhoAmICorrect();
-        }
-        // Tilt DOWN (phone tilted forward) = Wrong/Skip
-        else if (beta > tiltThreshold && lastTilt <= tiltThreshold) {
-            handleWhoAmIWrong();
-        }
-
-        lastTilt = beta;
-    };
-
-    window.addEventListener('deviceorientation', orientationListener);
-}
-
-// Handle correct answer
-function handleWhoAmICorrect() {
-    whoAmICorrect++;
-    whoAmICurrentWordIndex++;
-
-    // Vibrate for feedback (if supported)
-    if (navigator.vibrate) {
-        navigator.vibrate(100);
-    }
-
-    updateWhoAmIDisplay();
-}
-
-// Handle wrong/skip answer
-function handleWhoAmIWrong() {
-    whoAmIWrong++;
-    whoAmICurrentWordIndex++;
-
-    // Vibrate for feedback (if supported)
-    if (navigator.vibrate) {
-        navigator.vibrate([50, 50, 50]);
-    }
-
-    updateWhoAmIDisplay();
-}
-
-// End Who Am I game
-function endWhoAmIGame() {
-    // Stop timer
-    if (whoAmITimer) {
-        clearInterval(whoAmITimer);
-    }
-
-    // Remove orientation listener
-    if (orientationListener) {
-        window.removeEventListener('deviceorientation', orientationListener);
-        orientationListener = null;
-    }
-
-    // Show results
-    alert(`Game Over!\n\nCorrect: ${whoAmICorrect}\nWrong/Skipped: ${whoAmIWrong}\n\nScore: ${whoAmICorrect * 10} points`);
-
-    // Award points
-    playerData.points += whoAmICorrect * 10;
-    savePlayerData();
-    updatePlayerDisplay();
-
-    showScreen('menuScreen');
-}
-
 // ===== CHAT MODE FUNCTIONS =====
 
 // Find chat partner
@@ -1942,7 +1745,6 @@ document.getElementById('mode1v1Btn').addEventListener('click', () => {
     document.getElementById('mode1v1Btn').classList.add('active');
     document.getElementById('modeTriosBtn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
-    document.getElementById('modeWhoAmIBtn').classList.remove('active');
     document.getElementById('modeChatBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Match (1v1)';
     console.log('🎯 Mode switched to: 1v1');
@@ -1953,7 +1755,6 @@ document.getElementById('modeTriosBtn').addEventListener('click', () => {
     document.getElementById('modeTriosBtn').classList.add('active');
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
-    document.getElementById('modeWhoAmIBtn').classList.remove('active');
     document.getElementById('modeChatBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Trios (3 players)';
     console.log('🎯 Mode switched to: Trios');
@@ -1964,21 +1765,9 @@ document.getElementById('modeSquadBtn').addEventListener('click', () => {
     document.getElementById('modeSquadBtn').classList.add('active');
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('modeTriosBtn').classList.remove('active');
-    document.getElementById('modeWhoAmIBtn').classList.remove('active');
     document.getElementById('modeChatBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Find Squad (4 players)';
     console.log('🎯 Mode switched to: Squad');
-});
-
-document.getElementById('modeWhoAmIBtn').addEventListener('click', () => {
-    currentMode = 'whoami';
-    document.getElementById('modeWhoAmIBtn').classList.add('active');
-    document.getElementById('mode1v1Btn').classList.remove('active');
-    document.getElementById('modeTriosBtn').classList.remove('active');
-    document.getElementById('modeSquadBtn').classList.remove('active');
-    document.getElementById('modeChatBtn').classList.remove('active');
-    document.getElementById('findMatchBtn').textContent = 'Start Who Am I (Mobile)';
-    console.log('🎯 Mode switched to: Who Am I');
 });
 
 document.getElementById('modeChatBtn').addEventListener('click', () => {
@@ -1987,7 +1776,6 @@ document.getElementById('modeChatBtn').addEventListener('click', () => {
     document.getElementById('mode1v1Btn').classList.remove('active');
     document.getElementById('modeTriosBtn').classList.remove('active');
     document.getElementById('modeSquadBtn').classList.remove('active');
-    document.getElementById('modeWhoAmIBtn').classList.remove('active');
     document.getElementById('findMatchBtn').textContent = 'Start Chat';
     console.log('🎯 Mode switched to: Chat');
 });
@@ -2357,6 +2145,419 @@ savePlayerData = function() {
     originalSavePlayerData();
     updateLevelDisplay();
 };
+
+// ===== PROFILE SYSTEM =====
+
+// Profanity filter - List of words to censor
+const profanityList = [
+    'fuck', 'shit', 'ass', 'bitch', 'damn', 'hell', 'crap', 'bastard', 'dick', 'pussy',
+    'cock', 'cunt', 'whore', 'slut', 'fag', 'nigger', 'nigga', 'retard', 'idiot', 'stupid'
+];
+
+// Filter profanity from text
+function filterProfanity(text) {
+    let filtered = text;
+    profanityList.forEach(word => {
+        const regex = new RegExp(word, 'gi');
+        filtered = filtered.replace(regex, '*'.repeat(word.length));
+    });
+    return filtered;
+}
+
+// Load profile (own or other user's)
+async function loadProfile(userId = null) {
+    const isOwnProfile = !userId || userId === playerData.id;
+    const targetId = isOwnProfile ? playerData.id : userId;
+
+    showScreen('profileScreen');
+
+    // Update header
+    document.getElementById('profileTitle').textContent = isOwnProfile ? 'My Profile' : 'Profile';
+
+    // Show/hide edit buttons based on ownership
+    document.getElementById('editBioBtn').style.display = isOwnProfile ? 'inline-block' : 'none';
+    document.getElementById('createPostBtn').style.display = isOwnProfile ? 'inline-block' : 'none';
+
+    if (isOwnProfile) {
+        // Load own profile data
+        const profileAvatar = document.getElementById('profileAvatar');
+        applyAvatarStyle(profileAvatar, playerData.color);
+
+        document.getElementById('profileUsername').textContent = playerData.username;
+        document.getElementById('profilePoints').textContent = playerData.points.toLocaleString();
+        document.getElementById('profileLevel').textContent = calculateLevel(playerData.points);
+
+        // Load bio from Firebase
+        try {
+            const bioSnapshot = await database.ref(`profiles/${playerData.id}/bio`).once('value');
+            const bio = bioSnapshot.val();
+
+            const bioContainer = document.getElementById('profileBio');
+            if (bio && bio.trim()) {
+                bioContainer.innerHTML = `<p>${escapeHtml(bio)}</p>`;
+            } else {
+                bioContainer.innerHTML = '<p class="bio-empty">No bio yet. Click "Edit Bio" to add one!</p>';
+            }
+        } catch (error) {
+            console.error('Error loading bio:', error);
+        }
+
+        // Load posts from Firebase
+        loadPosts(targetId);
+    }
+}
+
+// Edit bio
+document.getElementById('editBioBtn').addEventListener('click', () => {
+    // Show editor, hide display
+    document.getElementById('profileBio').classList.add('hidden');
+    document.getElementById('bioEditor').classList.remove('hidden');
+
+    // Load current bio into textarea
+    const bioText = document.querySelector('#profileBio p:not(.bio-empty)');
+    if (bioText) {
+        document.getElementById('bioInput').value = bioText.textContent;
+    } else {
+        document.getElementById('bioInput').value = '';
+    }
+
+    document.getElementById('bioInput').focus();
+});
+
+// Save bio
+document.getElementById('saveBioBtn').addEventListener('click', async () => {
+    const bioText = document.getElementById('bioInput').value.trim();
+
+    if (bioText.length > 200) {
+        alert('Bio must be 200 characters or less!');
+        return;
+    }
+
+    // Filter profanity
+    const filteredBio = filterProfanity(bioText);
+
+    try {
+        // Save to Firebase
+        await database.ref(`profiles/${playerData.id}/bio`).set(filteredBio);
+
+        // Update display
+        const bioContainer = document.getElementById('profileBio');
+        if (filteredBio) {
+            bioContainer.innerHTML = `<p>${escapeHtml(filteredBio)}</p>`;
+        } else {
+            bioContainer.innerHTML = '<p class="bio-empty">No bio yet. Click "Edit Bio" to add one!</p>';
+        }
+
+        // Hide editor, show display
+        document.getElementById('bioEditor').classList.add('hidden');
+        document.getElementById('profileBio').classList.remove('hidden');
+
+        alert('Bio saved successfully!');
+    } catch (error) {
+        console.error('Error saving bio:', error);
+        alert('Failed to save bio. Please try again.');
+    }
+});
+
+// Cancel bio edit
+document.getElementById('cancelBioBtn').addEventListener('click', () => {
+    document.getElementById('bioEditor').classList.add('hidden');
+    document.getElementById('profileBio').classList.remove('hidden');
+});
+
+// Show post form
+document.getElementById('createPostBtn').addEventListener('click', () => {
+    document.getElementById('postForm').classList.remove('hidden');
+    document.getElementById('postInput').focus();
+});
+
+// Cancel post
+document.getElementById('cancelPostBtn').addEventListener('click', () => {
+    document.getElementById('postForm').classList.add('hidden');
+    document.getElementById('postInput').value = '';
+});
+
+// Submit post
+document.getElementById('submitPostBtn').addEventListener('click', async () => {
+    const postText = document.getElementById('postInput').value.trim();
+
+    if (!postText) {
+        alert('Please enter some text for your post!');
+        return;
+    }
+
+    if (postText.length > 500) {
+        alert('Post must be 500 characters or less!');
+        return;
+    }
+
+    // Filter profanity
+    const filteredPost = filterProfanity(postText);
+
+    try {
+        // Create post object
+        const post = {
+            id: generateId(),
+            userId: playerData.id,
+            username: playerData.username,
+            color: playerData.color,
+            text: filteredPost,
+            timestamp: Date.now(),
+            likes: 0,
+            likedBy: {},
+            replies: []
+        };
+
+        // Save to Firebase
+        await database.ref(`profiles/${playerData.id}/posts/${post.id}`).set(post);
+
+        // Hide form
+        document.getElementById('postForm').classList.add('hidden');
+        document.getElementById('postInput').value = '';
+
+        // Reload posts
+        loadPosts(playerData.id);
+
+        alert('Post created successfully!');
+    } catch (error) {
+        console.error('Error creating post:', error);
+        alert('Failed to create post. Please try again.');
+    }
+});
+
+// Load posts from Firebase
+async function loadPosts(userId) {
+    try {
+        const postsSnapshot = await database.ref(`profiles/${userId}/posts`).once('value');
+        const posts = postsSnapshot.val();
+
+        const postsList = document.getElementById('postsList');
+
+        if (!posts || Object.keys(posts).length === 0) {
+            postsList.innerHTML = '<p class="posts-empty">No posts yet. Be the first to share something!</p>';
+            return;
+        }
+
+        // Convert to array and sort by timestamp (newest first)
+        const postsArray = Object.values(posts).sort((a, b) => b.timestamp - a.timestamp);
+
+        // Render posts
+        postsList.innerHTML = postsArray.map(post => renderPost(post)).join('');
+    } catch (error) {
+        console.error('Error loading posts:', error);
+        document.getElementById('postsList').innerHTML = '<p class="posts-empty">Failed to load posts.</p>';
+    }
+}
+
+// Render a single post
+function renderPost(post) {
+    const isOwnPost = post.userId === playerData.id;
+    const hasLiked = post.likedBy && post.likedBy[playerData.id];
+    const timeAgo = getTimeAgo(post.timestamp);
+
+    return `
+        <div class="post-item" data-post-id="${post.id}">
+            <div class="post-header">
+                <div class="post-author">
+                    <div class="post-avatar" style="background: ${getColorStyle(post.color)}"></div>
+                    <div class="post-author-info">
+                        <span class="post-username">${escapeHtml(post.username)}</span>
+                        <span class="post-time">${timeAgo}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="post-content">
+                <p>${escapeHtml(post.text)}</p>
+            </div>
+            <div class="post-actions-bar">
+                <button class="post-action-btn ${hasLiked ? 'liked' : ''}" onclick="toggleLike('${post.id}', '${post.userId}')">
+                    <span class="action-icon">${hasLiked ? '❤️' : '🤍'}</span>
+                    <span class="action-count">${post.likes || 0}</span>
+                </button>
+                <button class="post-action-btn" onclick="showReplyForm('${post.id}')">
+                    <span class="action-icon">💬</span>
+                    <span class="action-count">${post.replies ? post.replies.length : 0}</span>
+                </button>
+            </div>
+
+            <!-- Replies -->
+            <div class="replies-container" id="replies-${post.id}">
+                ${post.replies ? post.replies.map(reply => renderReply(reply)).join('') : ''}
+            </div>
+
+            <!-- Reply Form -->
+            <div class="reply-form hidden" id="reply-form-${post.id}">
+                <textarea id="reply-input-${post.id}" maxlength="200" placeholder="Write a reply... (max 200 characters)"></textarea>
+                <div class="reply-actions">
+                    <button class="btn btn-primary btn-small" onclick="submitReply('${post.id}', '${post.userId}')">Reply</button>
+                    <button class="btn btn-secondary btn-small" onclick="hideReplyForm('${post.id}')">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Render a reply
+function renderReply(reply) {
+    const timeAgo = getTimeAgo(reply.timestamp);
+
+    return `
+        <div class="reply-item">
+            <div class="reply-avatar" style="background: ${getColorStyle(reply.color)}"></div>
+            <div class="reply-content">
+                <div class="reply-header">
+                    <span class="reply-username">${escapeHtml(reply.username)}</span>
+                    <span class="reply-time">${timeAgo}</span>
+                </div>
+                <p class="reply-text">${escapeHtml(reply.text)}</p>
+            </div>
+        </div>
+    `;
+}
+
+// Toggle like on post
+async function toggleLike(postId, postUserId) {
+    try {
+        const likedByRef = database.ref(`profiles/${postUserId}/posts/${postId}/likedBy/${playerData.id}`);
+        const likesRef = database.ref(`profiles/${postUserId}/posts/${postId}/likes`);
+
+        const likedSnapshot = await likedByRef.once('value');
+        const hasLiked = likedSnapshot.val();
+
+        if (hasLiked) {
+            // Unlike
+            await likedByRef.remove();
+            await likesRef.transaction(current => (current || 1) - 1);
+        } else {
+            // Like
+            await likedByRef.set(true);
+            await likesRef.transaction(current => (current || 0) + 1);
+        }
+
+        // Reload posts to show updated likes
+        loadPosts(postUserId);
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        alert('Failed to like post. Please try again.');
+    }
+}
+
+// Show reply form
+function showReplyForm(postId) {
+    const form = document.getElementById(`reply-form-${postId}`);
+    form.classList.remove('hidden');
+    document.getElementById(`reply-input-${postId}`).focus();
+}
+
+// Hide reply form
+function hideReplyForm(postId) {
+    const form = document.getElementById(`reply-form-${postId}`);
+    form.classList.add('hidden');
+    document.getElementById(`reply-input-${postId}`).value = '';
+}
+
+// Submit reply
+async function submitReply(postId, postUserId) {
+    const replyText = document.getElementById(`reply-input-${postId}`).value.trim();
+
+    if (!replyText) {
+        alert('Please enter a reply!');
+        return;
+    }
+
+    if (replyText.length > 200) {
+        alert('Reply must be 200 characters or less!');
+        return;
+    }
+
+    // Filter profanity
+    const filteredReply = filterProfanity(replyText);
+
+    try {
+        const reply = {
+            id: generateId(),
+            userId: playerData.id,
+            username: playerData.username,
+            color: playerData.color,
+            text: filteredReply,
+            timestamp: Date.now()
+        };
+
+        // Add reply to Firebase
+        await database.ref(`profiles/${postUserId}/posts/${postId}/replies`).push(reply);
+
+        // Hide form
+        hideReplyForm(postId);
+
+        // Reload posts
+        loadPosts(postUserId);
+
+        alert('Reply added successfully!');
+    } catch (error) {
+        console.error('Error submitting reply:', error);
+        alert('Failed to submit reply. Please try again.');
+    }
+}
+
+// Close profile button
+document.getElementById('closeProfileBtn').addEventListener('click', () => {
+    showScreen('menuScreen');
+});
+
+// ===== HUB NAVIGATION =====
+
+// Logout button - Clear localStorage and return to username screen
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    if (confirm('Are you sure you want to logout? This will clear your account from this device.')) {
+        console.log('🚪 Logging out...');
+
+        // Remove from online players
+        if (database && playerData.id) {
+            database.ref(`online/${playerData.id}`).remove();
+        }
+
+        // Clear localStorage
+        localStorage.removeItem('quizpvp_player');
+
+        // Reset player data
+        playerData = {
+            username: '',
+            points: 0,
+            color: '#4A90E2',
+            id: ''
+        };
+
+        // Return to username screen
+        showScreen('usernameScreen');
+        document.getElementById('usernameInput').value = '';
+        document.getElementById('usernameInput').focus();
+
+        console.log('✅ Logged out successfully');
+    }
+});
+
+// Play button - Navigate to game modes screen
+document.getElementById('playBtn').addEventListener('click', () => {
+    showScreen('gameModesScreen');
+});
+
+// Profile button - Navigate to profile screen
+document.getElementById('profileBtn').addEventListener('click', () => {
+    loadProfile();
+});
+
+// Back to Hub button
+document.getElementById('backToHubBtn').addEventListener('click', () => {
+    showScreen('menuScreen');
+});
+
+// Shop button handler (already exists but making sure it's connected)
+const existingShopBtn = document.getElementById('shopBtn');
+if (existingShopBtn && !existingShopBtn.onclick) {
+    existingShopBtn.addEventListener('click', () => {
+        showScreen('shopScreen');
+    });
+}
 
 // Initialize
 loadPlayerData();
