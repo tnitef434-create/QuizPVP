@@ -1,9 +1,9 @@
 {
   "name": "quizpvp",
-  "version": "2.4.1",
-  "description": "Multiplayer math quiz battle game - Static site with Firebase backend - 1v1, Trios, Squad, and Who Am I modes!",
+  "version": "2.6.0",
+  "description": "Multiplayer math quiz battle game - Static site with Firebase backend - 1v1, Trios, Squad, Who Am I, and Chat modes! Now with notifications, friend search, and level progression!",
   "main": "index.html",
-  "keywords": ["quiz", "multiplayer", "game", "math", "firebase", "trios", "squad", "timer", "whoami", "mobile", "tilt", "pwa"],
+  "keywords": ["quiz", "multiplayer", "game", "math", "firebase", "trios", "squad", "timer", "whoami", "mobile", "tilt", "pwa", "notifications", "friends", "level", "chat"],
   "author": "",
   "license": "MIT"
 }

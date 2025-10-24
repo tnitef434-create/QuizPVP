@@ -10,7 +10,7 @@
     <div class="background-pattern"></div>
 
     <!-- Version Badge -->
-    <div class="version-badge">v2.5.0</div>
+    <div class="version-badge">v2.6.0</div>
 
     <!-- Refresh Button -->
     <button id="refreshBtn" class="refresh-btn" title="Refresh for updates">
@@ -40,9 +40,23 @@
                 </h1>
                 <div class="player-info">
                     <div class="player-name" id="playerNameDisplay"></div>
-                    <div class="points-display">
-                        <span class="points-icon">★</span>
-                        <span id="pointsDisplay">0</span> points
+                    <div class="header-actions">
+                        <div class="points-display">
+                            <span class="points-icon">★</span>
+                            <span id="pointsDisplay">0</span> points
+                        </div>
+                        <button id="inboxBtn" class="inbox-btn" title="Notifications">
+                            <span class="inbox-icon">📬</span>
+                            <span id="inboxBadge" class="inbox-badge hidden">0</span>
+                        </button>
+                        <div class="level-progress">
+                            <div class="level-info">
+                                <span class="level-label">Level <span id="playerLevel">1</span></span>
+                            </div>
+                            <div class="level-bar">
+                                <div class="level-fill" id="levelFill" style="width: 0%"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -84,8 +98,20 @@
                     </button>
                     <button id="modeChatBtn" class="mode-btn">
                         <span class="mode-icon">💬</span>
-                        <span class="mode-title">Chat</span>
+                        <span class="mode-title">Chat <span class="beta-tag">BETA</span></span>
                         <span class="mode-desc">Chat with random players</span>
+                    </button>
+                    <button class="mode-btn coming-soon" disabled>
+                        <span class="mode-icon">🗺️</span>
+                        <span class="mode-title">WarMap</span>
+                        <span class="mode-desc">Strategic territory battles</span>
+                        <span class="coming-soon-label">COMING SOON</span>
+                    </button>
+                    <button class="mode-btn coming-soon" disabled>
+                        <span class="mode-icon">🏁</span>
+                        <span class="mode-title">Race Mode</span>
+                        <span class="mode-desc">Speed-based competition</span>
+                        <span class="coming-soon-label">COMING SOON</span>
                     </button>
                 </div>
             </div>
@@ -93,6 +119,7 @@
             <div class="menu-buttons">
                 <button id="findMatchBtn" class="btn btn-primary btn-large">Find Match (1v1)</button>
                 <button id="shopBtn" class="btn btn-secondary">Shop</button>
+                <button id="settingsBtn" class="btn btn-secondary">Settings</button>
             </div>
         </div>
     </div>
@@ -235,6 +262,76 @@
 
             <div class="chat-actions">
                 <button id="leaveChatBtn" class="btn btn-secondary">Leave Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inbox Screen -->
+    <div id="inboxScreen" class="screen">
+        <div class="container">
+            <div class="shop-header">
+                <h2>Notifications</h2>
+                <button id="closeInboxBtn" class="btn btn-secondary btn-small">Close</button>
+            </div>
+
+            <div class="inbox-tabs">
+                <button class="inbox-tab active" data-tab="all">All</button>
+                <button class="inbox-tab" data-tab="friends">Friend Requests</button>
+                <button class="inbox-tab" data-tab="wins">Wins</button>
+                <button class="inbox-tab" data-tab="updates">Updates</button>
+            </div>
+
+            <div id="inboxContent" class="inbox-content">
+                <div class="inbox-empty">
+                    <span class="inbox-empty-icon">📭</span>
+                    <p>No notifications yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings/What's New Screen -->
+    <div id="settingsScreen" class="screen">
+        <div class="container">
+            <div class="shop-header">
+                <h2>Settings</h2>
+                <button id="closeSettingsBtn" class="btn btn-secondary btn-small">Close</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>🎉 What's New</h3>
+                <div class="whats-new-card">
+                    <div class="update-version">Version 2.6.0</div>
+                    <div class="update-date">October 24, 2025</div>
+
+                    <div class="update-section">
+                        <h4>✨ New Features</h4>
+                        <ul>
+                            <li>📬 Notification inbox - Track friend requests, wins, and updates</li>
+                            <li>🔍 Search players by username and add friends</li>
+                            <li>📊 Level progression system with visual progress bar</li>
+                            <li>🗺️ Announced upcoming WarMap mode (Coming Soon)</li>
+                            <li>🏁 Announced upcoming Race Mode (Coming Soon)</li>
+                        </ul>
+                    </div>
+
+                    <div class="update-section">
+                        <h4>🔧 Improvements</h4>
+                        <ul>
+                            <li>💬 Chat mode now marked as BETA for feedback</li>
+                            <li>🎨 Enhanced UI with better notification system</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>👥 Find Friends</h3>
+                <div class="friend-search-card">
+                    <input type="text" id="friendSearchInput" placeholder="Search by username..." maxlength="15">
+                    <button id="searchFriendBtn" class="btn btn-primary">Search</button>
+                    <div id="friendSearchResults" class="friend-search-results"></div>
+                </div>
             </div>
         </div>
     </div>

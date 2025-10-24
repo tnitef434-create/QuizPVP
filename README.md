@@ -8,22 +8,35 @@ A **production-ready** real-time multiplayer math quiz game where players from d
 
 Or test locally by opening `index.html` in your browser!
 
-## ✨ Features (v2.0.0)
+## ✨ Features (v2.6.0)
 
 - ✅ **Real Cross-PC Multiplayer** - Players on different computers can play together
+- ✅ **5 Game Modes** - 1v1, Trios, Squad, Who Am I (mobile tilt), and Chat (BETA)
+- ✅ **Notification System** - Track friend requests, wins, and updates in your inbox
+- ✅ **Friend Search** - Search and add friends by username
+- ✅ **Level Progression** - Visual level system that grows with your points
 - ✅ **Live Player Count** - See how many players are online in real-time
 - ✅ **Connection Status** - Know when you're connected/disconnected
-- ✅ **Automatic Matchmaking** - Find opponents instantly
 - ✅ **Points & Shop System** - Earn points, customize your profile
 - ✅ **Special Effects** - Gold and Rainbow color effects
 - ✅ **Production Ready** - Deploy to GitHub Pages in 5 minutes
 
 ## Features
 
+### Game Modes
+- **1v1 Mode**: Classic head-to-head math battle with 8 questions
+- **Trios Mode**: Compete against 2 other players for the top spot
+- **Squad Mode**: 4-player competition with full leaderboard
+- **Who Am I Mode**: Mobile-only tilt game - guess words by tilting your device
+- **Chat Mode (BETA)**: Chat with random players in real-time
+- **Coming Soon**: WarMap and Race Mode!
+
 ### Game Mechanics
 - **Real-time Matchmaking**: Automatically matches you with other online players using Firebase
-- **1v1 Math Quiz**: Face off against opponents in quick 8-question math quizzes
 - **Point System**: Earn 100 points for each victory
+- **Level Progression**: Level up as you earn points (1 level per 1,000 points)
+- **Notification System**: Get notified of wins, friend requests, and updates
+- **Friend Search**: Search for players by username and add them as friends
 - **Simple Operations**: Questions include addition, subtraction, and multiplication
 
 ### Customization Shop
@@ -81,10 +94,14 @@ Simply open `index.html` in any modern web browser. Open multiple tabs to test m
 
 1. **Enter Username**: Type your desired username on the welcome screen
 2. **Click Join**: This saves your profile locally
-3. **Find Match**: Click "Find Match" to start searching for an opponent
-4. **Answer Questions**: You'll get 8 math questions to solve as fast as you can
-5. **See Results**: After both players finish, see who won and earn your points!
-6. **Visit Shop**: Use your points to customize your username and color
+3. **Select Mode**: Choose from 1v1, Trios, Squad, Who Am I (mobile), or Chat (BETA)
+4. **Find Match**: Click "Find Match" to start searching for opponents
+5. **Answer Questions**: Solve math questions as fast as you can
+6. **See Results**: After the game finishes, see who won and earn your points!
+7. **Check Notifications**: Click the inbox icon to see your wins and friend requests
+8. **Find Friends**: Use Settings → Find Friends to search for players by username
+9. **Visit Shop**: Use your points to customize your username and color
+10. **Track Progress**: Watch your level increase as you earn points!
 
 ## Technology Stack
 
@@ -174,10 +191,13 @@ Works in all modern browsers:
 
 Feel free to fork and improve! Some ideas:
 - Global leaderboard
-- Friend system
+- Full friend system (friend requests, friend list, friend battles)
 - Different difficulty levels
-- More game modes
+- WarMap mode implementation
+- Race Mode implementation
 - Achievement system
+- Private rooms/game codes
+- Tournament mode
 
 ## License
 

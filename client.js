@@ -1198,6 +1198,8 @@ function showTriosResults(players, myPlayer, myRank) {
     if (myRank === 1) {
         pointsEarned.textContent = '+100 points earned!';
         pointsEarned.style.display = 'block';
+        // Add win notification
+        addNotification('win', 'Trios Victory!', `You won Trios mode with a score of ${myPlayer.score} and earned 100 points!`);
     } else {
         pointsEarned.style.display = 'none';
     }
@@ -1259,6 +1261,8 @@ function showSquadResults(players, myPlayer, myRank) {
     if (myRank === 1) {
         pointsEarned.textContent = '+100 points earned!';
         pointsEarned.style.display = 'block';
+        // Add win notification
+        addNotification('win', 'Squad Victory!', `You won Squad mode with a score of ${myPlayer.score} and earned 100 points!`);
     } else {
         pointsEarned.style.display = 'none';
     }
@@ -1314,6 +1318,8 @@ function showResults(myScore, opponentScore, won, draw) {
     if (won) {
         pointsEarned.textContent = '+100 points earned!';
         pointsEarned.style.display = 'block';
+        // Add win notification
+        addNotification('win', 'Victory!', `You won with a score of ${myScore}-${opponentScore} and earned 100 points!`);
     } else {
         pointsEarned.style.display = 'none';
     }
@@ -2012,5 +2018,272 @@ document.getElementById('refreshBtn').addEventListener('click', () => {
     }, 300);
 });
 
+// ===== NEW FEATURES FUNCTIONALITY =====
+
+// Level System
+function calculateLevel(points) {
+    // Level formula: Level = floor(points / 1000) + 1
+    return Math.floor(points / 1000) + 1;
+}
+
+function calculateLevelProgress(points) {
+    // Progress within current level (0-100%)
+    const pointsInLevel = points % 1000;
+    return (pointsInLevel / 1000) * 100;
+}
+
+function updateLevelDisplay() {
+    const level = calculateLevel(playerData.points);
+    const progress = calculateLevelProgress(playerData.points);
+
+    document.getElementById('playerLevel').textContent = level;
+    document.getElementById('levelFill').style.width = progress + '%';
+}
+
+// Inbox/Notification System
+let notifications = [];
+
+function loadNotifications() {
+    const stored = localStorage.getItem('quizpvp_notifications');
+    if (stored) {
+        notifications = JSON.parse(stored);
+        updateInboxBadge();
+    }
+}
+
+function saveNotifications() {
+    localStorage.setItem('quizpvp_notifications', JSON.stringify(notifications));
+    updateInboxBadge();
+}
+
+function addNotification(type, title, message) {
+    const notification = {
+        id: generateId(),
+        type: type, // 'friend', 'win', 'update'
+        title: title,
+        message: message,
+        time: Date.now(),
+        read: false
+    };
+
+    notifications.unshift(notification);
+    saveNotifications();
+}
+
+function updateInboxBadge() {
+    const unreadCount = notifications.filter(n => !n.read).length;
+    const badge = document.getElementById('inboxBadge');
+
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+function showInbox() {
+    showScreen('inboxScreen');
+    renderNotifications('all');
+}
+
+function renderNotifications(filter) {
+    const content = document.getElementById('inboxContent');
+    let filtered = notifications;
+
+    if (filter === 'friends') {
+        filtered = notifications.filter(n => n.type === 'friend');
+    } else if (filter === 'wins') {
+        filtered = notifications.filter(n => n.type === 'win');
+    } else if (filter === 'updates') {
+        filtered = notifications.filter(n => n.type === 'update');
+    }
+
+    if (filtered.length === 0) {
+        content.innerHTML = `
+            <div class="inbox-empty">
+                <span class="inbox-empty-icon">📭</span>
+                <p>No notifications yet</p>
+            </div>
+        `;
+        return;
+    }
+
+    content.innerHTML = filtered.map(n => {
+        const icon = n.type === 'friend' ? '👤' :
+                    n.type === 'win' ? '🏆' : '🎉';
+        const timeAgo = getTimeAgo(n.time);
+
+        return `
+            <div class="notification-item ${n.read ? '' : 'unread'}" onclick="markNotificationRead('${n.id}')">
+                <div class="notification-icon">${icon}</div>
+                <div class="notification-content">
+                    <div class="notification-title">${n.title}</div>
+                    <div class="notification-message">${n.message}</div>
+                    <div class="notification-time">${timeAgo}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function markNotificationRead(id) {
+    const notification = notifications.find(n => n.id === id);
+    if (notification) {
+        notification.read = true;
+        saveNotifications();
+        renderNotifications(currentInboxTab);
+    }
+}
+
+function getTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+    return Math.floor(seconds / 86400) + ' days ago';
+}
+
+let currentInboxTab = 'all';
+
+// Inbox tab switching
+document.querySelectorAll('.inbox-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.inbox-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentInboxTab = tab.dataset.tab;
+        renderNotifications(currentInboxTab);
+    });
+});
+
+// Inbox button
+document.getElementById('inboxBtn').addEventListener('click', showInbox);
+
+document.getElementById('closeInboxBtn').addEventListener('click', () => {
+    showScreen('menuScreen');
+});
+
+// Settings Screen
+document.getElementById('settingsBtn').addEventListener('click', () => {
+    showScreen('settingsScreen');
+});
+
+document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+    showScreen('menuScreen');
+});
+
+// Friend Search System
+async function searchFriend() {
+    const searchInput = document.getElementById('friendSearchInput');
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    const resultsDiv = document.getElementById('friendSearchResults');
+
+    if (searchTerm.length < 2) {
+        resultsDiv.innerHTML = '<div class="friend-search-empty">Enter at least 2 characters to search</div>';
+        return;
+    }
+
+    if (searchTerm === playerData.username.toLowerCase()) {
+        resultsDiv.innerHTML = '<div class="friend-search-empty">You cannot add yourself!</div>';
+        return;
+    }
+
+    resultsDiv.innerHTML = '<div class="friend-search-empty">Searching...</div>';
+
+    try {
+        // Search in online players first
+        const onlineSnapshot = await get(ref(db, 'online'));
+        const players = [];
+
+        if (onlineSnapshot.exists()) {
+            const onlineData = onlineSnapshot.val();
+            Object.entries(onlineData).forEach(([id, player]) => {
+                if (player.username &&
+                    player.username.toLowerCase().includes(searchTerm) &&
+                    id !== playerData.id) {
+                    players.push({
+                        id: id,
+                        username: player.username,
+                        color: '#4A90E2', // Default color
+                        online: true
+                    });
+                }
+            });
+        }
+
+        if (players.length === 0) {
+            resultsDiv.innerHTML = '<div class="friend-search-empty">No players found with that username</div>';
+            return;
+        }
+
+        resultsDiv.innerHTML = players.map(player => {
+            const colorStyle = getColorStyle(player.color);
+            return `
+                <div class="friend-result-item">
+                    <div class="friend-result-info">
+                        <div class="friend-result-avatar" style="${colorStyle}"></div>
+                        <div class="friend-result-name">${escapeHtml(player.username)}</div>
+                        ${player.online ? '<span style="color: #10b981;">● Online</span>' : ''}
+                    </div>
+                    <div class="friend-result-actions">
+                        <button class="btn btn-primary btn-small" onclick="sendFriendRequest('${player.id}', '${escapeHtml(player.username)}')">
+                            Add Friend
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsDiv.innerHTML = '<div class="friend-search-empty">Search failed. Please try again.</div>';
+    }
+}
+
+function sendFriendRequest(friendId, friendUsername) {
+    // Add notification to current user
+    addNotification('friend', 'Friend Request Sent', `You sent a friend request to ${friendUsername}`);
+
+    // In a full implementation, this would send a request to Firebase
+    // For now, we'll just show a success message
+    alert(`Friend request sent to ${friendUsername}! (Note: Full friend system coming in next update)`);
+}
+
+document.getElementById('searchFriendBtn').addEventListener('click', searchFriend);
+
+document.getElementById('friendSearchInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        searchFriend();
+    }
+});
+
+// Add welcome notification on first load
+function checkFirstLoad() {
+    const hasSeenWelcome = localStorage.getItem('quizpvp_seen_welcome_v2.6');
+    if (!hasSeenWelcome) {
+        addNotification('update', 'Welcome to QuizPVP v2.6.0!',
+            'Check out new features: Inbox notifications, friend search, level system, and upcoming modes!');
+        localStorage.setItem('quizpvp_seen_welcome_v2.6', 'true');
+    }
+}
+
+// Override the original updatePlayerDisplay to include level
+const originalUpdatePlayerDisplay = updatePlayerDisplay;
+updatePlayerDisplay = function() {
+    originalUpdatePlayerDisplay();
+    updateLevelDisplay();
+};
+
+// Override points update to trigger level display update
+const originalSavePlayerData = savePlayerData;
+savePlayerData = function() {
+    originalSavePlayerData();
+    updateLevelDisplay();
+};
+
 // Initialize
 loadPlayerData();
+loadNotifications();
+checkFirstLoad();
+updateLevelDisplay();
