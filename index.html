@@ -39,7 +39,7 @@
     <div class="background-pattern"></div>
 
     <!-- Version Badge -->
-    <div class="version-badge">v2.6.1</div>
+    <div class="version-badge">v2.8.0</div>
 
     <!-- Refresh Button -->
     <button id="refreshBtn" class="refresh-btn" title="Refresh for updates">
@@ -60,7 +60,7 @@
         </div>
     </div>
 
-    <!-- Main Menu Screen -->
+    <!-- Main Menu Screen / Hub -->
     <div id="menuScreen" class="screen">
         <div class="container">
             <div class="header">
@@ -101,9 +101,45 @@
                 </div>
             </div>
 
-            <!-- Mode Selection -->
+            <!-- Hub Menu Options -->
+            <div class="hub-menu">
+                <h2>Main Hub</h2>
+                <div class="hub-buttons">
+                    <button id="playBtn" class="hub-btn hub-btn-primary">
+                        <span class="hub-icon">🎮</span>
+                        <span class="hub-title">Play</span>
+                        <span class="hub-desc">Start a game</span>
+                    </button>
+                    <button id="profileBtn" class="hub-btn">
+                        <span class="hub-icon">👤</span>
+                        <span class="hub-title">Profile</span>
+                        <span class="hub-desc">View your profile</span>
+                    </button>
+                    <button id="shopBtn" class="hub-btn">
+                        <span class="hub-icon">🛍️</span>
+                        <span class="hub-title">Shop</span>
+                        <span class="hub-desc">Buy customizations</span>
+                    </button>
+                    <button id="settingsBtn" class="hub-btn">
+                        <span class="hub-icon">⚙️</span>
+                        <span class="hub-title">Settings</span>
+                        <span class="hub-desc">Preferences</span>
+                    </button>
+                    <button id="logoutBtn" class="hub-btn hub-btn-logout">
+                        <span class="hub-icon">🚪</span>
+                        <span class="hub-title">Logout</span>
+                        <span class="hub-desc">Change account</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Modes Screen -->
+    <div id="gameModesScreen" class="screen">
+        <div class="container">
             <div class="mode-selection">
-                <h3>Select Game Mode</h3>
+                <h2>Select Game Mode</h2>
                 <div class="mode-buttons">
                     <button id="mode1v1Btn" class="mode-btn active">
                         <span class="mode-icon">⚔️</span>
@@ -119,11 +155,6 @@
                         <span class="mode-icon">👥</span>
                         <span class="mode-title">Squad</span>
                         <span class="mode-desc">4 players compete</span>
-                    </button>
-                    <button id="modeWhoAmIBtn" class="mode-btn mobile-only">
-                        <span class="mode-icon">📱</span>
-                        <span class="mode-title">Who Am I</span>
-                        <span class="mode-desc">Mobile tilt game (4 players)</span>
                     </button>
                     <button id="modeChatBtn" class="mode-btn">
                         <span class="mode-icon">💬</span>
@@ -147,8 +178,7 @@
 
             <div class="menu-buttons">
                 <button id="findMatchBtn" class="btn btn-primary btn-large">Find Match (1v1)</button>
-                <button id="shopBtn" class="btn btn-secondary">Shop</button>
-                <button id="settingsBtn" class="btn btn-secondary">Settings</button>
+                <button id="backToHubBtn" class="btn btn-secondary">Back to Hub</button>
             </div>
         </div>
     </div>
@@ -314,6 +344,74 @@
                 <div class="inbox-empty">
                     <span class="inbox-empty-icon">📭</span>
                     <p>No notifications yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Screen -->
+    <div id="profileScreen" class="screen">
+        <div class="container">
+            <div class="shop-header">
+                <h2 id="profileTitle">My Profile</h2>
+                <button id="closeProfileBtn" class="btn btn-secondary btn-small">Close</button>
+            </div>
+
+            <!-- Profile Header -->
+            <div class="profile-header-card">
+                <div class="profile-avatar" id="profileAvatar"></div>
+                <div class="profile-info">
+                    <h3 id="profileUsername">Username</h3>
+                    <div class="profile-stats">
+                        <span class="profile-stat">
+                            <span class="stat-icon">★</span>
+                            <span id="profilePoints">0</span> points
+                        </span>
+                        <span class="profile-stat">
+                            <span class="stat-icon">🏆</span>
+                            Level <span id="profileLevel">1</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bio Section -->
+            <div class="profile-section">
+                <div class="section-header">
+                    <h3>📝 Bio</h3>
+                    <button id="editBioBtn" class="btn btn-primary btn-small">Edit Bio</button>
+                </div>
+                <div class="profile-bio" id="profileBio">
+                    <p class="bio-empty">No bio yet. Click "Edit Bio" to add one!</p>
+                </div>
+                <div class="bio-editor hidden" id="bioEditor">
+                    <textarea id="bioInput" maxlength="200" placeholder="Write your bio... (max 200 characters)"></textarea>
+                    <div class="bio-actions">
+                        <button id="saveBioBtn" class="btn btn-primary btn-small">Save</button>
+                        <button id="cancelBioBtn" class="btn btn-secondary btn-small">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Posts Section -->
+            <div class="profile-section">
+                <div class="section-header">
+                    <h3>💬 Posts</h3>
+                    <button id="createPostBtn" class="btn btn-primary btn-small">Create Post</button>
+                </div>
+
+                <!-- New Post Form -->
+                <div class="post-form hidden" id="postForm">
+                    <textarea id="postInput" maxlength="500" placeholder="What's on your mind? (max 500 characters)"></textarea>
+                    <div class="post-actions">
+                        <button id="submitPostBtn" class="btn btn-primary btn-small">Post</button>
+                        <button id="cancelPostBtn" class="btn btn-secondary btn-small">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Posts List -->
+                <div class="posts-list" id="postsList">
+                    <p class="posts-empty">No posts yet. Be the first to share something!</p>
                 </div>
             </div>
         </div>
