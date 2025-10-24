@@ -38,9 +38,7 @@
     },
     "profiles": {
       ".read": "auth != null",
-      "$userId": {
-        ".write": "auth != null && auth.uid == $userId"
-      }
+      ".write": "auth != null"
     }
   }
 }

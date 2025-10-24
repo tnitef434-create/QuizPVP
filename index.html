@@ -145,21 +145,25 @@
                         <span class="mode-icon">⚔️</span>
                         <span class="mode-title">1v1</span>
                         <span class="mode-desc">Battle one opponent</span>
+                        <span class="mode-player-count"><span id="count1v1">0</span> playing</span>
                     </button>
                     <button id="modeTriosBtn" class="mode-btn">
                         <span class="mode-icon">🔺</span>
                         <span class="mode-title">Trios</span>
                         <span class="mode-desc">3 players compete</span>
+                        <span class="mode-player-count"><span id="countTrios">0</span> playing</span>
                     </button>
                     <button id="modeSquadBtn" class="mode-btn">
                         <span class="mode-icon">👥</span>
                         <span class="mode-title">Squad</span>
                         <span class="mode-desc">4 players compete</span>
+                        <span class="mode-player-count"><span id="countSquad">0</span> playing</span>
                     </button>
                     <button id="modeChatBtn" class="mode-btn">
                         <span class="mode-icon">💬</span>
                         <span class="mode-title">Chat <span class="beta-tag">BETA</span></span>
                         <span class="mode-desc">Chat with random players</span>
+                        <span class="mode-player-count"><span id="countChat">0</span> chatting</span>
                     </button>
                     <button class="mode-btn coming-soon" disabled>
                         <span class="mode-icon">🗺️</span>
@@ -360,6 +364,7 @@
             <!-- Profile Header -->
             <div class="profile-header-card">
                 <div class="profile-avatar" id="profileAvatar"></div>
+                <button id="changeProfilePicBtn" class="change-profile-pic-btn" title="Change profile picture">📷</button>
                 <div class="profile-info">
                     <h3 id="profileUsername">Username</h3>
                     <div class="profile-stats">
@@ -494,6 +499,78 @@
             </div>
 
             <div class="shop-items">
+                <!-- Affordable Items -->
+                <div class="shop-item">
+                    <div class="shop-item-icon" style="background: #ef4444;">🔴</div>
+                    <div class="shop-item-info">
+                        <h3>Red Color</h3>
+                        <p>Classic red theme</p>
+                    </div>
+                    <div class="shop-item-price">100 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('red', '#ef4444', 100)">Buy</button>
+                </div>
+
+                <div class="shop-item">
+                    <div class="shop-item-icon" style="background: #3b82f6;">🔵</div>
+                    <div class="shop-item-info">
+                        <h3>Blue Color</h3>
+                        <p>Cool blue theme</p>
+                    </div>
+                    <div class="shop-item-price">100 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('blue', '#3b82f6', 100)">Buy</button>
+                </div>
+
+                <div class="shop-item">
+                    <div class="shop-item-icon" style="background: #10b981;">🟢</div>
+                    <div class="shop-item-info">
+                        <h3>Green Color</h3>
+                        <p>Fresh green theme</p>
+                    </div>
+                    <div class="shop-item-price">100 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('green', '#10b981', 100)">Buy</button>
+                </div>
+
+                <div class="shop-item">
+                    <div class="shop-item-icon" style="background: #a855f7;">🟣</div>
+                    <div class="shop-item-info">
+                        <h3>Purple Color</h3>
+                        <p>Royal purple theme</p>
+                    </div>
+                    <div class="shop-item-price">200 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('purple', '#a855f7', 200)">Buy</button>
+                </div>
+
+                <div class="shop-item">
+                    <div class="shop-item-icon" style="background: #f97316;">🟠</div>
+                    <div class="shop-item-info">
+                        <h3>Orange Color</h3>
+                        <p>Vibrant orange theme</p>
+                    </div>
+                    <div class="shop-item-price">200 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('orange', '#f97316', 200)">Buy</button>
+                </div>
+
+                <div class="shop-item">
+                    <div class="shop-item-icon" style="background: #ec4899;">💗</div>
+                    <div class="shop-item-info">
+                        <h3>Pink Color</h3>
+                        <p>Pretty pink theme</p>
+                    </div>
+                    <div class="shop-item-price">200 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('pink', '#ec4899', 200)">Buy</button>
+                </div>
+
+                <div class="shop-item">
+                    <div class="shop-item-icon" style="background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);">💜</div>
+                    <div class="shop-item-info">
+                        <h3>Gradient Color</h3>
+                        <p>Smooth gradient effect</p>
+                    </div>
+                    <div class="shop-item-price">500 pts</div>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('gradient', 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)', 500)">Buy</button>
+                </div>
+
+                <!-- Mid-tier Items -->
                 <div class="shop-item">
                     <div class="shop-item-icon">✏️</div>
                     <div class="shop-item-info">
@@ -514,6 +591,7 @@
                     <button class="btn btn-primary btn-small" onclick="openColorPicker()">Buy</button>
                 </div>
 
+                <!-- Premium Items -->
                 <div class="shop-item special">
                     <div class="shop-item-icon gold-icon"></div>
                     <div class="shop-item-info">
@@ -521,7 +599,7 @@
                         <p>Shine like a champion</p>
                     </div>
                     <div class="shop-item-price">10,000 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('gold')">Buy</button>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('gold', 'gold', 10000)">Buy</button>
                 </div>
 
                 <div class="shop-item legendary">
@@ -531,7 +609,7 @@
                         <p>Animated rainbow effect</p>
                     </div>
                     <div class="shop-item-price">50,000 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('rainbow')">Buy</button>
+                    <button class="btn btn-primary btn-small" onclick="purchaseColor('rainbow', 'rainbow', 50000)">Buy</button>
                 </div>
             </div>
 
@@ -560,6 +638,40 @@
             <div class="color-preview" id="colorPreview"></div>
             <div class="modal-buttons">
                 <button class="btn btn-primary" onclick="confirmColorChange()">Confirm</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profilePicModal" class="modal">
+        <div class="modal-content">
+            <h3>Change Profile Picture</h3>
+            <p>Choose an emoji or upload an image</p>
+
+            <div class="emoji-picker">
+                <button class="emoji-option" onclick="selectEmoji('😀')">😀</button>
+                <button class="emoji-option" onclick="selectEmoji('😎')">😎</button>
+                <button class="emoji-option" onclick="selectEmoji('🤓')">🤓</button>
+                <button class="emoji-option" onclick="selectEmoji('😇')">😇</button>
+                <button class="emoji-option" onclick="selectEmoji('🥳')">🥳</button>
+                <button class="emoji-option" onclick="selectEmoji('🤖')">🤖</button>
+                <button class="emoji-option" onclick="selectEmoji('👽')">👽</button>
+                <button class="emoji-option" onclick="selectEmoji('🦄')">🦄</button>
+                <button class="emoji-option" onclick="selectEmoji('🐶')">🐶</button>
+                <button class="emoji-option" onclick="selectEmoji('🐱')">🐱</button>
+                <button class="emoji-option" onclick="selectEmoji('🐼')">🐼</button>
+                <button class="emoji-option" onclick="selectEmoji('🦊')">🦊</button>
+            </div>
+
+            <div class="upload-section">
+                <p>Or upload your own image:</p>
+                <input type="file" id="profilePicUpload" accept="image/*">
+            </div>
+
+            <div class="profile-pic-preview" id="profilePicPreview"></div>
+
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="confirmProfilePicChange()">Save</button>
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </div>
         </div>

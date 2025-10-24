@@ -72,7 +72,8 @@ let playerData = {
     username: '',
     points: 0,
     color: '#4A90E2',
-    id: ''
+    id: '',
+    profilePic: null // Can be emoji string or data URL
 };
 
 let currentGame = {
@@ -92,6 +93,12 @@ let gameListener = null;
 let searchListener = null;
 let activePlayersCount = 0;
 let currentMode = '1v1'; // Default mode
+let modePlayerCounts = {
+    '1v1': 0,
+    'trios': 0,
+    'squad': 0,
+    'chat': 0
+};
 
 let gameTimer = null;
 let timeRemaining = 80; // 1 minute 20 seconds
@@ -151,6 +158,77 @@ function trackActivePlayerCount() {
         console.log('👥 Active players:', activePlayersCount);
         updatePlayerCountDisplay();
     });
+}
+
+// Track player counts per mode
+function trackModePlayerCounts() {
+    // Track waiting queues and active games to count players in each mode
+    database.ref('waiting_1v1').on('value', (snapshot) => {
+        const waiting = snapshot.val() || {};
+        modePlayerCounts['1v1'] = Object.keys(waiting).length;
+        updateModeCountDisplays();
+    });
+
+    database.ref('waiting_trios').on('value', (snapshot) => {
+        const waiting = snapshot.val() || {};
+        modePlayerCounts['trios'] = Object.keys(waiting).length;
+        updateModeCountDisplays();
+    });
+
+    database.ref('waiting_squad').on('value', (snapshot) => {
+        const waiting = snapshot.val() || {};
+        modePlayerCounts['squad'] = Object.keys(waiting).length;
+        updateModeCountDisplays();
+    });
+
+    database.ref('waiting_chat').on('value', (snapshot) => {
+        const waiting = snapshot.val() || {};
+        modePlayerCounts['chat'] = Object.keys(waiting).length;
+        updateModeCountDisplays();
+    });
+
+    // Also count active games
+    database.ref('games').on('value', (snapshot) => {
+        const games = snapshot.val() || {};
+        const count1v1 = Object.keys(games).length * 2; // Each game has 2 players
+        modePlayerCounts['1v1'] += count1v1;
+        updateModeCountDisplays();
+    });
+
+    database.ref('games_trios').on('value', (snapshot) => {
+        const games = snapshot.val() || {};
+        const countTrios = Object.keys(games).length * 3; // Each game has 3 players
+        modePlayerCounts['trios'] += countTrios;
+        updateModeCountDisplays();
+    });
+
+    database.ref('games_squad').on('value', (snapshot) => {
+        const games = snapshot.val() || {};
+        const countSquad = Object.keys(games).length * 4; // Each game has 4 players
+        modePlayerCounts['squad'] += countSquad;
+        updateModeCountDisplays();
+    });
+
+    database.ref('chats').on('value', (snapshot) => {
+        const chats = snapshot.val() || {};
+        const activeChats = Object.values(chats).filter(c => c.active).length;
+        const countChat = activeChats * 2; // Each chat has 2 players
+        modePlayerCounts['chat'] += countChat;
+        updateModeCountDisplays();
+    });
+}
+
+// Update mode count displays
+function updateModeCountDisplays() {
+    const count1v1El = document.getElementById('count1v1');
+    const countTriosEl = document.getElementById('countTrios');
+    const countSquadEl = document.getElementById('countSquad');
+    const countChatEl = document.getElementById('countChat');
+
+    if (count1v1El) count1v1El.textContent = modePlayerCounts['1v1'] || 0;
+    if (countTriosEl) countTriosEl.textContent = modePlayerCounts['trios'] || 0;
+    if (countSquadEl) countSquadEl.textContent = modePlayerCounts['squad'] || 0;
+    if (countChatEl) countChatEl.textContent = modePlayerCounts['chat'] || 0;
 }
 
 // Update player count display
@@ -253,6 +331,7 @@ function loadPlayerData() {
         playerData.color = data.color || '#4A90E2';
         playerData.id = data.id || generateId();
         playerData.username = data.username || ''; // Load saved username
+        playerData.profilePic = data.profilePic || null; // Load profile picture
 
         // If username exists, skip to menu and setup
         if (playerData.username && playerData.username.length >= 2) {
@@ -261,6 +340,7 @@ function loadPlayerData() {
             showScreen('menuScreen');
             setupPlayerPresence();
             trackActivePlayerCount();
+            trackModePlayerCounts();
             cleanupOldGames();
             setInterval(cleanupOldGames, 60000);
             return true; // Username loaded
@@ -277,7 +357,8 @@ function savePlayerData() {
         points: playerData.points,
         color: playerData.color,
         id: playerData.id,
-        username: playerData.username // Save username too
+        username: playerData.username, // Save username too
+        profilePic: playerData.profilePic // Save profile picture
     }));
 }
 
@@ -319,8 +400,32 @@ function isLightColor(color) {
 }
 
 // Apply avatar style
-function applyAvatarStyle(element, color) {
-    element.style.background = getColorStyle(color);
+function applyAvatarStyle(element, color, profilePic = null) {
+    // Check if there's a profile picture to display
+    if (profilePic) {
+        // Check if it's an emoji or image URL
+        if (profilePic.startsWith('data:') || profilePic.startsWith('http')) {
+            // It's an image URL
+            element.style.backgroundImage = `url(${profilePic})`;
+            element.style.backgroundSize = 'cover';
+            element.style.backgroundPosition = 'center';
+            element.textContent = '';
+        } else {
+            // It's an emoji
+            element.style.backgroundImage = 'none';
+            element.style.background = getColorStyle(color);
+            element.textContent = profilePic;
+            element.style.fontSize = '2.5em';
+            element.style.display = 'flex';
+            element.style.alignItems = 'center';
+            element.style.justifyContent = 'center';
+        }
+    } else {
+        // No profile picture, use color background
+        element.style.backgroundImage = 'none';
+        element.style.background = getColorStyle(color);
+        element.textContent = '';
+    }
 
     if (color === 'rainbow') {
         element.classList.add('rainbow-avatar');
@@ -735,8 +840,8 @@ function startGame(gameId, gameData) {
     const yourAvatar = document.getElementById('yourAvatar');
     const opponentAvatar = document.getElementById('opponentAvatar');
 
-    applyAvatarStyle(yourAvatar, playerData.color);
-    applyAvatarStyle(opponentAvatar, opponent.color);
+    applyAvatarStyle(yourAvatar, playerData.color, playerData.profilePic);
+    applyAvatarStyle(opponentAvatar, opponent.color, null); // Opponents don't have profile pics in this version
 
     // Show first question
     showQuestion();
@@ -783,9 +888,9 @@ function startTriosGame(gameId, gameData) {
     const yourAvatar = document.getElementById('yourAvatar');
     const opponentAvatar = document.getElementById('opponentAvatar');
 
-    applyAvatarStyle(yourAvatar, playerData.color);
+    applyAvatarStyle(yourAvatar, playerData.color, playerData.profilePic);
     if (otherPlayer) {
-        applyAvatarStyle(opponentAvatar, otherPlayer.color);
+        applyAvatarStyle(opponentAvatar, otherPlayer.color, null);
     }
 
     // Show first question
@@ -831,9 +936,9 @@ function startSquadGame(gameId, gameData) {
     const yourAvatar = document.getElementById('yourAvatar');
     const opponentAvatar = document.getElementById('opponentAvatar');
 
-    applyAvatarStyle(yourAvatar, playerData.color);
+    applyAvatarStyle(yourAvatar, playerData.color, playerData.profilePic);
     if (otherPlayer) {
-        applyAvatarStyle(opponentAvatar, otherPlayer.color);
+        applyAvatarStyle(opponentAvatar, otherPlayer.color, null);
     }
 
     // Show first question
@@ -1384,29 +1489,18 @@ function confirmColorChange() {
     alert('Color changed successfully!');
 }
 
-function purchaseColor(colorType) {
-    let cost = 0;
-    let colorValue = '';
-
-    if (colorType === 'gold') {
-        cost = 10000;
-        colorValue = 'gold';
-    } else if (colorType === 'rainbow') {
-        cost = 50000;
-        colorValue = 'rainbow';
-    }
-
+function purchaseColor(colorName, colorValue, cost) {
     if (playerData.points < cost) {
         alert(`Not enough points! You need ${cost.toLocaleString()} points.`);
         return;
     }
 
-    if (confirm(`Purchase ${colorType} color for ${colorType.toLocaleString()} points?`)) {
+    if (confirm(`Purchase ${colorName} color for ${cost.toLocaleString()} points?`)) {
         playerData.points -= cost;
         playerData.color = colorValue;
         savePlayerData();
         updatePlayerDisplay();
-        alert(`${colorType} color purchased successfully!`);
+        alert(`${colorName} color purchased successfully!`);
     }
 }
 
@@ -1425,6 +1519,7 @@ function cancelSearch() {
         database.ref(`waiting_1v1/${playerData.id}`).remove();
         database.ref(`waiting_trios/${playerData.id}`).remove();
         database.ref(`waiting_squad/${playerData.id}`).remove();
+        database.ref(`waiting_chat/${playerData.id}`).remove();
     }
 
     // Remove game listeners
@@ -1435,11 +1530,18 @@ function cancelSearch() {
         searchListener = null;
     }
 
+    // Remove chat search listener
+    if (chatSearchListener) {
+        database.ref('chats').off('child_added', chatSearchListener);
+        chatSearchListener = null;
+    }
+
     // Reset searching text
     document.querySelector('.searching-animation h2').textContent = 'Finding Opponent...';
     document.querySelector('.searching-text').textContent = 'Matching you with another player';
 
-    showScreen('menuScreen');
+    // Return to game modes screen (play screen) instead of main menu
+    showScreen('gameModesScreen');
 }
 
 // ===== CHAT MODE FUNCTIONS =====
@@ -1546,7 +1648,7 @@ function startChatSession(chatId, chatData) {
     document.getElementById('chatStatus').textContent = 'Online';
 
     const partnerAvatar = document.getElementById('chatPartnerAvatar');
-    applyAvatarStyle(partnerAvatar, partner.color);
+    applyAvatarStyle(partnerAvatar, partner.color, null);
 
     // Clear messages
     const chatMessages = document.getElementById('chatMessages');
@@ -1688,6 +1790,7 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     // Setup player presence and tracking
     setupPlayerPresence();
     trackActivePlayerCount();
+    trackModePlayerCounts();
 
     // Clean up old games periodically
     cleanupOldGames();
@@ -2181,7 +2284,7 @@ async function loadProfile(userId = null) {
     if (isOwnProfile) {
         // Load own profile data
         const profileAvatar = document.getElementById('profileAvatar');
-        applyAvatarStyle(profileAvatar, playerData.color);
+        applyAvatarStyle(profileAvatar, playerData.color, playerData.profilePic);
 
         document.getElementById('profileUsername').textContent = playerData.username;
         document.getElementById('profilePoints').textContent = playerData.points.toLocaleString();
@@ -2503,6 +2606,85 @@ async function submitReply(postId, postUserId) {
 document.getElementById('closeProfileBtn').addEventListener('click', () => {
     showScreen('menuScreen');
 });
+
+// ===== PROFILE PICTURE FUNCTIONALITY =====
+
+let selectedProfilePic = null;
+
+// Open profile picture modal
+document.getElementById('changeProfilePicBtn').addEventListener('click', () => {
+    document.getElementById('profilePicModal').classList.add('active');
+    selectedProfilePic = playerData.profilePic; // Start with current
+    updateProfilePicPreview();
+});
+
+// Select emoji
+function selectEmoji(emoji) {
+    selectedProfilePic = emoji;
+    updateProfilePicPreview();
+}
+
+// Handle file upload
+document.getElementById('profilePicUpload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        if (file.size > 500000) { // 500KB limit
+            alert('Image too large! Please choose an image under 500KB.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            selectedProfilePic = event.target.result; // Data URL
+            updateProfilePicPreview();
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Update preview
+function updateProfilePicPreview() {
+    const preview = document.getElementById('profilePicPreview');
+    if (selectedProfilePic) {
+        if (selectedProfilePic.startsWith('data:')) {
+            // Image
+            preview.style.backgroundImage = `url(${selectedProfilePic})`;
+            preview.style.backgroundSize = 'cover';
+            preview.style.backgroundPosition = 'center';
+            preview.textContent = '';
+        } else {
+            // Emoji
+            preview.style.backgroundImage = 'none';
+            preview.style.background = getColorStyle(playerData.color);
+            preview.textContent = selectedProfilePic;
+            preview.style.fontSize = '3em';
+        }
+        preview.style.display = 'flex';
+    }
+}
+
+// Confirm profile picture change
+async function confirmProfilePicChange() {
+    if (!selectedProfilePic) {
+        alert('Please select a profile picture!');
+        return;
+    }
+
+    playerData.profilePic = selectedProfilePic;
+    savePlayerData();
+
+    // Save to Firebase
+    try {
+        await database.ref(`profiles/${playerData.id}/profilePic`).set(selectedProfilePic);
+    } catch (error) {
+        console.warn('Could not save profile picture to Firebase:', error);
+    }
+
+    // Update display
+    loadProfile();
+    closeModal();
+    alert('Profile picture updated!');
+}
 
 // ===== HUB NAVIGATION =====
 
