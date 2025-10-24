@@ -1,16 +1,6 @@
 // ===== FIREBASE CONFIGURATION =====
-// PRODUCTION SETUP INSTRUCTIONS:
-// 1. Go to https://firebase.google.com and create a free project
-// 2. Enable Realtime Database
-// 3. Set database rules to:
-//    {
-//      "rules": {
-//        ".read": true,
-//        ".write": true
-//      }
-//    }
-// 4. Replace this config with your project's config from Project Settings
-// 5. For security in production, implement proper authentication and rules
+// Firebase is configured to work with your database at:
+// https://quizpvp-5a2e2-default-rtdb.europe-west1.firebasedatabase.app
 
 const firebaseConfig = {
   apiKey: "AIzaSyDWrBVl4RtMoKCSYZWdq4lZqoYMlx9RPCs",
@@ -25,29 +15,56 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let database;
+let auth;
 let connectedRef;
 let myConnectionRef;
 let isFirebaseReady = false;
 
 try {
+    // Initialize Firebase App
     firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
     database = firebase.database();
     connectedRef = database.ref('.info/connected');
-    isFirebaseReady = true;
-    console.log('✅ Firebase initialized successfully');
+
+    console.log('✅ Firebase app initialized');
     console.log('🌐 Database URL:', firebaseConfig.databaseURL);
 
-    // Test connection
-    database.ref('.info/connected').on('value', (snapshot) => {
-        if (snapshot.val() === true) {
-            console.log('✅ Connected to Firebase!');
+    // Sign in anonymously to satisfy database rules
+    auth.signInAnonymously()
+        .then(() => {
+            console.log('✅ Signed in anonymously');
+            isFirebaseReady = true;
+
+            // Test connection after authentication
+            database.ref('.info/connected').on('value', (snapshot) => {
+                if (snapshot.val() === true) {
+                    console.log('✅ Connected to Firebase Database!');
+                } else {
+                    console.log('⚠️ Not connected to Firebase');
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('❌ Anonymous authentication failed:', error);
+            alert('Failed to authenticate with game server.\n\nError: ' + error.message);
+            isFirebaseReady = false;
+        });
+
+    // Monitor authentication state
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            console.log('✅ User authenticated:', user.uid);
+            isFirebaseReady = true;
         } else {
-            console.log('⚠️ Not connected to Firebase');
+            console.log('⚠️ User not authenticated');
+            isFirebaseReady = false;
         }
     });
+
 } catch (error) {
     console.error('❌ Firebase initialization error:', error);
-    alert('Failed to connect to game server. Please check:\n1. Your Firebase config in client.js is correct\n2. Your internet connection\n3. Firebase Database is enabled in your project\n\nError: ' + error.message);
+    alert('Failed to connect to game server. Please check your internet connection.\n\nError: ' + error.message);
     isFirebaseReady = false;
 }
 

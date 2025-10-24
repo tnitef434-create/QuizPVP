@@ -1,0 +1,36 @@
+{
+  "rules": {
+    "online": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "waiting_1v1": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "waiting_trios": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "waiting_squad": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "games": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "games_trios": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "games_squad": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "chats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
