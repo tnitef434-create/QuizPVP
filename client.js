@@ -201,13 +201,58 @@ function trackModePlayerCounts() {
 
 console.log('✅ V3.0 features initialized');
 
+// V3.0: Level system - Calculate XP required for next level
+function getXPForLevel(level) {
+    // Exponential progression: level 1->2 needs 100 XP, level 2->3 needs 150 XP, etc.
+    return Math.floor(100 * Math.pow(1.5, level - 1));
+}
+
+// Get level tier for styling
+function getLevelTier(level) {
+    if (level >= 50) return 'legendary';
+    if (level >= 30) return 'epic';
+    if (level >= 20) return 'rare';
+    if (level >= 10) return 'uncommon';
+    return 'common';
+}
+
+// Get level display with styling
+function getLevelDisplay(level) {
+    const tier = getLevelTier(level);
+    return `<span class="player-level level-${tier}">Lv ${level}</span>`;
+}
+
+// Award XP and check for level up
+function awardXP(amount) {
+    playerData.xp += amount;
+    console.log(`✨ +${amount} XP! Total: ${playerData.xp}`);
+
+    // Check for level up
+    let leveledUp = false;
+    while (playerData.xp >= getXPForLevel(playerData.level)) {
+        playerData.xp -= getXPForLevel(playerData.level);
+        playerData.level++;
+        leveledUp = true;
+        console.log(`🎉 LEVEL UP! Now level ${playerData.level}`);
+    }
+
+    if (leveledUp) {
+        showNotification('Level Up!', `You are now level ${playerData.level}!`, '🎉');
+    }
+
+    savePlayerData();
+    updatePlayerDisplay();
+}
+
 let playerData = {
     username: '',
     points: 0,
     color: '#4A90E2',
     id: '',
     friends: [],
-    friendRequests: []
+    friendRequests: [],
+    level: 1,
+    xp: 0
 };
 
 let currentGame = {
@@ -250,7 +295,8 @@ let currentChatSession = {
     chatId: '',
     partnerId: '',
     partnerUsername: '',
-    partnerColor: ''
+    partnerColor: '',
+    partnerLevel: 1
 };
 let chatListener = null;
 let chatSearchListener = null;
@@ -454,6 +500,8 @@ async function loadPlayerData() {
         playerData.username = data.username || ''; // Load saved username
         playerData.friends = data.friends || [];
         playerData.friendRequests = data.friendRequests || [];
+        playerData.level = data.level || 1;
+        playerData.xp = data.xp || 0;
 
         // If username exists, skip to menu and setup
         if (playerData.username && playerData.username.length >= 2) {
@@ -483,7 +531,9 @@ function savePlayerData() {
         id: playerData.id,
         username: playerData.username, // Save username too
         friends: playerData.friends || [],
-        friendRequests: playerData.friendRequests || []
+        friendRequests: playerData.friendRequests || [],
+        level: playerData.level || 1,
+        xp: playerData.xp || 0
     }));
 }
 
@@ -621,6 +671,7 @@ async function find1v1Match() {
                     id: playerData.id,
                     username: playerData.username,
                     color: playerData.color,
+                    level: playerData.level || 1,
                     score: 0,
                     answers: [],
                     finished: false
@@ -629,6 +680,7 @@ async function find1v1Match() {
                     id: opponentId,
                     username: opponentData.username,
                     color: opponentData.color,
+                    level: opponentData.level || 1,
                     score: 0,
                     answers: [],
                     finished: false
@@ -653,6 +705,7 @@ async function find1v1Match() {
             await waitingRef.child(playerData.id).set({
                 username: playerData.username,
                 color: playerData.color,
+                level: playerData.level || 1,
                 timestamp: Date.now()
             });
             console.log('✅ Added to queue. Waiting for opponent...');
@@ -953,9 +1006,9 @@ function startGame(gameId, gameData) {
 
     showScreen('gameScreen');
 
-    // Setup player displays
-    document.getElementById('yourName').textContent = playerData.username;
-    document.getElementById('opponentName').textContent = opponent.username;
+    // Setup player displays with levels
+    document.getElementById('yourName').innerHTML = playerData.username + getLevelDisplay(playerData.level);
+    document.getElementById('opponentName').innerHTML = opponent.username + getLevelDisplay(opponent.level || 1);
 
     const yourAvatar = document.getElementById('yourAvatar');
     const opponentAvatar = document.getElementById('opponentAvatar');
@@ -1391,10 +1444,8 @@ async function submitAnswers() {
                      'Waiting for opponent to finish...';
     document.getElementById('waitingResultsText').textContent = waitText;
 
-    // V3.0: Show vote to skip timer container if timer is still running
-    if (timeRemaining > 0) {
-        setupVoteToSkipTimer();
-    }
+    // V3.0: ALWAYS show vote to skip timer - no matter when you finish
+    setupVoteToSkipTimer();
 
     // Continue updating the timer display on the waiting screen
     updateWaitingTimerDisplay();
@@ -1494,10 +1545,12 @@ async function checkTriosGameEnd(game) {
         const myPlayer = game.players.find(p => p.id === playerData.id);
         const myRank = sortedPlayers.findIndex(p => p.id === playerData.id) + 1;
 
-        // Winner gets 100 points
+        // Winner gets 100 points + XP
         if (myRank === 1) {
             playerData.points += 100;
-            savePlayerData();
+            awardXP(50); // Winner gets 50 XP
+        } else {
+            awardXP(20); // Participants get 20 XP
         }
 
         showTriosResults(game.players, myPlayer, myRank);
@@ -1537,10 +1590,12 @@ async function checkSquadGameEnd(game) {
         const myPlayer = game.players.find(p => p.id === playerData.id);
         const myRank = sortedPlayers.findIndex(p => p.id === playerData.id) + 1;
 
-        // Winner gets 100 points
+        // Winner gets 100 points + XP
         if (myRank === 1) {
             playerData.points += 100;
-            savePlayerData();
+            awardXP(60); // Squad winner gets 60 XP (4 players is harder)
+        } else {
+            awardXP(25); // Participants get 25 XP
         }
 
         showSquadResults(game.players, myPlayer, myRank);
@@ -2135,12 +2190,14 @@ async function findChatPartner() {
                 user1: {
                     id: playerData.id,
                     username: playerData.username,
-                    color: playerData.color
+                    color: playerData.color,
+                    level: playerData.level || 1
                 },
                 user2: {
                     id: partnerId,
                     username: partnerData.username,
-                    color: partnerData.color
+                    color: partnerData.color,
+                    level: partnerData.level || 1
                 },
                 messages: [],
                 createdAt: Date.now(),
@@ -2155,6 +2212,7 @@ async function findChatPartner() {
             await waitingRef.child(playerData.id).set({
                 username: playerData.username,
                 color: playerData.color,
+                level: playerData.level || 1,
                 timestamp: Date.now()
             });
 
@@ -2196,11 +2254,12 @@ function startChatSession(chatId, chatData) {
     currentChatSession.partnerId = partner.id;
     currentChatSession.partnerUsername = partner.username;
     currentChatSession.partnerColor = partner.color;
+    currentChatSession.partnerLevel = partner.level || 1;
 
     showScreen('chatScreen');
 
-    // Update partner display
-    document.getElementById('chatPartnerName').textContent = partner.username;
+    // Update partner display with level
+    document.getElementById('chatPartnerName').innerHTML = partner.username + getLevelDisplay(partner.level || 1);
     document.getElementById('chatStatus').textContent = 'Online';
 
     const partnerAvatar = document.getElementById('chatPartnerAvatar');
@@ -2266,8 +2325,11 @@ function displayChatMessage(message) {
     const isMe = message.senderId === playerData.id;
     messageDiv.className = `chat-message ${isMe ? 'mine' : 'theirs'}`;
 
+    const senderName = isMe ? 'You' : currentChatSession.partnerUsername;
+    const senderLevel = isMe ? playerData.level : currentChatSession.partnerLevel;
+
     messageDiv.innerHTML = `
-        <div class="message-sender">${isMe ? 'You' : currentChatSession.partnerUsername}</div>
+        <div class="message-sender">${senderName} ${getLevelDisplay(senderLevel)}</div>
         <div class="message-text">${escapeHtml(message.text)}</div>
         <div class="message-time">${formatTime(message.timestamp)}</div>
     `;
@@ -2465,7 +2527,12 @@ function updateFriendsDisplay(friends) {
     friendsList.innerHTML = '';
 
     const friendsArray = Object.values(friends);
-    document.getElementById('friendsCount').textContent = friendsArray.length;
+
+    // Update friends count if element exists
+    const friendsCountEl = document.getElementById('friendsCount');
+    if (friendsCountEl) {
+        friendsCountEl.textContent = friendsArray.length;
+    }
 
     if (friendsArray.length === 0) {
         friendsList.innerHTML = '<div class="empty-state">No friends yet. Add friends from chat!</div>';
@@ -2747,7 +2814,111 @@ async function inviteFriendTo1v1(friendId, friendUsername) {
     }
 }
 
+// V3.0: Listen for incoming friend requests (real-time)
+let currentFriendRequest = null;
+
+function setupFriendRequestListener() {
+    if (!database || !playerData.id) return;
+
+    database.ref(`users/${playerData.id}/friendRequests`).on('child_added', (snapshot) => {
+        const requestId = snapshot.key;
+        const request = snapshot.val();
+
+        // Don't show if it's an old request (loaded on init)
+        if (Date.now() - request.timestamp > 5000) {
+            // Just update the badge
+            loadFriendRequests();
+            return;
+        }
+
+        // Show in-app notification
+        showFriendRequestNotification(requestId, request);
+    });
+}
+
+function showFriendRequestNotification(requestId, request) {
+    currentFriendRequest = { id: requestId, data: request };
+
+    const notif = document.getElementById('friendRequestNotification');
+    const usernameEl = notif.querySelector('.friend-request-username');
+
+    if (usernameEl) {
+        usernameEl.textContent = request.username;
+    }
+
+    notif.style.display = 'block';
+
+    // Update badge count
+    loadFriendRequests();
+
+    // Auto-hide after 10 seconds if not interacted with
+    setTimeout(() => {
+        if (notif.style.display === 'block') {
+            notif.style.display = 'none';
+            currentFriendRequest = null;
+        }
+    }, 10000);
+}
+
+function hideFriendRequestNotification() {
+    const notif = document.getElementById('friendRequestNotification');
+    notif.style.display = 'none';
+    currentFriendRequest = null;
+}
+
+async function acceptFriendRequestFromNotification() {
+    if (!currentFriendRequest) return;
+
+    const { id: friendId, data: friendData } = currentFriendRequest;
+
+    try {
+        // Add to my friends
+        await database.ref(`users/${playerData.id}/friends/${friendId}`).set({
+            id: friendId,
+            username: friendData.username,
+            color: friendData.color
+        });
+
+        // Add me to their friends
+        await database.ref(`users/${friendId}/friends/${playerData.id}`).set({
+            id: playerData.id,
+            username: playerData.username,
+            color: playerData.color
+        });
+
+        // Remove friend request
+        await database.ref(`users/${playerData.id}/friendRequests/${friendId}`).remove();
+
+        hideFriendRequestNotification();
+        showNotification('Friend Added!', `You are now friends with ${friendData.username}`, '🎉');
+
+        // Reload lists
+        loadFriendsList();
+        loadFriendRequests();
+    } catch (error) {
+        console.error('Error accepting friend request:', error);
+        showNotification('Error', 'Failed to accept friend request', '❌');
+    }
+}
+
+async function rejectFriendRequestFromNotification() {
+    if (!currentFriendRequest) return;
+
+    const { id: friendId } = currentFriendRequest;
+
+    try {
+        await database.ref(`users/${playerData.id}/friendRequests/${friendId}`).remove();
+        hideFriendRequestNotification();
+        showNotification('Request Rejected', 'Friend request declined', 'ℹ️');
+        loadFriendRequests();
+    } catch (error) {
+        console.error('Error rejecting friend request:', error);
+    }
+}
+
 // Listen for incoming game invites
+let currentGameInvite = null;
+
 function setupGameInviteListener() {
     if (!database || !playerData.id) return;
 
@@ -2761,66 +2932,120 @@ function setupGameInviteListener() {
             return;
         }
 
-        // Show notification with accept/decline options
-        const accept = confirm(`${invite.fromUsername} invited you to a 1v1 game! Accept?`);
-
-        if (accept) {
-            // Create the game
-            const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            const questions = generateQuestions(10);
-
-            await database.ref(`games/${gameId}`).set({
-                id: gameId,
-                mode: '1v1',
-                player1: {
-                    id: invite.from,
-                    username: invite.fromUsername,
-                    color: invite.fromColor,
-                    score: 0,
-                    answers: {},
-                    finished: false
-                },
-                player2: {
-                    id: playerData.id,
-                    username: playerData.username,
-                    color: playerData.color,
-                    score: 0,
-                    answers: {},
-                    finished: false
-                },
-                questions: questions,
-                startTime: Date.now(),
-                timeLimit: 80,
-                timeExpired: false
-            });
-
-            // Mark invite as accepted and add game ID
-            await database.ref(`gameInvites/${playerData.id}/${inviteId}`).update({
-                accepted: true,
-                gameId: gameId
-            });
-
-            // Start the game for this player
-            showNotification('Game Starting!', 'Get ready!', '🎮');
-            setTimeout(() => {
-                database.ref(`games/${gameId}`).once('value', (gameSnapshot) => {
-                    const game = gameSnapshot.val();
-                    if (game) {
-                        startGame(gameId, game);
-                    }
-                });
-            }, 1000);
-
-            // Clean up invite after a delay
-            setTimeout(async () => {
-                await database.ref(`gameInvites/${playerData.id}/${inviteId}`).remove();
-            }, 5000);
-        } else {
-            // Decline - remove the invite
-            await database.ref(`gameInvites/${playerData.id}/${inviteId}`).remove();
-            showNotification('Invite Declined', 'You declined the game invite', 'ℹ️');
+        // Don't show if it's an old invite (loaded on init)
+        if (Date.now() - invite.timestamp > 5000) {
+            return;
         }
+
+        // Show in-app notification
+        showGameInviteNotification(inviteId, invite);
     });
+}
+
+function showGameInviteNotification(inviteId, invite) {
+    currentGameInvite = { id: inviteId, data: invite };
+
+    const notif = document.getElementById('gameInviteNotification');
+    const usernameEl = notif.querySelector('.game-invite-username');
+
+    if (usernameEl) {
+        usernameEl.textContent = `${invite.fromUsername} wants to play!`;
+    }
+
+    notif.style.display = 'block';
+
+    // Auto-hide after 30 seconds if not interacted with
+    setTimeout(() => {
+        if (notif.style.display === 'block' && currentGameInvite && currentGameInvite.id === inviteId) {
+            hideGameInviteNotification();
+            // Auto-decline if not responded
+            database.ref(`gameInvites/${playerData.id}/${inviteId}`).remove();
+        }
+    }, 30000);
+}
+
+function hideGameInviteNotification() {
+    const notif = document.getElementById('gameInviteNotification');
+    notif.style.display = 'none';
+    currentGameInvite = null;
+}
+
+async function acceptGameInviteFromNotification() {
+    if (!currentGameInvite) return;
+
+    const { id: inviteId, data: invite } = currentGameInvite;
+
+    try {
+        // Create the game
+        const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const questions = generateQuestions(10);
+
+        await database.ref(`games/${gameId}`).set({
+            id: gameId,
+            mode: '1v1',
+            player1: {
+                id: invite.from,
+                username: invite.fromUsername,
+                color: invite.fromColor,
+                score: 0,
+                answers: {},
+                finished: false
+            },
+            player2: {
+                id: playerData.id,
+                username: playerData.username,
+                color: playerData.color,
+                score: 0,
+                answers: {},
+                finished: false
+            },
+            questions: questions,
+            startTime: Date.now(),
+            timeLimit: 80,
+            timeExpired: false
+        });
+
+        // Mark invite as accepted and add game ID
+        await database.ref(`gameInvites/${playerData.id}/${inviteId}`).update({
+            accepted: true,
+            gameId: gameId
+        });
+
+        hideGameInviteNotification();
+
+        // Start the game for this player
+        showNotification('Game Starting!', 'Get ready!', '🎮');
+        setTimeout(() => {
+            database.ref(`games/${gameId}`).once('value', (gameSnapshot) => {
+                const game = gameSnapshot.val();
+                if (game) {
+                    startGame(gameId, game);
+                }
+            });
+        }, 1000);
+
+        // Clean up invite after a delay
+        setTimeout(async () => {
+            await database.ref(`gameInvites/${playerData.id}/${inviteId}`).remove();
+        }, 5000);
+    } catch (error) {
+        console.error('Error accepting game invite:', error);
+        showNotification('Error', 'Failed to accept game invite', '❌');
+    }
+}
+
+async function declineGameInviteFromNotification() {
+    if (!currentGameInvite) return;
+
+    const { id: inviteId } = currentGameInvite;
+
+    try {
+        await database.ref(`gameInvites/${playerData.id}/${inviteId}`).remove();
+        hideGameInviteNotification();
+        showNotification('Invite Declined', 'You declined the game invite', 'ℹ️');
+    } catch (error) {
+        console.error('Error declining game invite:', error);
+    }
 }
 
 // View results manually
@@ -2848,10 +3073,14 @@ function viewResults() {
         voteContainer.style.display = 'none';
     }
 
-    // Award points if won
+    // Award points and XP
     if (gameWon) {
         playerData.points += 100;
-        savePlayerData();
+        awardXP(40); // Winner gets 40 XP
+    } else if (gameDraw) {
+        awardXP(20); // Draw gets 20 XP
+    } else {
+        awardXP(10); // Loser still gets 10 XP for participating
     }
 
     showResults(myGameScore, opponentGameScore, gameWon, gameDraw);
@@ -2941,8 +3170,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load player data first
     await loadPlayerData();
 
-    // V3.0: Setup game invite listener
+    // V3.0: Setup real-time listeners
     setupGameInviteListener();
+    setupFriendRequestListener();
 
     // Now attach all event listeners (DOM is ready)
     setupEventListeners();
@@ -3166,6 +3396,24 @@ function setupEventListeners() {
     safeAddListener('voteSkipBtn', 'click', () => {
         voteToSkipTimer();
     }, 'Vote to Skip Timer');
+
+    // V3.0: Friend request notification buttons
+    safeAddListener('acceptFriendNotifBtn', 'click', () => {
+        acceptFriendRequestFromNotification();
+    }, 'Accept Friend Request Notification');
+
+    safeAddListener('rejectFriendNotifBtn', 'click', () => {
+        rejectFriendRequestFromNotification();
+    }, 'Reject Friend Request Notification');
+
+    // V3.0: Game invite notification buttons
+    safeAddListener('acceptGameInviteBtn', 'click', () => {
+        acceptGameInviteFromNotification();
+    }, 'Accept Game Invite');
+
+    safeAddListener('declineGameInviteBtn', 'click', () => {
+        declineGameInviteFromNotification();
+    }, 'Decline Game Invite');
 
     // === SHOP & SETTINGS ===
     console.log('🛒 Setting up Shop buttons...');

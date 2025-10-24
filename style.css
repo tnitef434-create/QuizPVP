@@ -2196,6 +2196,130 @@ input[type="color"] {
     }
 }
 
+/* Friend Request Notification (V3.0) */
+.friend-request-notification,
+.game-invite-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 10001;
+    animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    max-width: 400px;
+}
+
+.friend-request-content,
+.game-invite-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+}
+
+.friend-request-icon,
+.game-invite-icon {
+    font-size: 2.5rem;
+    animation: pulse 2s infinite;
+}
+
+.friend-request-info,
+.game-invite-info {
+    flex: 1;
+}
+
+.friend-request-title,
+.game-invite-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.friend-request-username,
+.game-invite-username {
+    font-size: 1rem;
+    color: #666;
+    font-weight: 600;
+}
+
+.friend-request-actions,
+.game-invite-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-accept {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.btn-accept:hover {
+    background: #45a049;
+    transform: scale(1.1);
+}
+
+.btn-reject {
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.btn-reject:hover {
+    background: #da190b;
+    transform: scale(1.1);
+}
+
+.game-invite-actions .btn-accept,
+.game-invite-actions .btn-reject {
+    border-radius: 8px;
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 600px) {
+    .friend-request-notification,
+    .game-invite-notification {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
 /* Chat Footer Actions (V3.0 - Fixed Mobile Layout) */
 .chat-footer-actions {
     display: flex;
@@ -2371,3 +2495,62 @@ input[type="color"] {
     display: inline-block;
 }
 
+/* V3.0: Level System Styles */
+.player-level {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-left: 6px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.level-common {
+    background: linear-gradient(135deg, #9E9E9E, #757575);
+    color: white;
+}
+
+.level-uncommon {
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    color: white;
+}
+
+.level-rare {
+    background: linear-gradient(135deg, #2196F3, #0D47A1);
+    color: white;
+}
+
+.level-epic {
+    background: linear-gradient(135deg, #9C27B0, #6A1B9A);
+    color: white;
+    animation: epicGlow 2s infinite;
+}
+
+.level-legendary {
+    background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+    color: #333;
+    animation: legendaryGlow 2s infinite;
+    font-size: 0.95rem;
+}
+
+@keyframes epicGlow {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(156, 39, 176, 0.5);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(156, 39, 176, 0.8);
+    }
+}
+
+@keyframes legendaryGlow {
+    0%, 100% {
+        box-shadow: 0 2px 12px rgba(255, 215, 0, 0.6);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 4px 20px rgba(255, 215, 0, 0.9);
+        transform: scale(1.05);
+    }
+}
