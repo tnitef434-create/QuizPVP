@@ -144,8 +144,13 @@ let antiCheatActive = false;
 
 window.addEventListener('blur', () => {
     gameWindowFocused = false;
-    if (antiCheatActive && currentGame.gameId) {
-        console.log('⚠️ Player left game window - triggering auto-loss');
+
+    // Only trigger anti-cheat if actively playing AND on game screen
+    const gameScreen = document.getElementById('gameScreen');
+    const isOnGameScreen = gameScreen && gameScreen.classList.contains('active');
+
+    if (antiCheatActive && currentGame.gameId && isOnGameScreen) {
+        console.log('⚠️ Player left game window during active match - triggering auto-loss');
         handleTabSwitchLoss();
     }
 });
@@ -1393,6 +1398,9 @@ function nextQuestion() {
 
 // Submit answers
 async function submitAnswers() {
+    // Disable anti-cheat when submitting (game is over for this player)
+    antiCheatActive = false;
+
     // Don't stop the timer - keep it running!
     // stopGameTimer();
 
