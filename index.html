@@ -4,13 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>QuizPVP - Math Battle Arena</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="background-pattern"></div>
 
     <!-- Version Badge -->
-    <div class="version-badge">v2.9.0</div>
+    <div class="version-badge">v3.0</div>
+
+    <!-- In-App Notification System -->
+    <div id="appNotification" class="app-notification">
+        <div class="notification-icon">✨</div>
+        <div class="notification-content">
+            <div class="notification-title">Notification</div>
+            <div class="notification-message">Message here</div>
+        </div>
+    </div>
 
     <!-- Username Entry Screen -->
     <div id="usernameScreen" class="screen active">
@@ -324,8 +334,7 @@
                     </div>
                 </div>
                 <div class="chat-header-actions">
-                    <button id="addFriendBtn" class="btn btn-primary btn-small" style="display: none;">Add Friend</button>
-                    <button id="skipChatBtn" class="btn btn-secondary btn-small">Skip</button>
+                    <button id="addFriendBtn" class="btn btn-primary btn-small" style="display: none;">+ Friend</button>
                 </div>
             </div>
 
@@ -340,7 +349,8 @@
                 </button>
             </div>
 
-            <div class="chat-actions">
+            <div class="chat-footer-actions">
+                <button id="skipChatBtn" class="btn btn-secondary">Skip Partner</button>
                 <button id="leaveChatBtn" class="btn btn-secondary">Leave Chat</button>
             </div>
         </div>
@@ -474,7 +484,7 @@
                     <div class="settings-item-icon">ℹ️</div>
                     <div class="settings-item-info">
                         <h3>App Version</h3>
-                        <p>v2.9.0 - Hub Redesign</p>
+                        <p>v3.0 - The Perfect Update</p>
                     </div>
                 </div>
             </div>

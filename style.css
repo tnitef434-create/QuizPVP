@@ -2130,3 +2130,197 @@ input[type="color"] {
         font-size: 1.5rem;
     }
 }
+
+/* ===== V3.0 NEW FEATURES ===== */
+
+/* In-App Notification System */
+.app-notification {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    max-width: 90%;
+    transition: top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.app-notification.show {
+    top: 20px;
+}
+
+.notification-icon {
+    font-size: 2rem;
+    animation: pulse 2s infinite;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.notification-message {
+    font-size: 0.9rem;
+    opacity: 0.95;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Chat Footer Actions (V3.0 - Fixed Mobile Layout) */
+.chat-footer-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: center;
+}
+
+.chat-footer-actions button {
+    flex: 1;
+    max-width: 200px;
+}
+
+@media (max-width: 600px) {
+    .chat-footer-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .chat-footer-actions button {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+/* Player Count Badge */
+.mode-player-count {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.mode-player-count-dot {
+    width: 8px;
+    height: 8px;
+    background: #4CAF50;
+    border-radius: 50%;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* Vote Skip Timer UI */
+.vote-skip-container {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.vote-skip-info {
+    color: white;
+    font-size: 1rem;
+    margin-bottom: 12px;
+}
+
+.vote-progress {
+    background: rgba(255, 255, 255, 0.2);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 12px 0;
+}
+
+.vote-progress-bar {
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    height: 100%;
+    transition: width 0.3s;
+}
+
+/* Shop Item Cards (V3.0 - More Items) */
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+}
+
+.shop-item-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.shop-item-card:hover {
+    transform: translateY(-4px);
+    border-color: #667eea;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.shop-item-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+}
+
+.shop-item-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.shop-item-price {
+    color: #667eea;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.shop-item-owned {
+    background: #4CAF50;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    margin-top: 8px;
+    display: inline-block;
+}
+

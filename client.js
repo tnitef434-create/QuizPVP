@@ -116,6 +116,63 @@ window.showScreen = window.gameNavigation.showScreen.bind(window.gameNavigation)
 
 console.log('✅ Global navigation system initialized');
 
+// ===== V3.0 FEATURES =====
+
+// In-App Notification System
+window.showNotification = function(title, message, icon = '✨') {
+    const notification = document.getElementById('appNotification');
+    if (!notification) return;
+
+    const titleEl = notification.querySelector('.notification-title');
+    const messageEl = notification.querySelector('.notification-message');
+    const iconEl = notification.querySelector('.notification-icon');
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+    if (iconEl) iconEl.textContent = icon;
+
+    notification.classList.add('show');
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 4000);
+};
+
+// Anti-Tab-Switch Detection (Auto-lose if you leave during game)
+let gameWindowFocused = true;
+let antiCheatActive = false;
+
+window.addEventListener('blur', () => {
+    gameWindowFocused = false;
+    if (antiCheatActive && currentGame.gameId) {
+        console.log('⚠️ Player left game window - triggering auto-loss');
+        handleTabSwitchLoss();
+    }
+});
+
+window.addEventListener('focus', () => {
+    gameWindowFocused = true;
+});
+
+function handleTabSwitchLoss() {
+    if (!currentGame.gameId) return;
+
+    showNotification('Auto-Loss', 'You left the game window!', '❌');
+
+    // Mark player as lost
+    setTimeout(() => {
+        const myScore = currentGame.answers.reduce((sum, a) => sum + (a.correct ? 10 : 0), 0);
+        database.ref(`games/${currentGame.gameId}/players/${playerData.id}/score`).set(Math.floor(myScore / 2)); // Half points penalty
+        database.ref(`games/${currentGame.gameId}/players/${playerData.id}/finished`).set(true);
+        database.ref(`games/${currentGame.gameId}/players/${playerData.id}/tabSwitch`).set(true);
+
+        showScreen('menuScreen');
+        alert('You lost because you left the game window!');
+    }, 500);
+}
+
+console.log('✅ V3.0 features initialized');
+
 let playerData = {
     username: '',
     points: 0,
@@ -1592,7 +1649,7 @@ function closeModal() {
     });
 }
 
-// Cancel search
+// V3.0 - Cancel search (returns to play screen, not hub)
 function cancelSearch() {
     console.log('🚫 Search cancelled by user');
 
@@ -1601,6 +1658,7 @@ function cancelSearch() {
         database.ref(`waiting_1v1/${playerData.id}`).remove();
         database.ref(`waiting_trios/${playerData.id}`).remove();
         database.ref(`waiting_squad/${playerData.id}`).remove();
+        database.ref(`waiting_chat/${playerData.id}`).remove();
     }
 
     // Remove game listeners
@@ -1615,7 +1673,8 @@ function cancelSearch() {
     document.querySelector('.searching-animation h2').textContent = 'Finding Opponent...';
     document.querySelector('.searching-text').textContent = 'Matching you with another player';
 
-    showScreen('menuScreen');
+    // V3.0: Return to math mode screen (not hub)
+    showScreen('mathModeScreen');
 }
 
 // ===== WHO AM I GAME FUNCTIONS =====
@@ -1787,9 +1846,56 @@ function endWhoAmIGame() {
 
 // ===== CHAT MODE FUNCTIONS =====
 
-// Find chat partner
+// V3.0 - Destroy current chat completely
+async function destroyCurrentChat() {
+    console.log('🗑️ Destroying current chat session...');
+
+    // Remove all listeners
+    if (chatListener) {
+        database.ref(`chats/${currentChatSession.chatId}/messages`).off('child_added', chatListener);
+        chatListener = null;
+    }
+
+    if (chatSearchListener) {
+        database.ref('chats').off('child_added', chatSearchListener);
+        chatSearchListener = null;
+    }
+
+    // Mark chat as inactive in database
+    if (currentChatSession.chatId) {
+        try {
+            await database.ref(`chats/${currentChatSession.chatId}/active`).set(false);
+            await database.ref(`chats/${currentChatSession.chatId}`).remove(); // Delete the whole chat
+        } catch (error) {
+            console.warn('⚠️ Could not destroy chat:', error);
+        }
+    }
+
+    // Remove from waiting
+    try {
+        await database.ref(`waiting_chat/${playerData.id}`).remove();
+    } catch (error) {
+        console.warn('⚠️ Could not remove from waiting:', error);
+    }
+
+    // Reset session
+    currentChatSession = {
+        chatId: '',
+        partnerId: '',
+        partnerUsername: '',
+        partnerColor: '',
+        partnerLeft: false
+    };
+
+    console.log('✅ Chat session destroyed');
+}
+
+// V3.0 - Completely rebuilt chat system
 async function findChatPartner() {
     try {
+        // Clean up any existing chat session first
+        await destroyCurrentChat();
+
         showScreen('searchingScreen');
         document.querySelector('.searching-animation h2').textContent = 'Finding Chat Partner...';
         document.querySelector('.searching-text').textContent = 'Matching you with someone to chat';
@@ -1816,7 +1922,9 @@ async function findChatPartner() {
             const [partnerId, partnerData] = availablePartners[0];
             console.log('✅ Chat partner found:', partnerData.username);
 
-            // Remove partner from waiting
+            showNotification('Partner Found!', `Connecting with ${partnerData.username}`, '💬');
+
+            // Remove both from waiting
             await waitingRef.child(partnerId).remove();
             await waitingRef.child(playerData.id).remove();
 
@@ -1871,10 +1979,16 @@ async function findChatPartner() {
     }
 }
 
-// Start chat session
+// V3.0 - Fixed startChatSession (prevents duplication)
 function startChatSession(chatId, chatData) {
+    // Clean up any previous listeners first (critical!)
+    if (chatListener) {
+        database.ref(`chats/${currentChatSession.chatId}/messages`).off('child_added', chatListener);
+        chatListener = null;
+    }
+
     currentChatSession.chatId = chatId;
-    currentChatSession.partnerLeft = false; // Reset partner left flag
+    currentChatSession.partnerLeft = false;
 
     const isUser1 = chatData.user1.id === playerData.id;
     const partner = isUser1 ? chatData.user2 : chatData.user1;
@@ -1904,7 +2018,7 @@ function startChatSession(chatId, chatData) {
         addFriendBtn.style.display = 'block';
     }
 
-    // Re-enable chat input and send button (in case they were disabled from previous session)
+    // Re-enable chat input
     const chatInput = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendMessageBtn');
 
@@ -1919,20 +2033,29 @@ function startChatSession(chatId, chatData) {
     sendBtn.style.opacity = '';
     sendBtn.style.cursor = '';
 
-    // Listen for new messages
+    // V3.0 FIX: Track displayed message IDs to prevent duplication
+    const displayedMessageIds = new Set();
+
+    // Listen for new messages (ONLY ONCE!)
     chatListener = database.ref(`chats/${chatId}/messages`).on('child_added', (snapshot) => {
+        const messageId = snapshot.key;
         const message = snapshot.val();
-        if (message) {
+
+        // Only display if we haven't seen this message before
+        if (message && !displayedMessageIds.has(messageId)) {
+            displayedMessageIds.add(messageId);
             displayChatMessage(message);
         }
     });
 
     // Listen for partner leaving
     database.ref(`chats/${chatId}/active`).on('value', (snapshot) => {
-        if (snapshot.val() === false) {
+        if (snapshot.val() === false && !currentChatSession.partnerLeft) {
             handlePartnerLeft();
         }
     });
+
+    console.log('✅ Chat session started with:', partner.username);
 }
 
 // Display chat message
@@ -2008,40 +2131,27 @@ async function sendChatMessage() {
     }
 }
 
-// Skip to next chat partner
+// V3.0 - Fixed skip (destroys chat and finds new partner)
 async function skipChatPartner() {
-    if (confirm('Skip to next chat partner?')) {
-        await leaveChat(true);
-        findChatPartner();
-    }
+    console.log('⏭️ Skipping to next partner...');
+    showNotification('Skipping', 'Finding you a new partner...', '⏭️');
+
+    // Destroy current chat completely
+    await destroyCurrentChat();
+
+    // Find new partner (will go to loading if no one is waiting)
+    await findChatPartner();
 }
 
-// Leave chat
-async function leaveChat(skipping = false) {
-    // Clean up listeners
-    if (chatListener) {
-        database.ref(`chats/${currentChatSession.chatId}/messages`).off('child_added', chatListener);
-        chatListener = null;
-    }
+// V3.0 - Fixed leave (destroys chat and returns to menu)
+async function leaveChat() {
+    console.log('👋 Leaving chat...');
 
-    // Mark chat as inactive
-    try {
-        await database.ref(`chats/${currentChatSession.chatId}/active`).set(false);
-    } catch (error) {
-        console.warn('⚠️ Could not mark chat inactive:', error);
-    }
+    // Destroy current chat completely
+    await destroyCurrentChat();
 
-    // Reset session
-    currentChatSession = {
-        chatId: '',
-        partnerId: '',
-        partnerUsername: '',
-        partnerColor: ''
-    };
-
-    if (!skipping) {
-        showScreen('menuScreen');
-    }
+    // Always return to menu
+    showScreen('menuScreen');
 }
 
 // Handle partner left
@@ -2435,8 +2545,8 @@ function resetAppData() {
     window.location.reload();
 }
 
-// Clear account completely
-function clearAccount() {
+// V3.0 - Fixed clear account (fully works now)
+async function clearAccount() {
     if (!confirm('Delete everything and start fresh? This cannot be undone!')) {
         return;
     }
@@ -2445,18 +2555,40 @@ function clearAccount() {
         return;
     }
 
+    console.log('🗑️ Clearing account completely...');
+
     // Remove from database
     if (playerData.id && database) {
-        database.ref(`users/${playerData.id}`).remove();
-        database.ref(`usernames/${playerData.id}`).remove();
-        database.ref(`online/${playerData.id}`).remove();
+        try {
+            await database.ref(`users/${playerData.id}`).remove();
+            await database.ref(`usernames/${playerData.username}`).remove();
+            await database.ref(`online/${playerData.id}`).remove();
+            await database.ref(`waiting_chat/${playerData.id}`).remove();
+            await database.ref(`waiting_1v1/${playerData.id}`).remove();
+            await database.ref(`waiting_trios/${playerData.id}`).remove();
+            await database.ref(`waiting_squad/${playerData.id}`).remove();
+            console.log('✅ Database entries removed');
+        } catch (error) {
+            console.error('❌ Error removing from database:', error);
+        }
     }
 
-    // Clear local storage
+    // Clear local storage completely
     localStorage.clear();
+    sessionStorage.clear();
 
-    alert('Account deleted. Starting fresh...');
-    window.location.reload();
+    // Clear any service workers/cache
+    if ('caches' in window) {
+        caches.keys().then(names => {
+            names.forEach(name => caches.delete(name));
+        });
+    }
+
+    showNotification('Account Deleted', 'Reloading...', '🗑️');
+
+    setTimeout(() => {
+        window.location.reload(true);
+    }, 1000);
 }
 
 // Event listeners are now set up in setupEventListeners() function, called after DOMContentLoaded
@@ -2718,13 +2850,11 @@ function setupEventListeners() {
     }
 
     safeAddListener('skipChatBtn', 'click', () => {
-        skipChatPartner();
+        skipChatPartner(); // V3.0: No confirm needed
     }, 'Skip Chat Partner');
 
     safeAddListener('leaveChatBtn', 'click', () => {
-        if (confirm('Leave chat and return to menu?')) {
-            leaveChat();
-        }
+        leaveChat(); // V3.0: No confirm needed
     }, 'Leave Chat');
 
     safeAddListener('addFriendBtn', 'click', () => {
