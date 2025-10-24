@@ -16,6 +16,10 @@
       ".read": "auth != null",
       ".write": "auth != null"
     },
+    "waiting_chat": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
     "games": {
       ".read": "auth != null",
       ".write": "auth != null"
