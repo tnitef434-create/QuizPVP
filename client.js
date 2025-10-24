@@ -642,8 +642,11 @@ async function find1v1Match() {
             console.log('🎮 Creating game:', gameId);
             await database.ref(`games/${gameId}`).set(gameData);
 
+            // V3.0: Show match found notification
+            showNotification('Match Found!', `Starting ${currentMode.toUpperCase()} game...`, '🎮');
+
             // Start game for both players
-            startGame(gameId, gameData);
+            setTimeout(() => startGame(gameId, gameData), 1000); // Delay for notification
         } else {
             // Add self to waiting
             console.log('⏳ No opponents found. Joining waiting queue...');
@@ -667,6 +670,8 @@ async function find1v1Match() {
                 if (game && game.player2 && game.player2.id === playerData.id) {
                     // Found a game!
                     console.log('✅ Matched! Starting game...');
+                    showNotification('Match Found!', `Opponent found! Starting 1v1...`, '⚔️'); // V3.0
+
                     if (searchListener) {
                         database.ref('games').off('child_added', searchListener);
                         searchListener = null;
@@ -675,7 +680,7 @@ async function find1v1Match() {
                     // Remove from waiting
                     database.ref(`waiting_1v1/${playerData.id}`).remove();
 
-                    startGame(game.id, game);
+                    setTimeout(() => startGame(game.id, game), 1000); // V3.0: Delay for notification
                 }
             });
         }
@@ -777,13 +782,15 @@ async function findTriosMatch() {
 
                 if (imInGame) {
                     console.log('✅ Joined trios game!');
+                    showNotification('Match Found!', `Trios match ready! Starting 1v2...`, '🔺'); // V3.0
+
                     if (searchListener) {
                         database.ref('games_trios').off('child_added', searchListener);
                         searchListener = null;
                     }
 
                     database.ref(`waiting_trios/${playerData.id}`).remove();
-                    startTriosGame(game.id, game);
+                    setTimeout(() => startTriosGame(game.id, game), 1000); // V3.0: Delay for notification
                 }
             });
         }
@@ -885,13 +892,15 @@ async function findSquadMatch() {
 
                 if (imInGame) {
                     console.log('✅ Joined squad game!');
+                    showNotification('Match Found!', `Squad ready! Starting 1v3...`, '👥'); // V3.0
+
                     if (searchListener) {
                         database.ref('games_squad').off('child_added', searchListener);
                         searchListener = null;
                     }
 
                     database.ref(`waiting_squad/${playerData.id}`).remove();
-                    startSquadGame(game.id, game);
+                    setTimeout(() => startSquadGame(game.id, game), 1000); // V3.0: Delay for notification
                 }
             });
         }
@@ -926,6 +935,7 @@ function handleMatchmakingError(error) {
 
 // Start game (1v1)
 function startGame(gameId, gameData) {
+    antiCheatActive = true; // V3.0: Enable anti-tab-switch detection
     currentGame.gameId = gameId;
     currentGame.questions = gameData.questions;
     currentGame.answers = [];
