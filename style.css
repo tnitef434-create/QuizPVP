@@ -1600,3 +1600,341 @@ input[type="color"] {
         text-align: center;
     }
 }
+
+/* ===== DESKTOP MODE SETTINGS ===== */
+
+/* Display Preferences Card */
+.display-preferences-card {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.preference-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.preference-info {
+    flex: 1;
+    text-align: left;
+}
+
+.preference-info h4 {
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.preference-info p {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+}
+
+.preference-note {
+    background: rgba(102, 126, 234, 0.1);
+    border-left: 4px solid #667eea;
+    padding: 12px 15px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.toggle-slider:hover {
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+/* ===== DESKTOP MODE OPTIMIZATIONS ===== */
+
+body.desktop-mode {
+    overflow-y: auto;
+}
+
+/* Desktop Mode - Wider containers */
+body.desktop-mode .container {
+    max-width: 1200px;
+    padding: 30px;
+}
+
+/* Desktop Mode - Better header layout */
+body.desktop-mode .header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 30px;
+    align-items: center;
+    padding: 25px 30px;
+}
+
+body.desktop-mode .player-info {
+    justify-content: flex-end;
+    gap: 30px;
+}
+
+body.desktop-mode .header-actions {
+    flex-direction: row;
+    gap: 20px;
+}
+
+/* Desktop Mode - Mode selection grid */
+body.desktop-mode .mode-buttons {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+body.desktop-mode .mode-btn {
+    padding: 30px 20px;
+    min-height: 150px;
+}
+
+body.desktop-mode .mode-icon {
+    font-size: 3rem;
+}
+
+body.desktop-mode .mode-title {
+    font-size: 1.3rem;
+}
+
+body.desktop-mode .mode-desc {
+    font-size: 1rem;
+}
+
+/* Desktop Mode - Menu buttons horizontal */
+body.desktop-mode .menu-buttons {
+    flex-direction: row;
+    justify-content: center;
+    gap: 20px;
+}
+
+body.desktop-mode .btn-large {
+    padding: 20px 80px;
+    font-size: 1.4rem;
+}
+
+/* Desktop Mode - Game screen layout */
+body.desktop-mode .quiz-container {
+    padding: 60px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+body.desktop-mode .question-text {
+    font-size: 4rem;
+}
+
+body.desktop-mode input[type="number"],
+body.desktop-mode input[type="text"] {
+    font-size: 1.3rem;
+    padding: 20px 25px;
+}
+
+/* Desktop Mode - Shop items as grid */
+body.desktop-mode .shop-items {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+/* Desktop Mode - Chat interface */
+body.desktop-mode .chat-messages {
+    height: 500px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+body.desktop-mode .chat-input-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Desktop Mode - Inbox and Settings */
+body.desktop-mode .inbox-content,
+body.desktop-mode .settings-section {
+    max-width: 900px;
+    margin: 20px auto;
+}
+
+/* Desktop Mode - Stats bar */
+body.desktop-mode .stats-bar {
+    padding: 20px 30px;
+    font-size: 1.1rem;
+}
+
+/* Desktop Mode - Results screen */
+body.desktop-mode .results-card {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 50px;
+}
+
+body.desktop-mode .score-value {
+    font-size: 4rem;
+}
+
+/* Desktop Mode - Game timer */
+body.desktop-mode .game-timer {
+    font-size: 4rem;
+    padding: 20px 40px;
+    min-width: 200px;
+}
+
+/* ===== MOBILE MODE OPTIMIZATIONS ===== */
+
+body.mobile-mode {
+    /* Default mobile optimizations */
+}
+
+/* Mobile Mode - Compact layout */
+body.mobile-mode .container {
+    max-width: 100%;
+    padding: 15px;
+}
+
+body.mobile-mode .header {
+    padding: 15px;
+}
+
+body.mobile-mode .player-info {
+    flex-direction: column;
+    gap: 10px;
+}
+
+body.mobile-mode .header-actions {
+    width: 100%;
+}
+
+/* Mobile Mode - Stack mode buttons */
+body.mobile-mode .mode-buttons {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+body.mobile-mode .mode-btn {
+    padding: 15px 10px;
+    min-height: 120px;
+}
+
+body.mobile-mode .mode-icon {
+    font-size: 1.8rem;
+}
+
+body.mobile-mode .mode-title {
+    font-size: 1rem;
+}
+
+body.mobile-mode .mode-desc {
+    font-size: 0.8rem;
+}
+
+/* Mobile Mode - Touch-friendly buttons */
+body.mobile-mode .btn {
+    padding: 18px 30px;
+    font-size: 1.1rem;
+    min-height: 50px;
+}
+
+body.mobile-mode .btn-large {
+    width: 100%;
+    padding: 22px 40px;
+}
+
+/* Mobile Mode - Larger tap targets */
+body.mobile-mode input[type="number"],
+body.mobile-mode input[type="text"] {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 18px 20px;
+}
+
+/* Mobile Mode - Question text readable */
+body.mobile-mode .question-text {
+    font-size: 2.2rem;
+}
+
+/* Mobile Mode - Game timer */
+body.mobile-mode .game-timer {
+    font-size: 2.5rem;
+}
+
+/* Mobile Mode - Compact shop */
+body.mobile-mode .shop-items {
+    gap: 12px;
+}
+
+body.mobile-mode .shop-item {
+    padding: 15px;
+}
+
+/* Mobile Mode - Chat optimized for mobile */
+body.mobile-mode .chat-messages {
+    height: 350px;
+}
+
+body.mobile-mode .chat-input-container input {
+    font-size: 16px; /* Prevents zoom on iOS */
+}
+
+/* Responsive adjustments for mobile mode on small screens */
+@media (max-width: 600px) {
+    body.mobile-mode .mode-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    body.mobile-mode .game-title {
+        font-size: 2.5rem;
+    }
+
+    body.mobile-mode .game-title-small {
+        font-size: 2rem;
+    }
+}

@@ -2190,6 +2190,65 @@ document.getElementById('closeSettingsBtn').addEventListener('click', () => {
     showScreen('menuScreen');
 });
 
+// Desktop Mode Toggle
+function loadDesktopMode() {
+    const desktopMode = localStorage.getItem('quizpvp_desktop_mode');
+    const isDesktop = desktopMode === 'true';
+
+    // Apply the mode
+    if (isDesktop) {
+        document.body.classList.add('desktop-mode');
+        document.body.classList.remove('mobile-mode');
+    } else {
+        document.body.classList.add('mobile-mode');
+        document.body.classList.remove('desktop-mode');
+    }
+
+    // Set toggle state
+    const toggle = document.getElementById('desktopModeToggle');
+    if (toggle) {
+        toggle.checked = isDesktop;
+    }
+
+    console.log('🖥️ Display mode:', isDesktop ? 'Desktop' : 'Mobile');
+}
+
+function toggleDesktopMode() {
+    const toggle = document.getElementById('desktopModeToggle');
+    const isDesktop = toggle.checked;
+
+    // Save preference
+    localStorage.setItem('quizpvp_desktop_mode', isDesktop);
+
+    // Apply the mode
+    if (isDesktop) {
+        document.body.classList.add('desktop-mode');
+        document.body.classList.remove('mobile-mode');
+        console.log('✅ Switched to Desktop Mode');
+    } else {
+        document.body.classList.add('mobile-mode');
+        document.body.classList.remove('desktop-mode');
+        console.log('✅ Switched to Mobile Mode');
+    }
+}
+
+// Initialize desktop mode toggle
+document.getElementById('desktopModeToggle').addEventListener('change', toggleDesktopMode);
+
+// Auto-detect on first load
+function autoDetectDisplayMode() {
+    const savedMode = localStorage.getItem('quizpvp_desktop_mode');
+
+    // If no preference saved, auto-detect based on screen size
+    if (savedMode === null) {
+        const isLargeScreen = window.innerWidth >= 768;
+        localStorage.setItem('quizpvp_desktop_mode', isLargeScreen);
+        console.log('🔍 Auto-detected display mode:', isLargeScreen ? 'Desktop' : 'Mobile');
+    }
+
+    loadDesktopMode();
+}
+
 // Friend Search System
 async function searchFriend() {
     const searchInput = document.getElementById('friendSearchInput');
@@ -2304,3 +2363,4 @@ loadPlayerData();
 loadNotifications();
 checkFirstLoad();
 updateLevelDisplay();
+autoDetectDisplayMode();
