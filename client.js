@@ -2,15 +2,13 @@
 // PRODUCTION SETUP INSTRUCTIONS:
 // 1. Go to https://firebase.google.com and create a free project
 // 2. Enable Realtime Database
-// 3. Set database rules to:
-//    {
-//      "rules": {
-//        ".read": true,
-//        ".write": true
-//      }
-//    }
-// 4. Replace this config with your project's config from Project Settings
-// 5. For security in production, implement proper authentication and rules
+// 3. Enable Authentication > Sign-in method > Anonymous (toggle ON)
+// 4. Set database rules - SEE firebase-rules.json for secure rules
+// 5. Replace this config with your project's config from Project Settings
+//
+// SECURITY: This app now uses Firebase Authentication with anonymous users
+// All users are automatically signed in anonymously, and rules protect data
+// by ensuring users can only write to their own data paths
 
 const firebaseConfig = {
   apiKey: "AIzaSyDWrBVl4RtMoKCSYZWdq4lZqoYMlx9RPCs",
@@ -25,13 +23,16 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let database;
+let auth;
 let connectedRef;
 let myConnectionRef;
 let isFirebaseReady = false;
+let currentUser = null;
 
 try {
     firebase.initializeApp(firebaseConfig);
     database = firebase.database();
+    auth = firebase.auth();
     connectedRef = database.ref('.info/connected');
     isFirebaseReady = true;
     console.log('✅ Firebase initialized successfully');
@@ -45,6 +46,33 @@ try {
             console.log('⚠️ Not connected to Firebase');
         }
     });
+
+    // Enable anonymous authentication persistence
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+        console.log('✅ Auth persistence enabled');
+    });
+
+    // Handle authentication state changes
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            currentUser = user;
+            console.log('✅ User authenticated:', user.isAnonymous ? 'Anonymous' : 'Authenticated', 'UID:', user.uid);
+
+            // Initialize player data with authenticated UID
+            await initializePlayerWithAuth(user);
+        } else {
+            console.log('⚠️ No user signed in, signing in anonymously...');
+            // Sign in anonymously if no user
+            try {
+                const userCredential = await auth.signInAnonymously();
+                console.log('✅ Signed in anonymously:', userCredential.user.uid);
+            } catch (error) {
+                console.error('❌ Anonymous sign-in error:', error);
+                alert('Failed to authenticate. Please refresh the page.');
+            }
+        }
+    });
+
 } catch (error) {
     console.error('❌ Firebase initialization error:', error);
     alert('Failed to connect to game server. Please check:\n1. Your Firebase config in client.js is correct\n2. Your internet connection\n3. Firebase Database is enabled in your project\n\nError: ' + error.message);
@@ -494,7 +522,53 @@ async function registerUsername(username, userId) {
     }
 }
 
-// Load player data from localStorage
+// Initialize player data with Firebase Authentication
+async function initializePlayerWithAuth(user) {
+    if (!user) return;
+
+    // Set player ID to Firebase Auth UID
+    playerData.id = user.uid;
+
+    // Try to load data from localStorage first (for backward compatibility)
+    const saved = localStorage.getItem('quizpvp_player');
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            playerData.points = data.points || 0;
+            playerData.color = data.color || '#4A90E2';
+            playerData.username = data.username || '';
+            playerData.friends = data.friends || [];
+            playerData.friendRequests = data.friendRequests || [];
+            playerData.level = data.level || 1;
+            playerData.xp = data.xp || 0;
+
+            // Update saved data with new auth UID
+            savePlayerData();
+        } catch (e) {
+            console.error('Error parsing saved data:', e);
+        }
+    }
+
+    // If username exists, skip to menu and setup
+    if (playerData.username && playerData.username.length >= 2) {
+        console.log('✅ Loaded saved username:', playerData.username);
+        updatePlayerDisplay();
+        showScreen('menuScreen');
+        setupPlayerPresence();
+        trackActivePlayerCount();
+        trackModePlayerCounts();
+        loadFriendsList();
+        loadFriendRequests();
+        cleanupOldGames();
+        setInterval(cleanupOldGames, 60000);
+    } else {
+        // Show username screen if no username
+        console.log('⚠️ No username found, showing username screen');
+        showScreen('usernameScreen');
+    }
+}
+
+// Load player data from localStorage (legacy function, now handled by initializePlayerWithAuth)
 async function loadPlayerData() {
     const saved = localStorage.getItem('quizpvp_player');
     if (saved) {

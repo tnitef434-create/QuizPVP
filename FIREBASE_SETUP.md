@@ -1,10 +1,8 @@
-# Firebase Setup Guide for QuizPVP
+# Firebase Security Setup Guide
 
-This guide will help you set up your own Firebase backend for QuizPVP in **less than 5 minutes**. Firebase is completely FREE for this use case!
+## Overview
 
-## Why Do I Need This?
-
-The demo Firebase config in the code is for testing only. To deploy your game for real players, you need your own Firebase project.
+QuizPVP now uses Firebase Authentication with anonymous sign-in to protect your data while keeping the app accessible to everyone. Users are automatically signed in anonymously, and security rules ensure that players can only modify their own data.
 
 ## Step-by-Step Setup
 
@@ -21,42 +19,186 @@ The demo Firebase config in the code is for testing only. To deploy your game fo
 
 1. In the left sidebar, click **"Build"** → **"Realtime Database"**
 2. Click **"Create Database"**
-3. Choose location closest to your players (e.g., `us-central1`)
-4. Start in **"Test mode"** for now
+3. Choose location closest to your players (e.g., `us-central1`, `europe-west1`)
+4. Start in **"Locked mode"** (we'll add secure rules next)
 5. Click **"Enable"**
 
-### 3. Set Database Rules (30 seconds)
+### 3. Enable Anonymous Authentication (1 minute)
 
-1. Click the **"Rules"** tab in your Realtime Database
-2. Replace the rules with this:
+1. In the left sidebar, click **"Build"** → **"Authentication"**
+2. Click **"Get started"** if this is your first time
+3. Go to the **"Sign-in method"** tab
+4. Find **"Anonymous"** in the provider list
+5. Click on it and toggle it to **Enabled**
+6. Click **"Save"**
+
+### 4. Set Secure Database Rules (1 minute)
+
+1. Go back to **"Realtime Database"** in the left sidebar
+2. Click the **"Rules"** tab
+3. Replace the rules with the secure rules below
 
 ```json
 {
   "rules": {
-    "online": {
-      ".read": true,
-      ".write": true,
-      ".indexOn": ["timestamp"]
+    ".read": "auth != null",
+    ".write": false,
+
+    "activePlayers": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['username', 'color', 'timestamp'])"
+      }
     },
-    "waiting": {
-      ".read": true,
-      ".write": true,
-      ".indexOn": ["timestamp"]
+
+    "usernames": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 15"
+      }
     },
+
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        "points": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "color": {
+          ".validate": "newData.isString()"
+        },
+        "username": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 15"
+        },
+        "level": {
+          ".validate": "newData.isNumber() && newData.val() >= 1"
+        },
+        "xp": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "friends": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "friendRequests": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": "auth != null"
+        }
+      }
+    },
+
     "games": {
-      ".read": true,
-      ".write": true,
-      ".indexOn": ["createdAt"]
+      ".read": "auth != null",
+      "$gameId": {
+        ".write": "auth != null && (!data.exists() || data.child('players').hasChild(auth.uid) || newData.child('players').hasChild(auth.uid))",
+        ".validate": "newData.hasChildren(['mode', 'players', 'questions'])",
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid"
+          }
+        },
+        "voteSkip": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.isBoolean()"
+          }
+        }
+      }
+    },
+
+    "waiting1v1": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.uid == $uid || !data.exists())",
+        ".validate": "newData.hasChildren(['username', 'color'])"
+      }
+    },
+
+    "waiting1v2": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.uid == $uid || !data.exists())",
+        ".validate": "newData.hasChildren(['username', 'color'])"
+      }
+    },
+
+    "waiting1v3": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.uid == $uid || !data.exists())",
+        ".validate": "newData.hasChildren(['username', 'color'])"
+      }
+    },
+
+    "modeCounts": {
+      ".read": "auth != null",
+      "$mode": {
+        ".write": "auth != null"
+      }
+    },
+
+    "randomChat": {
+      ".read": "auth != null",
+      "waiting": {
+        "$uid": {
+          ".write": "auth != null && (auth.uid == $uid || !data.exists())"
+        }
+      },
+      "sessions": {
+        "$sessionId": {
+          ".read": "auth != null",
+          ".write": "auth != null && (newData.child('users').hasChild(auth.uid) || data.child('users').hasChild(auth.uid) || !data.exists())",
+          "messages": {
+            "$messageId": {
+              ".write": "auth != null && (data.parent().parent().child('users').hasChild(auth.uid) || newData.parent().parent().child('users').hasChild(auth.uid))"
+            }
+          }
+        }
+      }
+    },
+
+    "friendChats": {
+      "$chatId": {
+        ".read": "auth != null && (data.child('participants').hasChild(auth.uid) || newData.child('participants').hasChild(auth.uid))",
+        ".write": "auth != null && (data.child('participants').hasChild(auth.uid) || newData.child('participants').hasChild(auth.uid))",
+        "messages": {
+          "$messageId": {
+            ".write": "auth != null && data.parent().parent().child('participants').hasChild(auth.uid)"
+          }
+        }
+      }
+    },
+
+    "gameInvites": {
+      "$inviteId": {
+        ".read": "auth != null && (data.child('from').val() == auth.uid || data.child('to').val() == auth.uid)",
+        ".write": "auth != null && (newData.child('from').val() == auth.uid || data.child('to').val() == auth.uid || !data.exists())"
+      }
+    },
+
+    "whoAmIWaiting": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.uid == $uid || !data.exists())"
+      }
+    },
+
+    "whoAmIGames": {
+      ".read": "auth != null",
+      "$gameId": {
+        ".write": "auth != null && (!data.exists() || data.child('players').hasChild(auth.uid))"
+      }
     }
   }
 }
 ```
 
-3. Click **"Publish"**
+4. Click **"Publish"**
 
-⚠️ **Note**: These rules allow anyone to read/write. This is fine for a game like this, but for production apps with sensitive data, you'd want more restrictive rules.
-
-### 4. Get Your Config (1 minute)
+### 5. Get Your Config (1 minute)
 
 1. Click the gear icon (⚙️) next to "Project Overview"
 2. Click **"Project settings"**
@@ -79,14 +221,14 @@ const firebaseConfig = {
 };
 ```
 
-### 5. Update Your Code (30 seconds)
+### 6. Update Your Code (30 seconds)
 
 1. Open `client.js` in your QuizPVP folder
-2. Find the `firebaseConfig` section (lines 15-24)
-3. Replace the demo config with YOUR config from step 4
+2. Find the `firebaseConfig` section (around line 13)
+3. Replace the demo config with YOUR config from step 5
 4. Save the file
 
-That's it! Your game is now connected to your own Firebase backend! 🎉
+That's it! Your game is now connected to your own Firebase backend with secure authentication! 🎉
 
 ## Deploying to GitHub Pages
 
@@ -148,36 +290,23 @@ If you outgrow this, the paid plan (Blaze) is pay-as-you-go and still very cheap
 - Open two browser tabs to test locally first
 - Check Firebase Console → Realtime Database to see if players appear in `online/` and `waiting/`
 
-## Security Best Practices (Optional)
+## What These Security Rules Do
 
-For a public game, the simple rules work fine. But if you want to add security:
+### Security Features:
 
-```json
-{
-  "rules": {
-    "online": {
-      ".read": true,
-      "$playerId": {
-        ".write": "$playerId === auth.uid || !data.exists()"
-      }
-    },
-    "waiting": {
-      ".read": true,
-      "$playerId": {
-        ".write": "$playerId === auth.uid || !data.exists()"
-      }
-    },
-    "games": {
-      ".read": true,
-      "$gameId": {
-        ".write": "!data.exists() || (data.child('player1/id').val() === auth.uid || data.child('player2/id').val() === auth.uid)"
-      }
-    }
-  }
-}
-```
+1. **Authentication Required**: All reads and writes require an authenticated user (users automatically sign in anonymously)
+2. **User Data Protection**: Users can only write to their own data paths (identified by their UID)
+3. **Game Participation**: Players can only modify games they're part of
+4. **Data Validation**: Rules validate data types and formats (e.g., usernames must be 2-15 characters)
+5. **Chat Privacy**: Users can only read chats they're participating in
 
-This requires Firebase Authentication, which adds complexity but prevents abuse.
+### Benefits:
+
+- **More Secure**: Data is protected from unauthorized access and tampering
+- **Still Public**: Anyone can play without creating an account
+- **User Privacy**: Players can only access their own data and games they're in
+- **No Sign-Up Friction**: Players don't need to sign up or log in manually
+- **Free**: Anonymous auth is unlimited on Firebase's free tier
 
 ## Need Help?
 
