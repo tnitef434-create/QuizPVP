@@ -86,33 +86,6 @@ Simply open `index.html` in any modern web browser. Open multiple tabs to test m
 5. **See Results**: After both players finish, see who won and earn your points!
 6. **Visit Shop**: Use your points to customize your username and color
 
-## Technology Stack
-
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **Backend**: Firebase Realtime Database
-- **Hosting**: Works on any static host (GitHub Pages, Netlify, etc.)
-
-## Features Breakdown
-
-### Matchmaking System
-- Players join a waiting queue in Firebase
-- First available player is matched automatically
-- Stale entries (>30 seconds) are cleaned up
-- Real-time listener notifies when match is found
-
-### Game Flow
-1. Match found → Questions generated
-2. Both players answer same 8 questions
-3. Answers submitted to Firebase
-4. When both finish → Scores compared
-5. Winner gets 100 points
-6. Game cleanup after 30 seconds
-
-### Persistence
-- Points and colors saved in localStorage
-- Persists across sessions
-- Each player has unique ID
-
 ## Tips for Playing
 
 - Answer quickly but accurately - speed doesn't matter if you get them wrong!
