@@ -4,7 +4,7 @@ A **production-ready** real-time multiplayer math quiz game where players from d
 
 ## 🚀 Play Now
 
-**[LIVE DEMO](https://tnitef434-create.github.io/QuizPVP/)** (Replace with your GitHub Pages URL)
+**[LIVE](https://tnitef434-create.github.io/QuizPVP/)** 
 
 Or test locally by opening `index.html` in your browser!
 
