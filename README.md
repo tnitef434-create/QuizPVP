@@ -92,48 +92,6 @@ Simply open `index.html` in any modern web browser. Open multiple tabs to test m
 - **Backend**: Firebase Realtime Database
 - **Hosting**: Works on any static host (GitHub Pages, Netlify, etc.)
 
-## Firebase Configuration
-
-The game uses a pre-configured Firebase project. The configuration is in `client.js`. You can use the included config or replace it with your own Firebase project:
-
-1. Create a Firebase project at https://firebase.google.com
-2. Enable Realtime Database
-3. Set database rules to allow read/write (for testing)
-4. Replace the config in `client.js` with your project's config
-
-### Recommended Firebase Rules
-
-For production, use these security rules:
-
-```json
-{
-  "rules": {
-    "waiting": {
-      ".read": true,
-      ".write": true,
-      "$playerId": {
-        ".validate": "newData.hasChildren(['username', 'color', 'timestamp'])"
-      }
-    },
-    "games": {
-      ".read": true,
-      ".write": true
-    }
-  }
-}
-```
-
-## Project Structure
-
-```
-QuizPVP/
-├── index.html        # Main HTML structure with all screens
-├── style.css         # Styles and animations
-├── client.js         # Game logic and Firebase integration
-├── package.json      # Project metadata
-└── README.md         # This file
-```
-
 ## Features Breakdown
 
 ### Matchmaking System
