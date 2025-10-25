@@ -1,7 +1,6 @@
 {
   "rules": {
     ".read": "auth != null",
-    ".write": false,
 
     "activePlayers": {
       ".read": "auth != null",

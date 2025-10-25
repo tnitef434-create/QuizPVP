@@ -42,7 +42,6 @@ QuizPVP now uses Firebase Authentication with anonymous sign-in to protect your 
 {
   "rules": {
     ".read": "auth != null",
-    ".write": false,
 
     "activePlayers": {
       ".read": "auth != null",
