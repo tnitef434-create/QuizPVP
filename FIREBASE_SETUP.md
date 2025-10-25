@@ -42,154 +42,77 @@ QuizPVP now uses Firebase Authentication with anonymous sign-in to protect your 
 {
   "rules": {
     ".read": "auth != null",
+    ".write": "auth != null",
 
     "activePlayers": {
       ".read": "auth != null",
       "$uid": {
-        ".write": "auth != null && auth.uid == $uid",
-        ".validate": "newData.hasChildren(['username', 'color', 'timestamp'])"
+        ".write": "auth != null && auth.uid == $uid"
       }
     },
 
     "usernames": {
       ".read": "auth != null",
       "$uid": {
-        ".write": "auth != null && auth.uid == $uid",
-        ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 15"
+        ".write": "auth != null && auth.uid == $uid"
       }
     },
 
     "users": {
       ".read": "auth != null",
       "$uid": {
-        ".write": "auth != null && auth.uid == $uid",
-        "points": {
-          ".validate": "newData.isNumber() && newData.val() >= 0"
-        },
-        "color": {
-          ".validate": "newData.isString()"
-        },
-        "username": {
-          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 15"
-        },
-        "level": {
-          ".validate": "newData.isNumber() && newData.val() >= 1"
-        },
-        "xp": {
-          ".validate": "newData.isNumber() && newData.val() >= 0"
-        },
-        "friends": {
-          ".read": "auth != null",
-          ".write": "auth != null && auth.uid == $uid"
-        },
-        "friendRequests": {
-          ".read": "auth != null && auth.uid == $uid",
-          ".write": "auth != null"
-        }
+        ".write": "auth != null && auth.uid == $uid"
       }
     },
 
     "games": {
       ".read": "auth != null",
-      "$gameId": {
-        ".write": "auth != null && (!data.exists() || data.child('players').hasChild(auth.uid) || newData.child('players').hasChild(auth.uid))",
-        ".validate": "newData.hasChildren(['mode', 'players', 'questions'])",
-        "players": {
-          "$uid": {
-            ".write": "auth != null && auth.uid == $uid"
-          }
-        },
-        "voteSkip": {
-          "$uid": {
-            ".write": "auth != null && auth.uid == $uid",
-            ".validate": "newData.isBoolean()"
-          }
-        }
-      }
+      ".write": "auth != null"
     },
 
     "waiting1v1": {
       ".read": "auth != null",
-      "$uid": {
-        ".write": "auth != null && (auth.uid == $uid || !data.exists())",
-        ".validate": "newData.hasChildren(['username', 'color'])"
-      }
+      ".write": "auth != null"
     },
 
     "waiting1v2": {
       ".read": "auth != null",
-      "$uid": {
-        ".write": "auth != null && (auth.uid == $uid || !data.exists())",
-        ".validate": "newData.hasChildren(['username', 'color'])"
-      }
+      ".write": "auth != null"
     },
 
     "waiting1v3": {
       ".read": "auth != null",
-      "$uid": {
-        ".write": "auth != null && (auth.uid == $uid || !data.exists())",
-        ".validate": "newData.hasChildren(['username', 'color'])"
-      }
+      ".write": "auth != null"
     },
 
     "modeCounts": {
       ".read": "auth != null",
-      "$mode": {
-        ".write": "auth != null"
-      }
+      ".write": "auth != null"
     },
 
     "randomChat": {
       ".read": "auth != null",
-      "waiting": {
-        "$uid": {
-          ".write": "auth != null && (auth.uid == $uid || !data.exists())"
-        }
-      },
-      "sessions": {
-        "$sessionId": {
-          ".read": "auth != null",
-          ".write": "auth != null && (newData.child('users').hasChild(auth.uid) || data.child('users').hasChild(auth.uid) || !data.exists())",
-          "messages": {
-            "$messageId": {
-              ".write": "auth != null && (data.parent().parent().child('users').hasChild(auth.uid) || newData.parent().parent().child('users').hasChild(auth.uid))"
-            }
-          }
-        }
-      }
+      ".write": "auth != null"
     },
 
     "friendChats": {
-      "$chatId": {
-        ".read": "auth != null && (data.child('participants').hasChild(auth.uid) || newData.child('participants').hasChild(auth.uid))",
-        ".write": "auth != null && (data.child('participants').hasChild(auth.uid) || newData.child('participants').hasChild(auth.uid))",
-        "messages": {
-          "$messageId": {
-            ".write": "auth != null && data.parent().parent().child('participants').hasChild(auth.uid)"
-          }
-        }
-      }
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
 
     "gameInvites": {
-      "$inviteId": {
-        ".read": "auth != null && (data.child('from').val() == auth.uid || data.child('to').val() == auth.uid)",
-        ".write": "auth != null && (newData.child('from').val() == auth.uid || data.child('to').val() == auth.uid || !data.exists())"
-      }
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
 
     "whoAmIWaiting": {
       ".read": "auth != null",
-      "$uid": {
-        ".write": "auth != null && (auth.uid == $uid || !data.exists())"
-      }
+      ".write": "auth != null"
     },
 
     "whoAmIGames": {
       ".read": "auth != null",
-      "$gameId": {
-        ".write": "auth != null && (!data.exists() || data.child('players').hasChild(auth.uid))"
-      }
+      ".write": "auth != null"
     }
   }
 }
