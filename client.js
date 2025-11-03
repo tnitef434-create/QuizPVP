@@ -516,6 +516,7 @@ async function loadPlayerData() {
             setupPlayerPresence();
             trackActivePlayerCount();
             trackModePlayerCounts(); // V3.0
+            trackRPSModePlayerCounts(); // RPS tracking
             loadFriendsList();
             loadFriendRequests();
             cleanupOldGames();
@@ -3188,6 +3189,694 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('✅ QuizPVP ready!');
 });
 
+// ===== ROCK PAPER SCISSORS GAME =====
+
+// RPS Game state
+let currentRPSGame = {
+    gameId: '',
+    mode: 'rps1v1',
+    currentRound: 1,
+    totalRounds: 5,
+    myScore: 0,
+    opponentScore: 0,
+    rounds: [], // Track all rounds
+    myChoice: null,
+    opponentChoice: null,
+    players: [] // For multi-player modes
+};
+
+let rpsGameListener = null;
+let rpsSearchListener = null;
+
+// Add navigation function for RPS mode
+window.gameNavigation.goToRPSMode = function() {
+    console.log('✊ RPS mode selected');
+    this.showScreen('rpsModeScreen');
+    currentMode = 'rps1v1';
+};
+
+// Track RPS player counts
+function trackRPSModePlayerCounts() {
+    if (!database) return;
+
+    database.ref('waiting_rps1v1').on('value', (snapshot) => {
+        const count = snapshot.numChildren();
+        const el = document.getElementById('countRps1v1');
+        if (el) el.textContent = count;
+    });
+
+    database.ref('waiting_rps1v2').on('value', (snapshot) => {
+        const count = snapshot.numChildren();
+        const el = document.getElementById('countRps1v2');
+        if (el) el.textContent = count;
+    });
+
+    database.ref('waiting_rps1v3').on('value', (snapshot) => {
+        const count = snapshot.numChildren();
+        const el = document.getElementById('countRps1v3');
+        if (el) el.textContent = count;
+    });
+
+    console.log('✅ RPS mode player count tracking initialized');
+}
+
+// Start RPS matchmaking
+async function startRPSMatchmaking() {
+    if (!isFirebaseReady || !database) {
+        alert('⚠️ Firebase is not connected!');
+        console.error('❌ Firebase not ready. Cannot start RPS matchmaking.');
+        showScreen('rpsModeScreen');
+        return;
+    }
+
+    currentSearchType = 'game';
+    showScreen('searchingScreen');
+
+    if (currentMode === 'rps1v1') {
+        await findRPS1v1Match();
+    } else if (currentMode === 'rps1v2') {
+        await findRPS1v2Match();
+    } else if (currentMode === 'rps1v3') {
+        await findRPS1v3Match();
+    }
+}
+
+// Find RPS 1v1 match
+async function findRPS1v1Match() {
+    try {
+        const waitingRef = database.ref('waiting_rps1v1');
+        console.log('📡 Checking RPS 1v1 queue...');
+        const snapshot = await waitingRef.once('value');
+        const waiting = snapshot.val() || {};
+
+        // Clean stale entries
+        const now = Date.now();
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 30000) {
+                waitingRef.child(key).remove();
+            }
+        });
+
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
+
+        if (availablePlayers.length > 0) {
+            const [opponentId, opponentData] = availablePlayers[0];
+            console.log('✅ RPS Match found! Opponent:', opponentData.username);
+
+            await waitingRef.child(opponentId).remove();
+            await waitingRef.child(playerData.id).remove();
+
+            const gameId = generateId();
+            const gameData = {
+                id: gameId,
+                mode: 'rps1v1',
+                player1: {
+                    id: playerData.id,
+                    username: playerData.username,
+                    color: playerData.color,
+                    level: playerData.level || 1,
+                    score: 0,
+                    choices: {}
+                },
+                player2: {
+                    id: opponentId,
+                    username: opponentData.username,
+                    color: opponentData.color,
+                    level: opponentData.level || 1,
+                    score: 0,
+                    choices: {}
+                },
+                currentRound: 1,
+                totalRounds: 5,
+                rounds: {},
+                createdAt: Date.now(),
+                finished: false
+            };
+
+            await database.ref(`games_rps/${gameId}`).set(gameData);
+            showNotification('Match Found!', 'Starting RPS battle!', '✊');
+            setTimeout(() => startRPSGame(gameId, gameData), 1000);
+        } else {
+            await waitingRef.child(playerData.id).set({
+                username: playerData.username,
+                color: playerData.color,
+                level: playerData.level || 1,
+                timestamp: Date.now()
+            });
+
+            if (rpsSearchListener) {
+                database.ref('games_rps').off('child_added', rpsSearchListener);
+            }
+
+            rpsSearchListener = database.ref('games_rps').on('child_added', (snapshot) => {
+                const game = snapshot.val();
+                if (game && game.player2 && game.player2.id === playerData.id) {
+                    showNotification('Match Found!', 'RPS opponent found!', '✊');
+                    if (rpsSearchListener) {
+                        database.ref('games_rps').off('child_added', rpsSearchListener);
+                        rpsSearchListener = null;
+                    }
+                    database.ref(`waiting_rps1v1/${playerData.id}`).remove();
+                    setTimeout(() => startRPSGame(game.id, game), 1000);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ RPS 1v1 matchmaking error:', error);
+        handleMatchmakingError(error);
+    }
+}
+
+// Find RPS 1v2 match (3 players)
+async function findRPS1v2Match() {
+    try {
+        const waitingRef = database.ref('waiting_rps1v2');
+        const snapshot = await waitingRef.once('value');
+        const waiting = snapshot.val() || {};
+
+        // Clean stale entries
+        const now = Date.now();
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 60000) {
+                waitingRef.child(key).remove();
+            }
+        });
+
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
+
+        if (availablePlayers.length >= 2) {
+            const players = [
+                { id: playerData.id, ...playerData },
+                ...availablePlayers.slice(0, 2).map(([id, data]) => ({ id, ...data }))
+            ];
+
+            for (const player of players) {
+                await waitingRef.child(player.id).remove();
+            }
+
+            const gameId = generateId();
+            const gameData = {
+                id: gameId,
+                mode: 'rps1v2',
+                players: players.map(p => ({
+                    id: p.id,
+                    username: p.username,
+                    color: p.color,
+                    level: p.level || 1,
+                    score: 0,
+                    choices: {}
+                })),
+                currentRound: 1,
+                totalRounds: 5,
+                rounds: {},
+                createdAt: Date.now(),
+                finished: false
+            };
+
+            await database.ref(`games_rps/${gameId}`).set(gameData);
+            showNotification('Match Found!', '3 players ready!', '🔺');
+            setTimeout(() => startRPSGame(gameId, gameData), 1000);
+        } else {
+            await waitingRef.child(playerData.id).set({
+                username: playerData.username,
+                color: playerData.color,
+                level: playerData.level || 1,
+                timestamp: Date.now()
+            });
+
+            document.querySelector('.searching-text').textContent =
+                `Waiting for RPS 1v2... (${availablePlayers.length + 1}/3 players)`;
+
+            if (rpsSearchListener) {
+                database.ref('games_rps').off('child_added', rpsSearchListener);
+            }
+
+            rpsSearchListener = database.ref('games_rps').on('child_added', (snapshot) => {
+                const game = snapshot.val();
+                const imInGame = game.mode === 'rps1v2' && game.players &&
+                    game.players.some(p => p.id === playerData.id);
+
+                if (imInGame) {
+                    showNotification('Match Found!', 'RPS 1v2 ready!', '🔺');
+                    if (rpsSearchListener) {
+                        database.ref('games_rps').off('child_added', rpsSearchListener);
+                        rpsSearchListener = null;
+                    }
+                    database.ref(`waiting_rps1v2/${playerData.id}`).remove();
+                    setTimeout(() => startRPSGame(game.id, game), 1000);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ RPS 1v2 matchmaking error:', error);
+        handleMatchmakingError(error);
+    }
+}
+
+// Find RPS 1v3 match (4 players)
+async function findRPS1v3Match() {
+    try {
+        const waitingRef = database.ref('waiting_rps1v3');
+        const snapshot = await waitingRef.once('value');
+        const waiting = snapshot.val() || {};
+
+        // Clean stale entries
+        const now = Date.now();
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 60000) {
+                waitingRef.child(key).remove();
+            }
+        });
+
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
+
+        if (availablePlayers.length >= 3) {
+            const players = [
+                { id: playerData.id, ...playerData },
+                ...availablePlayers.slice(0, 3).map(([id, data]) => ({ id, ...data }))
+            ];
+
+            for (const player of players) {
+                await waitingRef.child(player.id).remove();
+            }
+
+            const gameId = generateId();
+            const gameData = {
+                id: gameId,
+                mode: 'rps1v3',
+                players: players.map(p => ({
+                    id: p.id,
+                    username: p.username,
+                    color: p.color,
+                    level: p.level || 1,
+                    score: 0,
+                    choices: {}
+                })),
+                currentRound: 1,
+                totalRounds: 5,
+                rounds: {},
+                createdAt: Date.now(),
+                finished: false
+            };
+
+            await database.ref(`games_rps/${gameId}`).set(gameData);
+            showNotification('Match Found!', '4 players ready!', '👥');
+            setTimeout(() => startRPSGame(gameId, gameData), 1000);
+        } else {
+            await waitingRef.child(playerData.id).set({
+                username: playerData.username,
+                color: playerData.color,
+                level: playerData.level || 1,
+                timestamp: Date.now()
+            });
+
+            document.querySelector('.searching-text').textContent =
+                `Waiting for RPS 1v3... (${availablePlayers.length + 1}/4 players)`;
+
+            if (rpsSearchListener) {
+                database.ref('games_rps').off('child_added', rpsSearchListener);
+            }
+
+            rpsSearchListener = database.ref('games_rps').on('child_added', (snapshot) => {
+                const game = snapshot.val();
+                const imInGame = game.mode === 'rps1v3' && game.players &&
+                    game.players.some(p => p.id === playerData.id);
+
+                if (imInGame) {
+                    showNotification('Match Found!', 'RPS 1v3 ready!', '👥');
+                    if (rpsSearchListener) {
+                        database.ref('games_rps').off('child_added', rpsSearchListener);
+                        rpsSearchListener = null;
+                    }
+                    database.ref(`waiting_rps1v3/${playerData.id}`).remove();
+                    setTimeout(() => startRPSGame(game.id, game), 1000);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ RPS 1v3 matchmaking error:', error);
+        handleMatchmakingError(error);
+    }
+}
+
+// Start RPS game
+function startRPSGame(gameId, gameData) {
+    console.log('🎮 Starting RPS game:', gameId);
+
+    currentRPSGame = {
+        gameId: gameId,
+        mode: gameData.mode,
+        currentRound: gameData.currentRound || 1,
+        totalRounds: gameData.totalRounds || 5,
+        myScore: 0,
+        opponentScore: 0,
+        rounds: [],
+        myChoice: null,
+        opponentChoice: null,
+        players: gameData.players || []
+    };
+
+    // Setup game display
+    showScreen('rpsGameScreen');
+
+    if (gameData.mode === 'rps1v1') {
+        // 1v1 mode
+        const isPlayer1 = gameData.player1.id === playerData.id;
+        const me = isPlayer1 ? gameData.player1 : gameData.player2;
+        const opponent = isPlayer1 ? gameData.player2 : gameData.player1;
+
+        document.getElementById('rpsYourName').textContent = me.username;
+        document.getElementById('rpsOpponentName').textContent = opponent.username;
+        applyAvatarStyle(document.getElementById('rpsYourAvatar'), me.color);
+        applyAvatarStyle(document.getElementById('rpsOpponentAvatar'), opponent.color);
+
+        currentRPSGame.myScore = me.score || 0;
+        currentRPSGame.opponentScore = opponent.score || 0;
+    } else {
+        // Multi-player mode - show first opponent
+        const me = gameData.players.find(p => p.id === playerData.id);
+        const opponent = gameData.players.find(p => p.id !== playerData.id);
+
+        document.getElementById('rpsYourName').textContent = me.username;
+        document.getElementById('rpsOpponentName').textContent = opponent ? opponent.username : 'Opponents';
+        applyAvatarStyle(document.getElementById('rpsYourAvatar'), me.color);
+        applyAvatarStyle(document.getElementById('rpsOpponentAvatar'), opponent ? opponent.color : '#999');
+    }
+
+    updateRPSScoreDisplay();
+    setupRPSRound();
+
+    // Listen for game updates
+    if (rpsGameListener) {
+        database.ref(`games_rps/${gameId}`).off('value', rpsGameListener);
+    }
+
+    rpsGameListener = database.ref(`games_rps/${gameId}`).on('value', (snapshot) => {
+        const game = snapshot.val();
+        if (!game) return;
+
+        checkRPSRoundComplete(game);
+    });
+}
+
+// Setup new RPS round
+function setupRPSRound() {
+    document.getElementById('rpsCurrentRound').textContent = currentRPSGame.currentRound;
+    document.getElementById('rpsRoundStatus').textContent = 'Choose your move!';
+
+    // Reset buttons
+    document.querySelectorAll('.rps-btn').forEach(btn => {
+        btn.classList.remove('selected', 'disabled');
+    });
+
+    // Hide result overlay
+    const resultDiv = document.getElementById('rpsRoundResult');
+    if (resultDiv) resultDiv.style.display = 'none';
+
+    // Hide waiting
+    const waitingDiv = document.getElementById('rpsWaiting');
+    if (waitingDiv) waitingDiv.style.display = 'none';
+
+    currentRPSGame.myChoice = null;
+    currentRPSGame.opponentChoice = null;
+}
+
+// Play RPS move
+async function playRPSMove(choice) {
+    if (currentRPSGame.myChoice) return; // Already made a choice
+
+    currentRPSGame.myChoice = choice;
+
+    // Visual feedback
+    document.querySelectorAll('.rps-btn').forEach(btn => {
+        if (btn.dataset.choice === choice) {
+            btn.classList.add('selected');
+        } else {
+            btn.classList.add('disabled');
+        }
+    });
+
+    document.getElementById('rpsRoundStatus').textContent = 'Move locked in!';
+
+    // Show waiting
+    document.getElementById('rpsWaiting').style.display = 'block';
+
+    // Submit choice to Firebase
+    const roundKey = `round${currentRPSGame.currentRound}`;
+    const playerKey = currentRPSGame.mode === 'rps1v1'
+        ? (currentRPSGame.gameId && database.ref(`games_rps/${currentRPSGame.gameId}/player1`).once('value').then(s => s.val()?.id === playerData.id) ? 'player1' : 'player2')
+        : 'player' + (currentRPSGame.players.findIndex(p => p.id === playerData.id) + 1);
+
+    try {
+        if (currentRPSGame.mode === 'rps1v1') {
+            const game = await database.ref(`games_rps/${currentRPSGame.gameId}`).once('value');
+            const gameData = game.val();
+            const isPlayer1 = gameData.player1.id === playerData.id;
+            const playerKey = isPlayer1 ? 'player1' : 'player2';
+
+            await database.ref(`games_rps/${currentRPSGame.gameId}/${playerKey}/choices/${roundKey}`).set(choice);
+        } else {
+            const playerIndex = currentRPSGame.players.findIndex(p => p.id === playerData.id);
+            await database.ref(`games_rps/${currentRPSGame.gameId}/players/${playerIndex}/choices/${roundKey}`).set(choice);
+        }
+    } catch (error) {
+        console.error('Error submitting RPS choice:', error);
+    }
+}
+
+// Check if round is complete
+function checkRPSRoundComplete(game) {
+    const roundKey = `round${currentRPSGame.currentRound}`;
+
+    if (game.mode === 'rps1v1') {
+        const p1Choice = game.player1.choices?.[roundKey];
+        const p2Choice = game.player2.choices?.[roundKey];
+
+        if (p1Choice && p2Choice && !currentRPSGame.opponentChoice) {
+            const isPlayer1 = game.player1.id === playerData.id;
+            currentRPSGame.opponentChoice = isPlayer1 ? p2Choice : p1Choice;
+
+            // Show round result
+            showRPSRoundResult(currentRPSGame.myChoice, currentRPSGame.opponentChoice);
+        }
+    } else {
+        // Multi-player: check if all players have chosen
+        const allChosen = game.players.every(p => p.choices?.[roundKey]);
+
+        if (allChosen && !currentRPSGame.opponentChoice) {
+            // For multi-player, we'll just show results against first opponent for now
+            const myIndex = game.players.findIndex(p => p.id === playerData.id);
+            const opponentIndex = (myIndex + 1) % game.players.length;
+            currentRPSGame.opponentChoice = game.players[opponentIndex].choices[roundKey];
+
+            showRPSRoundResult(currentRPSGame.myChoice, currentRPSGame.opponentChoice);
+        }
+    }
+
+    // Check if game is finished
+    if (game.finished) {
+        endRPSGame(game);
+    }
+}
+
+// Determine RPS winner
+function determineRPSWinner(choice1, choice2) {
+    if (choice1 === choice2) return 'draw';
+    if (
+        (choice1 === 'rock' && choice2 === 'scissors') ||
+        (choice1 === 'paper' && choice2 === 'rock') ||
+        (choice1 === 'scissors' && choice2 === 'paper')
+    ) {
+        return 'win';
+    }
+    return 'lose';
+}
+
+// Get emoji for choice
+function getRPSEmoji(choice) {
+    const emojis = {
+        rock: '✊',
+        paper: '✋',
+        scissors: '✌️'
+    };
+    return emojis[choice] || '❓';
+}
+
+// Show round result
+function showRPSRoundResult(myChoice, opponentChoice) {
+    const result = determineRPSWinner(myChoice, opponentChoice);
+
+    // Update scores
+    if (result === 'win') {
+        currentRPSGame.myScore++;
+    } else if (result === 'lose') {
+        currentRPSGame.opponentScore++;
+    }
+
+    // Update score display
+    updateRPSScoreDisplay();
+
+    // Store round result
+    currentRPSGame.rounds.push({
+        round: currentRPSGame.currentRound,
+        myChoice: myChoice,
+        opponentChoice: opponentChoice,
+        result: result
+    });
+
+    // Show result overlay
+    document.getElementById('rpsYourChoice').textContent = getRPSEmoji(myChoice);
+    document.getElementById('rpsOpponentChoice').textContent = getRPSEmoji(opponentChoice);
+
+    const resultTextEl = document.getElementById('rpsResultText');
+    if (result === 'win') {
+        resultTextEl.textContent = 'You Win!';
+        resultTextEl.className = 'rps-result-outcome win';
+    } else if (result === 'lose') {
+        resultTextEl.textContent = 'You Lose!';
+        resultTextEl.className = 'rps-result-outcome lose';
+    } else {
+        resultTextEl.textContent = "It's a Draw!";
+        resultTextEl.className = 'rps-result-outcome draw';
+    }
+
+    document.getElementById('rpsRoundResult').style.display = 'flex';
+    document.getElementById('rpsWaiting').style.display = 'none';
+
+    // Check if game is over
+    if (currentRPSGame.currentRound >= currentRPSGame.totalRounds) {
+        setTimeout(() => {
+            finishRPSGame();
+        }, 3000);
+    } else {
+        // Next round
+        setTimeout(() => {
+            currentRPSGame.currentRound++;
+            setupRPSRound();
+        }, 3000);
+    }
+}
+
+// Update score display
+function updateRPSScoreDisplay() {
+    document.getElementById('rpsYourScore').textContent = currentRPSGame.myScore;
+    document.getElementById('rpsOpponentScore').textContent = currentRPSGame.opponentScore;
+}
+
+// Finish RPS game
+async function finishRPSGame() {
+    // Update game as finished
+    try {
+        await database.ref(`games_rps/${currentRPSGame.gameId}/finished`).set(true);
+
+        // Update final scores
+        if (currentRPSGame.mode === 'rps1v1') {
+            const game = await database.ref(`games_rps/${currentRPSGame.gameId}`).once('value');
+            const gameData = game.val();
+            const isPlayer1 = gameData.player1.id === playerData.id;
+            const playerKey = isPlayer1 ? 'player1' : 'player2';
+
+            await database.ref(`games_rps/${currentRPSGame.gameId}/${playerKey}/score`).set(currentRPSGame.myScore);
+        } else {
+            const playerIndex = currentRPSGame.players.findIndex(p => p.id === playerData.id);
+            await database.ref(`games_rps/${currentRPSGame.gameId}/players/${playerIndex}/score`).set(currentRPSGame.myScore);
+        }
+    } catch (error) {
+        console.error('Error finishing RPS game:', error);
+    }
+
+    showRPSResults();
+}
+
+// End RPS game (from Firebase update)
+function endRPSGame(game) {
+    if (rpsGameListener) {
+        database.ref(`games_rps/${currentRPSGame.gameId}`).off('value', rpsGameListener);
+        rpsGameListener = null;
+    }
+
+    // Clean up game after 30 seconds
+    setTimeout(() => {
+        database.ref(`games_rps/${currentRPSGame.gameId}`).remove();
+    }, 30000);
+}
+
+// Show RPS results
+function showRPSResults() {
+    showScreen('rpsResultsScreen');
+
+    const won = currentRPSGame.myScore > currentRPSGame.opponentScore;
+    const draw = currentRPSGame.myScore === currentRPSGame.opponentScore;
+
+    // Show banner
+    const banner = document.getElementById('rpsResultBanner');
+    if (won) {
+        banner.textContent = '🎉 VICTORY! 🎉';
+        banner.className = 'result-banner victory';
+    } else if (draw) {
+        banner.textContent = '🤝 DRAW! 🤝';
+        banner.className = 'result-banner draw';
+    } else {
+        banner.textContent = '💔 DEFEAT 💔';
+        banner.className = 'result-banner defeat';
+    }
+
+    // Show final scores
+    document.getElementById('rpsFinalYourScore').textContent = currentRPSGame.myScore;
+    document.getElementById('rpsFinalOpponentScore').textContent = currentRPSGame.opponentScore;
+
+    // Award points and XP
+    let pointsEarned = 0;
+    let xpEarned = 0;
+
+    if (won) {
+        pointsEarned = 100;
+        xpEarned = 50;
+    } else if (draw) {
+        pointsEarned = 50;
+        xpEarned = 25;
+    } else {
+        pointsEarned = 20;
+        xpEarned = 20;
+    }
+
+    playerData.points += pointsEarned;
+    awardXP(xpEarned);
+
+    document.getElementById('rpsPointsEarned').innerHTML = `
+        <div style="font-size: 1.2rem; color: #4CAF50; font-weight: 700;">
+            +${pointsEarned} Points | +${xpEarned} XP
+        </div>
+    `;
+
+    // Show rounds review
+    const reviewDiv = document.getElementById('rpsRoundsReview');
+    reviewDiv.innerHTML = '<h3 style="color: #333; margin-bottom: 15px;">Round History</h3>';
+
+    currentRPSGame.rounds.forEach((round, index) => {
+        const resultClass = round.result === 'win' ? 'win' : round.result === 'lose' ? 'lose' : 'draw';
+        const resultText = round.result === 'win' ? 'WIN' : round.result === 'lose' ? 'LOSS' : 'DRAW';
+
+        reviewDiv.innerHTML += `
+            <div class="rps-round-item">
+                <div class="rps-round-number">Round ${round.round}</div>
+                <div class="rps-round-moves">
+                    <div class="rps-round-move">${getRPSEmoji(round.myChoice)}</div>
+                    <span style="color: #999;">vs</span>
+                    <div class="rps-round-move">${getRPSEmoji(round.opponentChoice)}</div>
+                </div>
+                <div class="rps-round-result ${resultClass}">${resultText}</div>
+            </div>
+        `;
+    });
+}
+
 // Setup all event listeners - called after DOM is ready
 function setupEventListeners() {
     console.log('🎯 Setting up event listeners...');
@@ -3525,6 +4214,60 @@ function setupEventListeners() {
             window.location.reload(true);
         }, 300);
     }, 'Refresh button');
+
+    // === ROCK PAPER SCISSORS BUTTONS ===
+    console.log('✊ Setting up Rock Paper Scissors buttons...');
+
+    // RPS Mode selection buttons
+    safeAddListener('rpsMode1v1Btn', 'click', () => {
+        currentMode = 'rps1v1';
+        document.querySelectorAll('#rpsModeScreen .mode-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('rpsMode1v1Btn')?.classList.add('active');
+        const findBtn = document.getElementById('findRPSMatchBtn');
+        if (findBtn) findBtn.textContent = 'Find Match (1v1)';
+    }, 'RPS 1v1 Mode');
+
+    safeAddListener('rpsMode1v2Btn', 'click', () => {
+        currentMode = 'rps1v2';
+        document.querySelectorAll('#rpsModeScreen .mode-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('rpsMode1v2Btn')?.classList.add('active');
+        const findBtn = document.getElementById('findRPSMatchBtn');
+        if (findBtn) findBtn.textContent = 'Find Match (1v2)';
+    }, 'RPS 1v2 Mode');
+
+    safeAddListener('rpsMode1v3Btn', 'click', () => {
+        currentMode = 'rps1v3';
+        document.querySelectorAll('#rpsModeScreen .mode-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('rpsMode1v3Btn')?.classList.add('active');
+        const findBtn = document.getElementById('findRPSMatchBtn');
+        if (findBtn) findBtn.textContent = 'Find Match (1v3)';
+    }, 'RPS 1v3 Mode');
+
+    safeAddListener('findRPSMatchBtn', 'click', () => {
+        startRPSMatchmaking();
+    }, 'Find RPS Match');
+
+    // RPS game buttons
+    safeAddListener('rpsRockBtn', 'click', () => {
+        playRPSMove('rock');
+    }, 'RPS Rock');
+
+    safeAddListener('rpsPaperBtn', 'click', () => {
+        playRPSMove('paper');
+    }, 'RPS Paper');
+
+    safeAddListener('rpsScissorsBtn', 'click', () => {
+        playRPSMove('scissors');
+    }, 'RPS Scissors');
+
+    // RPS results buttons
+    safeAddListener('rpsPlayAgainBtn', 'click', () => {
+        showScreen('rpsModeScreen');
+    }, 'RPS Play Again');
+
+    safeAddListener('rpsBackToMenuBtn', 'click', () => {
+        showScreen('menuScreen');
+    }, 'RPS Back to Menu');
 
     console.log('✅ All event listeners attached successfully!');
 }

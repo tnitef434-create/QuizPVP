@@ -1,0 +1,103 @@
+{
+  "rules": {
+    "games": {
+      "$gameId": {
+        ".read": true,
+        ".write": true,
+        ".indexOn": ["createdAt", "gameStartedAt"]
+      }
+    },
+    "games_trios": {
+      "$gameId": {
+        ".read": true,
+        ".write": true,
+        ".indexOn": ["createdAt"]
+      }
+    },
+    "games_squad": {
+      "$gameId": {
+        ".read": true,
+        ".write": true,
+        ".indexOn": ["createdAt"]
+      }
+    },
+    "games_rps": {
+      "$gameId": {
+        ".read": true,
+        ".write": true,
+        ".indexOn": ["createdAt", "mode", "finished"]
+      }
+    },
+    "waiting_1v1": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp"]
+    },
+    "waiting_trios": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp"]
+    },
+    "waiting_squad": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp"]
+    },
+    "waiting_rps1v1": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp"]
+    },
+    "waiting_rps1v2": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp"]
+    },
+    "waiting_rps1v3": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp"]
+    },
+    "waiting_chat": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp"]
+    },
+    "chats": {
+      "$chatId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "online": {
+      ".read": true,
+      "$userId": {
+        ".write": true
+      }
+    },
+    "usernames": {
+      ".read": true,
+      "$userId": {
+        ".write": true
+      }
+    },
+    "friends": {
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "friendRequests": {
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "gameInvites": {
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}
