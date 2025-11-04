@@ -313,6 +313,13 @@
                 <div class="spinner"></div>
                 <p>Waiting for opponent...</p>
             </div>
+
+            <!-- Forfeit Button -->
+            <div class="forfeit-container">
+                <button id="rpsForfeitBtn" class="btn btn-danger btn-small" onclick="forfeitRPSGame()">
+                    Forfeit Match
+                </button>
+            </div>
         </div>
     </div>
 
@@ -449,7 +456,13 @@
                 </div>
             </div>
 
-            <button class="btn btn-secondary btn-small" id="warLeaveBtn">Leave Game</button>
+            <!-- Action Buttons -->
+            <div class="game-action-buttons">
+                <button id="warForfeitBtn" class="btn btn-danger btn-small" onclick="forfeitWarGame()">
+                    Forfeit Match
+                </button>
+                <button class="btn btn-secondary btn-small" id="warLeaveBtn">Leave Game</button>
+            </div>
         </div>
     </div>
 

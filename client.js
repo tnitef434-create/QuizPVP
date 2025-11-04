@@ -4313,6 +4313,56 @@ function endRPSGame(game) {
     }, 30000);
 }
 
+// Forfeit RPS game
+async function forfeitRPSGame() {
+    if (!currentRPSGame.gameId) {
+        alert('⚠️ No active game to forfeit');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to forfeit? You will lose this match!')) {
+        return;
+    }
+
+    try {
+        console.log('🏳️ Forfeiting RPS game:', currentRPSGame.gameId);
+
+        const isBotGame = currentRPSGame.mode === 'rpsbot' || currentRPSGame.gameId.startsWith('bot_');
+
+        if (!isBotGame) {
+            // Online game - update database
+            const gameRef = database.ref(`games_rps/${currentRPSGame.gameId}`);
+            await gameRef.update({
+                finished: true,
+                forfeited: true,
+                forfeitedBy: playerData.id,
+                finishedAt: Date.now()
+            });
+
+            // Clean up listener
+            if (rpsGameListener) {
+                database.ref(`games_rps/${currentRPSGame.gameId}`).off('value', rpsGameListener);
+                rpsGameListener = null;
+            }
+        }
+
+        // Show loss result
+        currentRPSGame.myScore = 0;
+        currentRPSGame.opponentScore = 5; // Opponent gets full points
+
+        showNotification('Forfeited', 'You forfeited the match', '🏳️');
+
+        // Wait a moment then show results
+        setTimeout(() => {
+            showRPSResults();
+        }, 500);
+
+    } catch (error) {
+        console.error('❌ Error forfeiting RPS game:', error);
+        alert('Error forfeiting game: ' + error.message);
+    }
+}
+
 // Show RPS results
 function showRPSResults() {
     showScreen('rpsResultsScreen');
@@ -5069,6 +5119,62 @@ function finishWarGame(gameData) {
     }
 
     showWarResults(won, draw, myScore, opponentScore, opponent.username, pointsEarned, xpEarned);
+}
+
+// Forfeit War game
+async function forfeitWarGame() {
+    if (!currentWarGame.gameId) {
+        alert('⚠️ No active game to forfeit');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to forfeit? You will lose this match!')) {
+        return;
+    }
+
+    try {
+        console.log('🏳️ Forfeiting War game:', currentWarGame.gameId);
+
+        const isBotGame = currentWarGame.gameId.startsWith('bot_');
+
+        if (!isBotGame) {
+            // Online game - update database
+            const gameRef = database.ref(`games_war/${currentWarGame.gameId}`);
+            await gameRef.update({
+                finished: true,
+                forfeited: true,
+                forfeitedBy: playerData.id,
+                finishedAt: Date.now()
+            });
+
+            // Clean up listener
+            if (warGameListener) {
+                database.ref(`games_war/${currentWarGame.gameId}`).off('value', warGameListener);
+                warGameListener = null;
+            }
+        }
+
+        // Show loss result
+        currentWarGame.myScore = 0;
+        currentWarGame.opponentScore = 7; // Opponent gets full points
+
+        showNotification('Forfeited', 'You forfeited the match', '🏳️');
+
+        // Get opponent name
+        const gameData = await database.ref(`games_war/${currentWarGame.gameId}`).once('value');
+        const game = gameData.val();
+        const iAmPlayer1 = game && game.player1.id === playerData.id;
+        const opponent = game ? (iAmPlayer1 ? game.player2 : game.player1) : { username: 'Opponent' };
+
+        // Wait a moment then show results
+        setTimeout(() => {
+            showWarResults(false, false, 0, 7, opponent.username, 0, 0);
+        }, 500);
+
+    } catch (error) {
+        console.error('❌ Error forfeiting War game:', error);
+        alert('Error forfeiting game: ' + error.message);
+    }
 }
 
 // Show War results
