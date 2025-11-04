@@ -4344,54 +4344,52 @@ function endRPSGame(game) {
     }, 30000);
 }
 
-// Forfeit RPS game
-async function forfeitRPSGame() {
-    if (!currentRPSGame.gameId) {
-        alert('⚠️ No active game to forfeit');
+// Forfeit RPS game - FIXED
+function forfeitRPSGame() {
+    console.log('🏳️ Forfeit RPS button clicked');
+
+    if (!currentRPSGame || !currentRPSGame.gameId) {
+        alert('⚠️ No active game');
         return;
     }
 
-    if (!confirm('Are you sure you want to forfeit? You will lose this match!')) {
+    if (!confirm('Forfeit this match? You will lose!')) {
         return;
     }
 
-    try {
-        console.log('🏳️ Forfeiting RPS game:', currentRPSGame.gameId);
+    console.log('Forfeiting RPS game:', currentRPSGame.gameId);
 
-        const isBotGame = currentRPSGame.mode === 'rpsbot' || currentRPSGame.gameId.startsWith('bot_');
+    // Clean up listener
+    if (rpsGameListener) {
+        try {
+            database.ref(`games_rps/${currentRPSGame.gameId}`).off('value', rpsGameListener);
+        } catch (e) {
+            console.log('Error cleaning up listener:', e);
+        }
+        rpsGameListener = null;
+    }
 
-        if (!isBotGame) {
-            // Online game - update database
-            const gameRef = database.ref(`games_rps/${currentRPSGame.gameId}`);
-            await gameRef.update({
+    // Update database if online game
+    const isBotGame = currentRPSGame.mode === 'rpsbot' || currentRPSGame.gameId.startsWith('bot_');
+    if (!isBotGame && database) {
+        try {
+            database.ref(`games_rps/${currentRPSGame.gameId}`).update({
                 finished: true,
                 forfeited: true,
-                forfeitedBy: playerData.id,
-                finishedAt: Date.now()
+                forfeitedBy: playerData.id
             });
-
-            // Clean up listener
-            if (rpsGameListener) {
-                database.ref(`games_rps/${currentRPSGame.gameId}`).off('value', rpsGameListener);
-                rpsGameListener = null;
-            }
+        } catch (e) {
+            console.log('Error updating forfeit:', e);
         }
-
-        // Show loss result
-        currentRPSGame.myScore = 0;
-        currentRPSGame.opponentScore = 5; // Opponent gets full points
-
-        showNotification('Forfeited', 'You forfeited the match', '🏳️');
-
-        // Wait a moment then show results
-        setTimeout(() => {
-            showRPSResults();
-        }, 500);
-
-    } catch (error) {
-        console.error('❌ Error forfeiting RPS game:', error);
-        alert('Error forfeiting game: ' + error.message);
     }
+
+    // Set scores for loss
+    currentRPSGame.myScore = 0;
+    currentRPSGame.opponentScore = 5;
+
+    // Show results
+    showNotification('Forfeited', 'Match forfeited', '🏳️');
+    setTimeout(() => showRPSResults(), 300);
 }
 
 // Show RPS results
@@ -4636,50 +4634,40 @@ async function startWarMatchmaking() {
     }
 }
 
-// Find War 1v1 match
+// Find War 1v1 match - COMPLETELY REWRITTEN (matches math game pattern)
 async function findWar1v1Match() {
     try {
         const waitingRef = database.ref('waiting_war1v1');
         console.log('📡 Checking War 1v1 queue...');
 
-        // Clean stale entries (15 seconds)
         const snapshot = await waitingRef.once('value');
         const waiting = snapshot.val() || {};
-        const now = Date.now();
+        console.log('✅ Connected. Waiting War players:', Object.keys(waiting).length);
 
-        const cleanupPromises = [];
+        // Remove stale entries (older than 30 seconds)
+        const now = Date.now();
         Object.keys(waiting).forEach(key => {
-            if (waiting[key] && now - waiting[key].timestamp > 15000) {
+            if (waiting[key] && now - waiting[key].timestamp > 30000) {
                 console.log('🗑️ Removing stale War player:', key);
-                cleanupPromises.push(waitingRef.child(key).remove());
+                waitingRef.child(key).remove();
             }
         });
-        await Promise.all(cleanupPromises);
 
-        // Get fresh snapshot
+        // Check for available opponent
         const freshSnapshot = await waitingRef.once('value');
         const freshWaiting = freshSnapshot.val() || {};
-        const availablePlayers = Object.entries(freshWaiting)
-            .filter(([id]) => id !== playerData.id);
+        const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
 
         console.log('Available War opponents:', availablePlayers.length);
 
         if (availablePlayers.length > 0) {
+            // Match found!
             const [opponentId, opponentData] = availablePlayers[0];
-            console.log('🎮 Found War opponent:', opponentData.username);
+            console.log('✅ War match found! Opponent:', opponentData.username);
 
-            // CRITICAL: Remove both players FIRST to prevent double-matching
+            // Remove both from waiting
             await waitingRef.child(opponentId).remove();
             await waitingRef.child(playerData.id).remove();
-
-            // Verify removal
-            const verifySnapshot = await waitingRef.once('value');
-            const verifyWaiting = verifySnapshot.val() || {};
-            if (verifyWaiting[opponentId] || verifyWaiting[playerData.id]) {
-                console.error('❌ Failed to remove players from queue');
-                showScreen('warModeScreen');
-                return;
-            }
 
             // Create game
             const gameId = 'war_' + generateId();
@@ -4714,74 +4702,55 @@ async function findWar1v1Match() {
                 finished: false
             };
 
+            console.log('🎮 Creating War game:', gameId);
             await database.ref(`games_war/${gameId}`).set(gameData);
-            console.log('✅ War game created:', gameId);
 
-            startWarGame(gameId, gameData);
+            showNotification('Match Found!', 'Starting War battle!', '🃏');
+
+            // Start game for player1 (creator)
+            setTimeout(() => startWarGame(gameId, gameData), 1000);
         } else {
-            console.log('⏳ No War opponents available. Joining queue...');
-
+            // Add self to waiting
+            console.log('⏳ No War opponents found. Joining waiting queue...');
             await waitingRef.child(playerData.id).set({
                 username: playerData.username,
-                level: playerData.level || 1,
                 color: playerData.color,
-                timestamp: Date.now(),
-                searching: true
+                level: playerData.level || 1,
+                timestamp: Date.now()
             });
+            console.log('✅ Added to War queue. Waiting for opponent...');
 
-            warSearchListener = waitingRef.on('child_added', async (snapshot) => {
-                const otherPlayer = snapshot.val();
-                const otherId = snapshot.key;
+            // Clean up old listener if exists
+            if (warSearchListener) {
+                database.ref('games_war').off('child_added', warSearchListener);
+            }
 
-                if (otherId !== playerData.id && otherPlayer.searching) {
-                    console.log('🎮 War opponent joined:', otherPlayer.username);
+            // Listen for game creation (BOTH players use this!)
+            warSearchListener = database.ref('games_war').on('child_added', (snapshot) => {
+                const game = snapshot.val();
+                console.log('🎮 New War game detected:', game.id);
 
-                    waitingRef.off('child_added', warSearchListener);
-                    warSearchListener = null;
+                // Check if I'm player2 in this game
+                if (game && game.mode === 'war1v1' && game.player2 && game.player2.id === playerData.id) {
+                    // Found my game!
+                    console.log('✅ War matched! Starting game...');
+                    showNotification('Match Found!', 'War opponent found!', '🃏');
 
-                    await waitingRef.child(otherId).remove();
-                    await waitingRef.child(playerData.id).remove();
+                    if (warSearchListener) {
+                        database.ref('games_war').off('child_added', warSearchListener);
+                        warSearchListener = null;
+                    }
 
-                    const gameId = 'war_' + generateId();
-                    const deck1 = generateDeck();
-                    const deck2 = generateDeck();
+                    // Remove from waiting
+                    database.ref(`waiting_war1v1/${playerData.id}`).remove();
 
-                    const gameData = {
-                        id: gameId,
-                        mode: 'war1v1',
-                        player1: {
-                            id: playerData.id,
-                            username: playerData.username,
-                            color: playerData.color,
-                            level: playerData.level || 1,
-                            score: 0,
-                            cards: {},
-                            deck: deck1
-                        },
-                        player2: {
-                            id: otherId,
-                            username: otherPlayer.username,
-                            color: otherPlayer.color,
-                            level: otherPlayer.level || 1,
-                            score: 0,
-                            cards: {},
-                            deck: deck2
-                        },
-                        currentRound: 1,
-                        totalRounds: 7,
-                        rounds: {},
-                        createdAt: Date.now(),
-                        finished: false
-                    };
-
-                    await database.ref(`games_war/${gameId}`).set(gameData);
-                    startWarGame(gameId, gameData);
+                    setTimeout(() => startWarGame(game.id, game), 1000);
                 }
             });
         }
     } catch (error) {
         console.error('❌ War matchmaking error:', error);
-        showScreen('warModeScreen');
+        handleMatchmakingError(error);
     }
 }
 
@@ -5152,60 +5121,52 @@ function finishWarGame(gameData) {
     showWarResults(won, draw, myScore, opponentScore, opponent.username, pointsEarned, xpEarned);
 }
 
-// Forfeit War game
-async function forfeitWarGame() {
-    if (!currentWarGame.gameId) {
-        alert('⚠️ No active game to forfeit');
+// Forfeit War game - FIXED
+function forfeitWarGame() {
+    console.log('🏳️ Forfeit War button clicked');
+
+    if (!currentWarGame || !currentWarGame.gameId) {
+        alert('⚠️ No active game');
         return;
     }
 
-    if (!confirm('Are you sure you want to forfeit? You will lose this match!')) {
+    if (!confirm('Forfeit this match? You will lose!')) {
         return;
     }
 
-    try {
-        console.log('🏳️ Forfeiting War game:', currentWarGame.gameId);
+    console.log('Forfeiting War game:', currentWarGame.gameId);
 
-        const isBotGame = currentWarGame.gameId.startsWith('bot_');
+    // Clean up listener
+    if (warGameListener) {
+        try {
+            database.ref(`games_war/${currentWarGame.gameId}`).off('value', warGameListener);
+        } catch (e) {
+            console.log('Error cleaning up listener:', e);
+        }
+        warGameListener = null;
+    }
 
-        if (!isBotGame) {
-            // Online game - update database
-            const gameRef = database.ref(`games_war/${currentWarGame.gameId}`);
-            await gameRef.update({
+    // Update database if online game
+    const isBotGame = currentWarGame.gameId.startsWith('bot_');
+    if (!isBotGame && database) {
+        try {
+            database.ref(`games_war/${currentWarGame.gameId}`).update({
                 finished: true,
                 forfeited: true,
-                forfeitedBy: playerData.id,
-                finishedAt: Date.now()
+                forfeitedBy: playerData.id
             });
-
-            // Clean up listener
-            if (warGameListener) {
-                database.ref(`games_war/${currentWarGame.gameId}`).off('value', warGameListener);
-                warGameListener = null;
-            }
+        } catch (e) {
+            console.log('Error updating forfeit:', e);
         }
-
-        // Show loss result
-        currentWarGame.myScore = 0;
-        currentWarGame.opponentScore = 7; // Opponent gets full points
-
-        showNotification('Forfeited', 'You forfeited the match', '🏳️');
-
-        // Get opponent name
-        const gameData = await database.ref(`games_war/${currentWarGame.gameId}`).once('value');
-        const game = gameData.val();
-        const iAmPlayer1 = game && game.player1.id === playerData.id;
-        const opponent = game ? (iAmPlayer1 ? game.player2 : game.player1) : { username: 'Opponent' };
-
-        // Wait a moment then show results
-        setTimeout(() => {
-            showWarResults(false, false, 0, 7, opponent.username, 0, 0);
-        }, 500);
-
-    } catch (error) {
-        console.error('❌ Error forfeiting War game:', error);
-        alert('Error forfeiting game: ' + error.message);
     }
+
+    // Set scores for loss
+    currentWarGame.myScore = 0;
+    currentWarGame.opponentScore = 7;
+
+    // Show results
+    showNotification('Forfeited', 'Match forfeited', '🏳️');
+    setTimeout(() => showWarResults(false, false, 0, 7, 'Opponent', 0, 0), 300);
 }
 
 // Show War results
