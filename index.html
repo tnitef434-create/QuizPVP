@@ -104,6 +104,12 @@
                     <div class="hub-card-desc">Chat & friends</div>
                 </div>
 
+                <div class="hub-card" id="shopCard" onclick="window.gameNavigation.showScreen('shopScreen')">
+                    <div class="hub-card-icon">🛒</div>
+                    <div class="hub-card-title">Shop</div>
+                    <div class="hub-card-desc">Buy cool cosmetics</div>
+                </div>
+
                 <div class="hub-card" id="tutorialCard" onclick="window.gameNavigation.showScreen('tutorialScreen')">
                     <div class="hub-card-icon">📚</div>
                     <div class="hub-card-title">Tutorial</div>
@@ -113,7 +119,7 @@
                 <div class="hub-card" id="settingsCard" onclick="window.gameNavigation.goToSettings()">
                     <div class="hub-card-icon">⚙️</div>
                     <div class="hub-card-title">Settings</div>
-                    <div class="hub-card-desc">Customize & shop</div>
+                    <div class="hub-card-desc">App settings</div>
                 </div>
             </div>
         </div>
@@ -845,7 +851,7 @@
                 </div>
             </div>
 
-            <button id="closeShopBtn" class="btn btn-secondary">Back</button>
+            <button id="closeShopBtn" class="btn btn-secondary" onclick="window.gameNavigation.goToMenu()">Back to Menu</button>
         </div>
     </div>
 
@@ -857,15 +863,6 @@
             </div>
 
             <div class="settings-items">
-                <div class="settings-item" onclick="showScreen('shopScreen')" style="cursor: pointer;">
-                    <div class="settings-item-icon">🛒</div>
-                    <div class="settings-item-info">
-                        <h3>Shop</h3>
-                        <p>Buy colors, username changes, and more</p>
-                    </div>
-                    <button class="btn btn-primary btn-small">Open Shop</button>
-                </div>
-
                 <div class="settings-item">
                     <div class="settings-item-icon">🔄</div>
                     <div class="settings-item-info">

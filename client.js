@@ -257,7 +257,10 @@ let playerData = {
     friends: [],
     friendRequests: [],
     level: 1,
-    xp: 0
+    xp: 0,
+    wins: 0, // Track total wins for cosmetic unlocks
+    ownedCosmetics: [], // Array of owned cosmetic IDs
+    equippedCosmetic: null // Currently equipped cosmetic ID
 };
 
 let currentGame = {
@@ -468,6 +471,11 @@ function showScreen(screenId) {
     if (targetScreen) {
         targetScreen.classList.add('active');
         console.log(`✅ Screen switched to: ${screenId}`);
+
+        // Render shop when opening shop screen
+        if (screenId === 'shopScreen') {
+            renderShop();
+        }
     } else {
         console.error(`❌ Screen not found: ${screenId}`);
     }
@@ -507,6 +515,9 @@ async function loadPlayerData() {
         playerData.friendRequests = data.friendRequests || [];
         playerData.level = data.level || 1;
         playerData.xp = data.xp || 0;
+        playerData.wins = data.wins || 0;
+        playerData.ownedCosmetics = data.ownedCosmetics || [];
+        playerData.equippedCosmetic = data.equippedCosmetic || null;
 
         // If username exists, skip to menu and setup
         if (playerData.username && playerData.username.length >= 2) {
@@ -540,7 +551,10 @@ function savePlayerData() {
         friends: playerData.friends || [],
         friendRequests: playerData.friendRequests || [],
         level: playerData.level || 1,
-        xp: playerData.xp || 0
+        xp: playerData.xp || 0,
+        wins: playerData.wins || 0,
+        ownedCosmetics: playerData.ownedCosmetics || [],
+        equippedCosmetic: playerData.equippedCosmetic || null
     }));
 }
 
@@ -1558,6 +1572,7 @@ async function checkTriosGameEnd(game) {
         // Winner gets 100 points + XP
         if (myRank === 1) {
             playerData.points += 100;
+            playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
             awardXP(50); // Winner gets 50 XP
         } else {
             awardXP(20); // Participants get 20 XP
@@ -1603,6 +1618,7 @@ async function checkSquadGameEnd(game) {
         // Winner gets 100 points + XP
         if (myRank === 1) {
             playerData.points += 100;
+            playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
             awardXP(60); // Squad winner gets 60 XP (4 players is harder)
         } else {
             awardXP(25); // Participants get 25 XP
@@ -1789,6 +1805,190 @@ function showResults(myScore, opponentScore, won, draw) {
         `;
         answersReview.appendChild(answerItem);
     });
+}
+
+// Cosmetics Database
+const COSMETICS = {
+    // Basic colors (always available)
+    'red': { id: 'red', name: 'Red Color', desc: 'Bold and vibrant red', cost: 100, type: 'color', value: '#FF5252', winsRequired: 0 },
+    'blue': { id: 'blue', name: 'Blue Color', desc: 'Cool ocean blue', cost: 100, type: 'color', value: '#2196F3', winsRequired: 0 },
+    'green': { id: 'green', name: 'Green Color', desc: 'Fresh emerald green', cost: 100, type: 'color', value: '#4CAF50', winsRequired: 0 },
+    'purple': { id: 'purple', name: 'Purple Color', desc: 'Royal purple', cost: 150, type: 'color', value: '#9C27B0', winsRequired: 0 },
+    'pink': { id: 'pink', name: 'Pink Color', desc: 'Sweet bubblegum pink', cost: 150, type: 'color', value: '#E91E63', winsRequired: 0 },
+    'orange': { id: 'orange', name: 'Orange Color', desc: 'Warm sunset orange', cost: 150, type: 'color', value: '#FF9800', winsRequired: 0 },
+
+    // Premium colors
+    'gold': { id: 'gold', name: 'Gold Color', desc: 'Shine like a champion', cost: 10000, type: 'color', value: 'gold', winsRequired: 0, special: true },
+    'rainbow': { id: 'rainbow', name: 'Rainbow Color', desc: 'Animated rainbow effect', cost: 50000, type: 'color', value: 'rainbow', winsRequired: 0, legendary: true },
+
+    // Win-based unlockables
+    'diamond': { id: 'diamond', name: '💎 Diamond Aura', desc: 'Sparkling diamond effect', cost: 5000, type: 'color', value: '#B9F2FF', winsRequired: 10, special: true },
+    'fire': { id: 'fire', name: '🔥 Fire Champion', desc: 'Blazing fire effect', cost: 10000, type: 'color', value: '#FF4500', winsRequired: 25, special: true },
+    'lightning': { id: 'lightning', name: '⚡ Lightning Legend', desc: 'Electric lightning aura', cost: 15000, type: 'color', value: '#FFD700', winsRequired: 50, legendary: true }
+};
+
+// Render the shop with dynamic cosmetics
+function renderShop() {
+    const shopItemsContainer = document.querySelector('.shop-items');
+    if (!shopItemsContainer) return;
+
+    // Clear existing items except username and custom color (we'll re-add them)
+    shopItemsContainer.innerHTML = '';
+
+    // Add cosmetic items
+    Object.values(COSMETICS).forEach(cosmetic => {
+        const isOwned = (playerData.ownedCosmetics || []).includes(cosmetic.id);
+        const isEquipped = playerData.equippedCosmetic === cosmetic.id;
+        const hasWins = (playerData.wins || 0) >= cosmetic.winsRequired;
+        const isLocked = !hasWins;
+
+        let itemClass = 'shop-item';
+        if (cosmetic.cost <= 150) itemClass += ' affordable';
+        if (cosmetic.special) itemClass += ' special';
+        if (cosmetic.legendary) itemClass += ' legendary';
+        if (isLocked) itemClass += ' locked';
+
+        // Determine button text and action
+        let buttonText, buttonAction, buttonClass;
+        if (isLocked) {
+            buttonText = `🔒 ${cosmetic.winsRequired} Wins`;
+            buttonAction = `alert('Win ${cosmetic.winsRequired} games to unlock this!')`;
+            buttonClass = 'btn btn-secondary btn-small';
+        } else if (isEquipped) {
+            buttonText = 'Equipped';
+            buttonAction = ``;
+            buttonClass = 'btn btn-success btn-small';
+        } else if (isOwned) {
+            buttonText = 'Equip?';
+            buttonAction = `equipCosmetic('${cosmetic.id}')`;
+            buttonClass = 'btn btn-primary btn-small';
+        } else {
+            buttonText = 'Buy';
+            buttonAction = `purchaseCosmetic('${cosmetic.id}')`;
+            buttonClass = 'btn btn-primary btn-small';
+        }
+
+        // Create visual indicator
+        let iconHTML;
+        if (cosmetic.type === 'color') {
+            if (cosmetic.value === 'gold') {
+                iconHTML = '<div class="shop-item-icon gold-icon"></div>';
+            } else if (cosmetic.value === 'rainbow') {
+                iconHTML = '<div class="shop-item-icon rainbow-icon"></div>';
+            } else {
+                iconHTML = `<div class="shop-item-icon" style="background: ${cosmetic.value};"></div>`;
+            }
+        }
+
+        const itemHTML = `
+            <div class="${itemClass}">
+                ${iconHTML}
+                <div class="shop-item-info">
+                    <h3>${cosmetic.name}</h3>
+                    <p>${cosmetic.desc}</p>
+                    ${isLocked ? `<p class="unlock-req">🏆 Win ${cosmetic.winsRequired} games to unlock</p>` : ''}
+                </div>
+                <div class="shop-item-price">${cosmetic.cost.toLocaleString()} pts</div>
+                <button class="${buttonClass}" ${buttonAction ? `onclick="${buttonAction}"` : 'disabled'}>${buttonText}</button>
+            </div>
+        `;
+
+        shopItemsContainer.insertAdjacentHTML('beforeend', itemHTML);
+    });
+
+    // Add username change option
+    shopItemsContainer.insertAdjacentHTML('beforeend', `
+        <div class="shop-item">
+            <div class="shop-item-icon">✏️</div>
+            <div class="shop-item-info">
+                <h3>Change Username</h3>
+                <p>Choose a new username</p>
+            </div>
+            <div class="shop-item-price">1,000 pts</div>
+            <button class="btn btn-primary btn-small" onclick="openUsernameChange()">Buy</button>
+        </div>
+    `);
+
+    // Add custom color picker
+    shopItemsContainer.insertAdjacentHTML('beforeend', `
+        <div class="shop-item">
+            <div class="shop-item-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+            <div class="shop-item-info">
+                <h3>Custom Color</h3>
+                <p>Choose any color you like</p>
+            </div>
+            <div class="shop-item-price">5,000 pts</div>
+            <button class="btn btn-primary btn-small" onclick="openColorPicker()">Buy</button>
+        </div>
+    `);
+}
+
+// Purchase a cosmetic
+function purchaseCosmetic(cosmeticId) {
+    const cosmetic = COSMETICS[cosmeticId];
+    if (!cosmetic) return;
+
+    // Check if already owned
+    if ((playerData.ownedCosmetics || []).includes(cosmeticId)) {
+        alert('You already own this cosmetic!');
+        return;
+    }
+
+    // Check wins requirement
+    if ((playerData.wins || 0) < cosmetic.winsRequired) {
+        showNotification('Locked', `Win ${cosmetic.winsRequired} games to unlock!`, '🔒');
+        return;
+    }
+
+    // Check points
+    if (playerData.points < cosmetic.cost) {
+        showNotification('Not Enough Points', `You need ${cosmetic.cost.toLocaleString()} points`, '❌');
+        return;
+    }
+
+    if (confirm(`Purchase ${cosmetic.name} for ${cosmetic.cost.toLocaleString()} points?`)) {
+        // Deduct points
+        playerData.points -= cosmetic.cost;
+
+        // Add to owned cosmetics
+        if (!playerData.ownedCosmetics) playerData.ownedCosmetics = [];
+        playerData.ownedCosmetics.push(cosmeticId);
+
+        // Equip it immediately
+        playerData.equippedCosmetic = cosmeticId;
+        playerData.color = cosmetic.value;
+
+        savePlayerData();
+        updatePlayerDisplay();
+
+        // Update shop display
+        document.getElementById('shopPointsDisplay').textContent = playerData.points.toLocaleString();
+        renderShop();
+
+        showNotification('Purchase Successful!', `${cosmetic.name} equipped!`, '✨');
+    }
+}
+
+// Equip an owned cosmetic
+function equipCosmetic(cosmeticId) {
+    const cosmetic = COSMETICS[cosmeticId];
+    if (!cosmetic) return;
+
+    // Check if owned
+    if (!(playerData.ownedCosmetics || []).includes(cosmeticId)) {
+        alert('You don\'t own this cosmetic!');
+        return;
+    }
+
+    // Equip it
+    playerData.equippedCosmetic = cosmeticId;
+    playerData.color = cosmetic.value;
+
+    savePlayerData();
+    updatePlayerDisplay();
+    renderShop();
+
+    showNotification('Equipped!', `${cosmetic.name} equipped!`, '✨');
 }
 
 // Shop functions
@@ -3110,6 +3310,7 @@ function viewResults() {
     // Award points and XP
     if (gameWon) {
         playerData.points += 100;
+        playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
         awardXP(40); // Winner gets 40 XP
     } else if (gameDraw) {
         awardXP(20); // Draw gets 20 XP
@@ -3293,87 +3494,43 @@ async function startRPSMatchmaking() {
     }
 }
 
-// Find RPS 1v1 match - FULLY REWORKED v1.5
+// Find RPS 1v1 match - Simplified to match math game logic
 async function findRPS1v1Match() {
     try {
         const waitingRef = database.ref('waiting_rps1v1');
-        const presenceRef = database.ref('online_players');
-        console.log('📡 Checking RPS 1v1 queue (v1.5 matchmaking)...');
-
-        // AGGRESSIVE cleanup - 5 seconds only (was 15)
+        console.log('📡 Checking RPS 1v1 queue...');
         const snapshot = await waitingRef.once('value');
         const waiting = snapshot.val() || {};
+        console.log('✅ Connected to database. Waiting RPS 1v1 players:', Object.keys(waiting).length);
+
+        // Remove stale entries (older than 30 seconds)
         const now = Date.now();
-
-        const cleanupPromises = [];
-        for (const key of Object.keys(waiting)) {
-            if (waiting[key] && now - waiting[key].timestamp > 5000) {
-                console.log('🗑️ Removing stale RPS player (>5s):', key);
-                cleanupPromises.push(waitingRef.child(key).remove());
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 30000) {
+                console.log('🗑️ Removing stale RPS player:', key);
+                waitingRef.child(key).remove();
             }
-        }
-        await Promise.all(cleanupPromises);
-
-        // Get fresh snapshot after cleanup
-        const freshSnapshot = await waitingRef.once('value');
-        const freshWaiting = freshSnapshot.val() || {};
-
-        // Get online players for verification
-        const onlineSnapshot = await presenceRef.once('value');
-        const onlinePlayers = onlineSnapshot.val() || {};
-
-        // Filter for valid opponents: not self, online, and actually searching
-        const availablePlayers = Object.entries(freshWaiting).filter(([id, data]) => {
-            if (id === playerData.id) return false;
-            if (!data || !data.searching) return false;
-
-            // CRITICAL: Verify opponent is actually online
-            const isOnline = onlinePlayers[id] && onlinePlayers[id].online;
-            if (!isOnline) {
-                console.log('🚫 Skipping offline player:', id);
-                waitingRef.child(id).remove(); // Clean up offline players
-                return false;
-            }
-
-            // Verify timestamp is very recent (within 5 seconds)
-            const timeDiff = now - (data.timestamp || 0);
-            if (timeDiff > 5000) {
-                console.log('🚫 Skipping stale player entry:', id, `(${timeDiff}ms old)`);
-                waitingRef.child(id).remove();
-                return false;
-            }
-
-            return true;
         });
 
-        console.log(`✅ Found ${availablePlayers.length} valid RPS opponent(s)`);
+        // Check for available opponent
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
+
+        console.log('Available RPS opponents:', availablePlayers.length);
 
         if (availablePlayers.length > 0) {
+            // Match found!
             const [opponentId, opponentData] = availablePlayers[0];
-            console.log('🎮 Creating match with:', opponentData.username);
+            console.log('✅ RPS Match found! Opponent:', opponentData.username);
 
-            // ATOMIC TRANSACTION: Remove both players immediately
-            const updates = {};
-            updates[`waiting_rps1v1/${opponentId}`] = null;
-            updates[`waiting_rps1v1/${playerData.id}`] = null;
-            await database.ref().update(updates);
+            // Remove opponent from waiting
+            await waitingRef.child(opponentId).remove();
 
-            // Double-check they were actually removed
-            const verifyRemoval = await waitingRef.once('value');
-            const afterRemoval = verifyRemoval.val() || {};
-            if (afterRemoval[opponentId] || afterRemoval[playerData.id]) {
-                console.error('❌ Failed to remove players from queue atomically');
-                return findRPS1v1Match(); // Retry
-            }
+            // Also remove self if in queue
+            await waitingRef.child(playerData.id).remove();
 
-            // Verify opponent is STILL online before creating game
-            const finalOnlineCheck = await presenceRef.child(opponentId).once('value');
-            const opponentOnline = finalOnlineCheck.val();
-            if (!opponentOnline || !opponentOnline.online) {
-                console.log('⚠️ Opponent went offline, retrying...');
-                return findRPS1v1Match();
-            }
-
+            // Create game
             const gameId = 'rps_' + generateId();
             const gameData = {
                 id: gameId,
@@ -3401,68 +3558,45 @@ async function findRPS1v1Match() {
                 finished: false
             };
 
+            console.log('🎮 Creating RPS game:', gameId);
             await database.ref(`games_rps/${gameId}`).set(gameData);
-            console.log('✅ RPS game created successfully:', gameId);
+
             showNotification('Match Found!', 'Starting RPS battle!', '✊');
             setTimeout(() => startRPSGame(gameId, gameData), 1000);
         } else {
-            // No valid opponents, join queue with heartbeat
-            console.log('⏳ No valid opponents. Joining queue with heartbeat...');
-
-            // Remove old entry first
-            await waitingRef.child(playerData.id).remove();
-
-            // Add to queue
-            const queueEntry = {
+            // Add self to waiting
+            console.log('⏳ No opponents found. Joining RPS waiting queue...');
+            await waitingRef.child(playerData.id).set({
                 username: playerData.username,
                 color: playerData.color,
                 level: playerData.level || 1,
-                timestamp: Date.now(),
-                searching: true
-            };
-            await waitingRef.child(playerData.id).set(queueEntry);
+                timestamp: Date.now()
+            });
+            console.log('✅ Added to RPS queue. Waiting for opponent...');
 
-            // Setup heartbeat to keep entry fresh (update every 2 seconds)
-            const heartbeatInterval = setInterval(async () => {
-                try {
-                    const stillSearching = document.getElementById('searchingScreen').classList.contains('active');
-                    if (stillSearching && currentMode === 'rps1v1') {
-                        await waitingRef.child(playerData.id).update({
-                            timestamp: Date.now()
-                        });
-                        console.log('💓 RPS queue heartbeat sent');
-                    } else {
-                        clearInterval(heartbeatInterval);
-                    }
-                } catch (err) {
-                    clearInterval(heartbeatInterval);
-                }
-            }, 2000);
-
-            // Clean up old listener
+            // Clean up old listener if exists
             if (rpsSearchListener) {
                 database.ref('games_rps').off('child_added', rpsSearchListener);
-                rpsSearchListener = null;
             }
 
             // Listen for game creation
-            rpsSearchListener = database.ref('games_rps').on('child_added', async (snapshot) => {
+            rpsSearchListener = database.ref('games_rps').on('child_added', (snapshot) => {
                 const game = snapshot.val();
+                console.log('🎮 New RPS game detected:', game.id);
 
-                // Only respond if I'm player2 in this game
                 if (game && game.mode === 'rps1v1' && game.player2 && game.player2.id === playerData.id) {
-                    console.log('✅ RPS Match found! Starting game...');
-                    clearInterval(heartbeatInterval);
+                    // Found a game!
+                    console.log('✅ RPS Matched! Starting game...');
+                    showNotification('Match Found!', 'RPS opponent found!', '✊');
 
                     if (rpsSearchListener) {
                         database.ref('games_rps').off('child_added', rpsSearchListener);
                         rpsSearchListener = null;
                     }
 
-                    // Remove from queue
-                    await waitingRef.child(playerData.id).remove();
+                    // Remove from waiting
+                    database.ref(`waiting_rps1v1/${playerData.id}`).remove();
 
-                    showNotification('Match Found!', 'RPS opponent found!', '✊');
                     setTimeout(() => startRPSGame(game.id, game), 1000);
                 }
             });
@@ -4033,6 +4167,7 @@ function showRPSResults() {
         if (won) {
             pointsEarned = 100;
             xpEarned = 50;
+            playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
         } else if (draw) {
             pointsEarned = 50;
             xpEarned = 25;
@@ -4723,6 +4858,7 @@ function finishWarGame(gameData) {
         if (won) {
             pointsEarned = 10;
             xpEarned = 20;
+            playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
         } else if (draw) {
             pointsEarned = 3;
             xpEarned = 5;
@@ -5084,10 +5220,6 @@ function setupEventListeners() {
     safeAddListener('shopBtn', 'click', () => {
         showScreen('shopScreen');
     }, 'Shop button');
-
-    safeAddListener('closeShopBtn', 'click', () => {
-        showScreen('settingsScreen');
-    }, 'Close Shop');
 
     const colorPicker = document.getElementById('colorPicker');
     if (colorPicker) {
