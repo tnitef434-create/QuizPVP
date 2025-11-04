@@ -1863,36 +1863,52 @@ const COSMETICS = {
 
 // Render the shop with dynamic cosmetics (Organized into tabs)
 function renderShop() {
-    console.log('🛒 Rendering shop...');
+    try {
+        console.log('🛒 Rendering shop...');
+        console.log('Player data:', playerData);
 
-    // Update stats display
-    const pointsEl = document.getElementById('shopPointsDisplay');
-    const winsEl = document.getElementById('shopWinsDisplay');
+        // Update stats display
+        const pointsEl = document.getElementById('shopPointsDisplay');
+        const winsEl = document.getElementById('shopWinsDisplay');
 
-    if (pointsEl) pointsEl.textContent = playerData.points.toLocaleString();
-    if (winsEl) winsEl.textContent = (playerData.wins || 0).toString();
+        console.log('Stats elements:', { pointsEl, winsEl });
 
-    // Get containers
-    const basicContainer = document.getElementById('shopColorsBasic');
-    const premiumContainer = document.getElementById('shopColorsPremium');
-    const unlockablesContainer = document.getElementById('shopUnlockables');
-    const otherContainer = document.getElementById('shopOther');
+        if (pointsEl) pointsEl.textContent = playerData.points.toLocaleString();
+        if (winsEl) winsEl.textContent = (playerData.wins || 0).toString();
 
-    console.log('Shop containers:', { basicContainer, premiumContainer, unlockablesContainer, otherContainer });
+        // Get containers
+        const basicContainer = document.getElementById('shopColorsBasic');
+        const premiumContainer = document.getElementById('shopColorsPremium');
+        const unlockablesContainer = document.getElementById('shopUnlockables');
+        const otherContainer = document.getElementById('shopOther');
 
-    if (!basicContainer || !premiumContainer || !unlockablesContainer || !otherContainer) {
-        console.error('❌ Shop containers not found!');
-        return;
-    }
+        console.log('Shop containers:', {
+            basic: !!basicContainer,
+            premium: !!premiumContainer,
+            unlockables: !!unlockablesContainer,
+            other: !!otherContainer
+        });
 
-    // Clear all containers
-    basicContainer.innerHTML = '';
-    premiumContainer.innerHTML = '';
-    unlockablesContainer.innerHTML = '';
-    otherContainer.innerHTML = '';
+        if (!basicContainer || !premiumContainer || !unlockablesContainer || !otherContainer) {
+            console.error('❌ Shop containers not found!');
+            console.error('Missing:', {
+                basic: !basicContainer,
+                premium: !premiumContainer,
+                unlockables: !unlockablesContainer,
+                other: !otherContainer
+            });
+            return;
+        }
 
-    // Helper function to create cosmetic HTML
-    function createCosmeticHTML(cosmetic) {
+        // Clear all containers
+        basicContainer.innerHTML = '';
+        premiumContainer.innerHTML = '';
+        unlockablesContainer.innerHTML = '';
+        otherContainer.innerHTML = '';
+        console.log('✅ Containers cleared');
+
+        // Helper function to create cosmetic HTML
+        function createCosmeticHTML(cosmetic) {
         const isOwned = (playerData.ownedCosmetics || []).includes(cosmetic.id);
         const isEquipped = playerData.equippedCosmetic === cosmetic.id;
         const hasWins = (playerData.wins || 0) >= cosmetic.winsRequired;
@@ -2007,8 +2023,15 @@ function renderShop() {
         </div>
     `;
 
-    // Setup tab switching (if not already done)
-    setupShopTabs();
+        // Setup tab switching (if not already done)
+        setupShopTabs();
+
+        console.log('🎉 Shop rendering completed successfully!');
+    } catch (error) {
+        console.error('❌ FATAL Error rendering shop:', error);
+        console.error('Error stack:', error.stack);
+        alert('Error loading shop. Check console for details.');
+    }
 }
 
 // Setup shop tab switching
@@ -4886,8 +4909,8 @@ function startWarGame(gameId, gameData) {
 
             // Check if opponent played
             const currentRound = data.currentRound;
-            const myCard = me.cards[currentRound];
-            const oppCard = opp.cards[currentRound];
+            const myCard = me.cards ? me.cards[currentRound] : null;
+            const oppCard = opp.cards ? opp.cards[currentRound] : null;
 
             if (myCard && oppCard) {
                 // Both played - show result
