@@ -2767,6 +2767,51 @@ input[type="color"] {
 }
 
 /* RPS Results Screen */
+.rps-result-banner-large {
+    font-size: 3rem;
+    padding: 30px;
+    margin-bottom: 30px;
+    border-radius: 20px;
+    font-weight: 900;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+    animation: bounceIn 0.8s;
+}
+
+.rps-match-summary {
+    text-align: center;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 15px;
+}
+
+.rps-score-large {
+    font-size: 4rem !important;
+    font-weight: 900;
+}
+
+.rps-points-large {
+    font-size: 1.5rem !important;
+    padding: 25px !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white !important;
+    border-radius: 15px;
+    margin: 25px 0;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.rps-results-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.rps-results-buttons .btn {
+    flex: 1;
+    max-width: 250px;
+}
+
 .rps-final-score {
     margin-bottom: 30px;
 }

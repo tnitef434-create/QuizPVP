@@ -1898,6 +1898,10 @@ function cancelSearch() {
         database.ref(`waiting_trios/${playerData.id}`).remove();
         database.ref(`waiting_squad/${playerData.id}`).remove();
         database.ref(`waiting_chat/${playerData.id}`).remove();
+        // RPS queues
+        database.ref(`waiting_rps1v1/${playerData.id}`).remove();
+        database.ref(`waiting_rps1v2/${playerData.id}`).remove();
+        database.ref(`waiting_rps1v3/${playerData.id}`).remove();
     }
 
     // Remove game listeners
@@ -1906,6 +1910,12 @@ function cancelSearch() {
         database.ref('games_trios').off('child_added', searchListener);
         database.ref('games_squad').off('child_added', searchListener);
         searchListener = null;
+    }
+
+    // Remove RPS listeners
+    if (rpsSearchListener) {
+        database.ref('games_rps').off('child_added', rpsSearchListener);
+        rpsSearchListener = null;
     }
 
     // Remove chat listeners
@@ -1929,6 +1939,9 @@ function cancelSearch() {
         const friendsTab = document.getElementById('friendsTabContent');
         if (chatTab) chatTab.style.display = 'block';
         if (friendsTab) friendsTab.style.display = 'none';
+    } else if (currentMode && (currentMode.startsWith('rps'))) {
+        console.log('✊ Returning to RPS Mode selection');
+        showScreen('rpsModeScreen');
     } else {
         console.log('🎮 Returning to Math Mode selection');
         showScreen('mathModeScreen');
@@ -3818,13 +3831,25 @@ function showRPSResults() {
     const banner = document.getElementById('rpsResultBanner');
     if (won) {
         banner.textContent = '🎉 VICTORY! 🎉';
-        banner.className = 'result-banner victory';
+        banner.className = 'result-banner victory rps-result-banner-large';
     } else if (draw) {
         banner.textContent = '🤝 DRAW! 🤝';
-        banner.className = 'result-banner draw';
+        banner.className = 'result-banner draw rps-result-banner-large';
     } else {
         banner.textContent = '💔 DEFEAT 💔';
-        banner.className = 'result-banner defeat';
+        banner.className = 'result-banner defeat rps-result-banner-large';
+    }
+
+    // Show match summary
+    const summaryEl = document.getElementById('rpsMatchSummary');
+    if (summaryEl) {
+        if (won) {
+            summaryEl.textContent = `You dominated with ${currentRPSGame.myScore} rounds won! Great job!`;
+        } else if (draw) {
+            summaryEl.textContent = `You both won ${currentRPSGame.myScore} rounds. It's a perfect tie!`;
+        } else {
+            summaryEl.textContent = `You won ${currentRPSGame.myScore} rounds. Better luck next time!`;
+        }
     }
 
     // Show final scores
@@ -3850,8 +3875,8 @@ function showRPSResults() {
     awardXP(xpEarned);
 
     document.getElementById('rpsPointsEarned').innerHTML = `
-        <div style="font-size: 1.2rem; color: #4CAF50; font-weight: 700;">
-            +${pointsEarned} Points | +${xpEarned} XP
+        <div style="font-size: 1.4rem; font-weight: 800;">
+            ⭐ +${pointsEarned} Points | +${xpEarned} XP ⭐
         </div>
     `;
 
