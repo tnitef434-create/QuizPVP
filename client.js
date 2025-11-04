@@ -3946,18 +3946,10 @@ function showRPSResults() {
     let xpEarned = 0;
 
     if (isBotGame) {
-        // Bot game rewards - much smaller (practice mode)
-        if (won) {
-            pointsEarned = 1;  // Just 1 point for beating bot
-            xpEarned = 5;      // Small XP reward
-        } else if (draw) {
-            pointsEarned = 0;
-            xpEarned = 2;
-        } else {
-            pointsEarned = 0;
-            xpEarned = 1;
-        }
-        console.log('🤖 Bot game rewards: +' + pointsEarned + ' points, +' + xpEarned + ' XP');
+        // Bot game rewards - ZERO (practice mode only)
+        pointsEarned = 0;  // No points from bot games
+        xpEarned = 0;      // No XP from bot games
+        console.log('🤖 Bot game rewards: +0 points, +0 XP (practice mode)');
     } else {
         // Online game rewards - full points
         if (won) {

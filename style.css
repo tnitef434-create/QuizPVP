@@ -2769,6 +2769,14 @@ input[type="color"] {
 /* RPS Results Screen - now uses standard results styles */
 /* Removed custom RPS results styles - using math game results styles instead */
 
+/* RPS Mode Selection - Button Layout Fix */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
 /* Animations */
 @keyframes slideIn {
     from {
