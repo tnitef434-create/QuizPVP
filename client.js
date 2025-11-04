@@ -3591,8 +3591,8 @@ function startRPSGame(gameId, gameData) {
     // Setup game display
     showScreen('rpsGameScreen');
 
-    if (gameData.mode === 'rps1v1') {
-        // 1v1 mode
+    if (gameData.mode === 'rps1v1' || gameData.mode === 'rpsbot') {
+        // 1v1 mode or bot mode
         const isPlayer1 = gameData.player1.id === playerData.id;
         const me = isPlayer1 ? gameData.player1 : gameData.player2;
         const opponent = isPlayer1 ? gameData.player2 : gameData.player1;
@@ -3618,17 +3618,23 @@ function startRPSGame(gameId, gameData) {
     updateRPSScoreDisplay();
     setupRPSRound();
 
-    // Listen for game updates
-    if (rpsGameListener) {
-        database.ref(`games_rps/${gameId}`).off('value', rpsGameListener);
+    // Listen for game updates (ONLY for online games, not bot games)
+    if (gameData.mode === 'rpsbot' || gameId.startsWith('bot_')) {
+        console.log('🤖 Bot game - skipping Firebase listeners');
+        // Bot games don't use Firebase
+    } else {
+        // Online game - set up Firebase listener
+        if (rpsGameListener) {
+            database.ref(`games_rps/${gameId}`).off('value', rpsGameListener);
+        }
+
+        rpsGameListener = database.ref(`games_rps/${gameId}`).on('value', (snapshot) => {
+            const game = snapshot.val();
+            if (!game) return;
+
+            checkRPSRoundComplete(game);
+        });
     }
-
-    rpsGameListener = database.ref(`games_rps/${gameId}`).on('value', (snapshot) => {
-        const game = snapshot.val();
-        if (!game) return;
-
-        checkRPSRoundComplete(game);
-    });
 }
 
 // Setup new RPS round
@@ -3679,7 +3685,7 @@ async function playRPSMove(choice) {
         setTimeout(() => {
             const botChoice = botMakeChoice();
             currentRPSGame.opponentChoice = botChoice;
-            console.log(`🤖 Bot chose: ${botChoice}`);
+            console.log(`🎮 Round ${currentRPSGame.currentRound}: You chose ${currentRPSGame.myChoice}, Bot chose ${botChoice}`);
 
             // Show round result
             showRPSRoundResult(currentRPSGame.myChoice, currentRPSGame.opponentChoice);
@@ -3775,11 +3781,17 @@ function getRPSEmoji(choice) {
 function showRPSRoundResult(myChoice, opponentChoice) {
     const result = determineRPSWinner(myChoice, opponentChoice);
 
+    console.log(`🎯 Round ${currentRPSGame.currentRound} result: ${result.toUpperCase()}`);
+
     // Update scores
     if (result === 'win') {
         currentRPSGame.myScore++;
+        console.log(`✅ You win! Score: ${currentRPSGame.myScore} - ${currentRPSGame.opponentScore}`);
     } else if (result === 'lose') {
         currentRPSGame.opponentScore++;
+        console.log(`❌ You lose! Score: ${currentRPSGame.myScore} - ${currentRPSGame.opponentScore}`);
+    } else {
+        console.log(`🤝 Draw! Score: ${currentRPSGame.myScore} - ${currentRPSGame.opponentScore}`);
     }
 
     // Update score display
@@ -3834,24 +3846,32 @@ function updateRPSScoreDisplay() {
 
 // Finish RPS game
 async function finishRPSGame() {
-    // Update game as finished
-    try {
-        await database.ref(`games_rps/${currentRPSGame.gameId}/finished`).set(true);
+    // Check if this is a bot game
+    const isBotGame = currentRPSGame.mode === 'rpsbot' || currentRPSGame.gameId.startsWith('bot_');
 
-        // Update final scores
-        if (currentRPSGame.mode === 'rps1v1') {
-            const game = await database.ref(`games_rps/${currentRPSGame.gameId}`).once('value');
-            const gameData = game.val();
-            const isPlayer1 = gameData.player1.id === playerData.id;
-            const playerKey = isPlayer1 ? 'player1' : 'player2';
+    if (!isBotGame) {
+        // Online game - update Firebase
+        try {
+            await database.ref(`games_rps/${currentRPSGame.gameId}/finished`).set(true);
 
-            await database.ref(`games_rps/${currentRPSGame.gameId}/${playerKey}/score`).set(currentRPSGame.myScore);
-        } else {
-            const playerIndex = currentRPSGame.players.findIndex(p => p.id === playerData.id);
-            await database.ref(`games_rps/${currentRPSGame.gameId}/players/${playerIndex}/score`).set(currentRPSGame.myScore);
+            // Update final scores
+            if (currentRPSGame.mode === 'rps1v1') {
+                const game = await database.ref(`games_rps/${currentRPSGame.gameId}`).once('value');
+                const gameData = game.val();
+                const isPlayer1 = gameData.player1.id === playerData.id;
+                const playerKey = isPlayer1 ? 'player1' : 'player2';
+
+                await database.ref(`games_rps/${currentRPSGame.gameId}/${playerKey}/score`).set(currentRPSGame.myScore);
+            } else {
+                const playerIndex = currentRPSGame.players.findIndex(p => p.id === playerData.id);
+                await database.ref(`games_rps/${currentRPSGame.gameId}/players/${playerIndex}/score`).set(currentRPSGame.myScore);
+            }
+        } catch (error) {
+            console.error('Error finishing RPS game:', error);
         }
-    } catch (error) {
-        console.error('Error finishing RPS game:', error);
+    } else {
+        // Bot game - no Firebase updates needed
+        console.log('🤖 Bot game finished - skipping Firebase updates');
     }
 
     showRPSResults();
