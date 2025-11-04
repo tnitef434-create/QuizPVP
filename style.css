@@ -1909,6 +1909,7 @@ input[type="color"] {
     align-items: center;
     gap: 12px;
     font-family: inherit;
+    position: relative; /* For absolute positioned badges */
 }
 
 .game-type-btn:hover:not(.coming-soon) {
@@ -3192,5 +3193,260 @@ input[type="color"] {
 
     .score-value {
         font-size: 1.5rem;
+    }
+}
+
+/* ============================================================================
+   TUTORIAL SCREEN
+   ============================================================================ */
+
+.tutorial-content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 0;
+}
+
+.tutorial-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tutorial-section.highlight {
+    background: rgba(231, 76, 60, 0.1);
+    border: 2px solid rgba(231, 76, 60, 0.3);
+}
+
+.tutorial-heading {
+    color: #3498db;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.tutorial-text {
+    color: #ecf0f1;
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.tutorial-text p {
+    margin-bottom: 15px;
+}
+
+.tutorial-text strong {
+    color: #f39c12;
+}
+
+.tutorial-text em {
+    color: #95a5a6;
+    font-style: italic;
+}
+
+.tutorial-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.tutorial-list li {
+    padding: 10px 0;
+    padding-left: 10px;
+    border-left: 3px solid #3498db;
+    margin-bottom: 10px;
+    background: rgba(52, 152, 219, 0.1);
+    border-radius: 5px;
+}
+
+/* Card Hierarchy */
+.card-hierarchy {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.card-example {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    min-width: 100px;
+    transition: transform 0.3s ease;
+}
+
+.card-example:hover {
+    transform: translateY(-5px);
+}
+
+.card-example.ace {
+    background: rgba(241, 196, 15, 0.2);
+    border: 2px solid #f1c40f;
+}
+
+.card-mini {
+    width: 60px;
+    height: 80px;
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #2c3e50;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.card-rank {
+    font-size: 0.9rem;
+    color: #bdc3c7;
+    text-align: center;
+}
+
+/* Suits Grid */
+.suits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.suit-example {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.suit-icon {
+    font-size: 3rem;
+}
+
+.suit-icon.red {
+    color: #e74c3c;
+}
+
+.suit-icon.black {
+    color: #2c3e50;
+}
+
+.suit-name {
+    font-size: 1rem;
+    color: #ecf0f1;
+    font-weight: 600;
+}
+
+/* War Example */
+.war-example {
+    background: rgba(231, 76, 60, 0.2);
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #e74c3c;
+    font-weight: bold;
+    color: #ecf0f1;
+}
+
+/* Rewards Grid */
+.rewards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.reward-example {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.reward-example:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.reward-example.victory {
+    border-color: #2ecc71;
+    background: rgba(46, 204, 113, 0.1);
+}
+
+.reward-example.draw {
+    border-color: #f39c12;
+    background: rgba(243, 156, 18, 0.1);
+}
+
+.reward-example.defeat {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.reward-icon {
+    font-size: 2.5rem;
+}
+
+.reward-label {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #ecf0f1;
+}
+
+.reward-value {
+    font-size: 0.9rem;
+    color: #bdc3c7;
+}
+
+/* Responsive Tutorial */
+@media (max-width: 768px) {
+    .tutorial-section {
+        padding: 20px 15px;
+    }
+
+    .tutorial-heading {
+        font-size: 1.3rem;
+    }
+
+    .tutorial-text {
+        font-size: 1rem;
+    }
+
+    .card-hierarchy {
+        gap: 10px;
+    }
+
+    .card-example {
+        min-width: 80px;
+        padding: 10px;
+    }
+
+    .card-mini {
+        width: 50px;
+        height: 65px;
+        font-size: 1.5rem;
+    }
+
+    .suits-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .rewards-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
     }
 }

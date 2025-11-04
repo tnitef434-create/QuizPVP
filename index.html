@@ -104,6 +104,12 @@
                     <div class="hub-card-desc">Chat & friends</div>
                 </div>
 
+                <div class="hub-card" id="tutorialCard" onclick="window.gameNavigation.showScreen('tutorialScreen')">
+                    <div class="hub-card-icon">📚</div>
+                    <div class="hub-card-title">Tutorial</div>
+                    <div class="hub-card-desc">Learn card games</div>
+                </div>
+
                 <div class="hub-card" id="settingsCard" onclick="window.gameNavigation.goToSettings()">
                     <div class="hub-card-icon">⚙️</div>
                     <div class="hub-card-title">Settings</div>
@@ -888,6 +894,147 @@
                 </div>
             </div>
 
+            <button class="btn btn-secondary" onclick="window.gameNavigation.goToMenu()">Back to Menu</button>
+        </div>
+    </div>
+
+    <!-- Tutorial Screen -->
+    <div id="tutorialScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h2>📚 Tutorial - War Card Game</h2>
+            </div>
+
+            <div class="tutorial-content">
+                <!-- How to Play Section -->
+                <div class="tutorial-section">
+                    <h3 class="tutorial-heading">🎴 How to Play</h3>
+                    <div class="tutorial-text">
+                        <p><strong>War</strong> is a classic card battle game. Each round, you and your opponent flip a card. The highest card wins the round and earns 1 point!</p>
+                        <p>The game lasts <strong>7 rounds</strong>. Whoever has the most points at the end wins the match.</p>
+                    </div>
+                </div>
+
+                <!-- Card Values Section -->
+                <div class="tutorial-section">
+                    <h3 class="tutorial-heading">🃏 Card Values (Lowest to Highest)</h3>
+                    <div class="card-hierarchy">
+                        <div class="card-example">
+                            <div class="card-mini">2</div>
+                            <span class="card-rank">2 = Lowest</span>
+                        </div>
+                        <div class="card-example">
+                            <div class="card-mini">3-10</div>
+                            <span class="card-rank">Number Cards</span>
+                        </div>
+                        <div class="card-example">
+                            <div class="card-mini">J</div>
+                            <span class="card-rank">Jack = 11</span>
+                        </div>
+                        <div class="card-example">
+                            <div class="card-mini">Q</div>
+                            <span class="card-rank">Queen = 12</span>
+                        </div>
+                        <div class="card-example">
+                            <div class="card-mini">K</div>
+                            <span class="card-rank">King = 13</span>
+                        </div>
+                        <div class="card-example ace">
+                            <div class="card-mini">A</div>
+                            <span class="card-rank">Ace = 14 (Highest!)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Suits Section -->
+                <div class="tutorial-section">
+                    <h3 class="tutorial-heading">♠️ Card Suits</h3>
+                    <div class="suits-grid">
+                        <div class="suit-example">
+                            <span class="suit-icon black">♠️</span>
+                            <span class="suit-name">Spades</span>
+                        </div>
+                        <div class="suit-example">
+                            <span class="suit-icon red">♥️</span>
+                            <span class="suit-name">Hearts</span>
+                        </div>
+                        <div class="suit-example">
+                            <span class="suit-icon red">♦️</span>
+                            <span class="suit-name">Diamonds</span>
+                        </div>
+                        <div class="suit-example">
+                            <span class="suit-icon black">♣️</span>
+                            <span class="suit-name">Clubs</span>
+                        </div>
+                    </div>
+                    <div class="tutorial-text">
+                        <p><em>Note: Suits don't affect card strength. Only the card value matters!</em></p>
+                    </div>
+                </div>
+
+                <!-- WAR Rounds Section -->
+                <div class="tutorial-section highlight">
+                    <h3 class="tutorial-heading">⚔️ WAR Rounds!</h3>
+                    <div class="tutorial-text">
+                        <p>When both players flip the <strong>same card value</strong>, it's <strong>WAR</strong>!</p>
+                        <p>War rounds are worth <strong>2 points</strong> instead of 1. The winner is determined randomly, making wars exciting and unpredictable!</p>
+                        <p class="war-example">Example: You flip a 7♠️, opponent flips a 7♥️ → ⚔️ WAR!</p>
+                    </div>
+                </div>
+
+                <!-- Game Modes Section -->
+                <div class="tutorial-section">
+                    <h3 class="tutorial-heading">🎮 Game Modes</h3>
+                    <div class="tutorial-text">
+                        <ul class="tutorial-list">
+                            <li><strong>1v1 Multiplayer:</strong> Battle real players online. Win to earn points and XP!</li>
+                            <li><strong>VS Bot:</strong> Practice against AI. No rewards, just for fun and learning!</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Rewards Section -->
+                <div class="tutorial-section">
+                    <h3 class="tutorial-heading">💰 Rewards (1v1 Only)</h3>
+                    <div class="rewards-grid">
+                        <div class="reward-example victory">
+                            <div class="reward-icon">🏆</div>
+                            <div class="reward-label">Victory</div>
+                            <div class="reward-value">+10 Points, +20 XP</div>
+                        </div>
+                        <div class="reward-example draw">
+                            <div class="reward-icon">🤝</div>
+                            <div class="reward-label">Draw</div>
+                            <div class="reward-value">+3 Points, +5 XP</div>
+                        </div>
+                        <div class="reward-example defeat">
+                            <div class="reward-icon">💪</div>
+                            <div class="reward-label">Defeat</div>
+                            <div class="reward-value">+1 Point, +2 XP</div>
+                        </div>
+                    </div>
+                    <div class="tutorial-text">
+                        <p><em>Bot games give 0 rewards - they're just for practice!</em></p>
+                    </div>
+                </div>
+
+                <!-- Tips Section -->
+                <div class="tutorial-section">
+                    <h3 class="tutorial-heading">💡 Pro Tips</h3>
+                    <div class="tutorial-text">
+                        <ul class="tutorial-list">
+                            <li>🎲 Cards are randomly shuffled each game - it's all about luck!</li>
+                            <li>⚔️ Hope for WAR rounds - they're worth double points!</li>
+                            <li>🤖 Practice with bots to learn before facing real players</li>
+                            <li>🏁 Even if you lose, you still earn points for playing!</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-large" onclick="window.gameNavigation.showScreen('warModeScreen')">
+                Play War Now! 🃏
+            </button>
             <button class="btn btn-secondary" onclick="window.gameNavigation.goToMenu()">Back to Menu</button>
         </div>
     </div>
