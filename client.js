@@ -3391,6 +3391,75 @@ function viewResults() {
 
 // ===== SETTINGS FUNCTIONS =====
 
+// Fix matchmaking (clear all queue entries)
+async function fixMatchmaking() {
+    if (!database || !playerData.id) {
+        alert('⚠️ Not connected to database');
+        return;
+    }
+
+    if (!confirm('Clear all matchmaking queues and reset? This will remove you from all waiting queues.')) {
+        return;
+    }
+
+    try {
+        console.log('🔧 Fixing matchmaking for player:', playerData.id);
+
+        // Remove from ALL waiting queues
+        const queues = [
+            'waiting_1v1',
+            'waiting_trios',
+            'waiting_squad',
+            'waiting_chat',
+            'waiting_rps1v1',
+            'waiting_rps1v2',
+            'waiting_rps1v3',
+            'waiting_war1v1'
+        ];
+
+        const removePromises = queues.map(queue =>
+            database.ref(`${queue}/${playerData.id}`).remove()
+        );
+
+        await Promise.all(removePromises);
+
+        // Clear all active listeners
+        if (searchListener) {
+            database.ref('games').off('child_added', searchListener);
+            database.ref('games_trios').off('child_added', searchListener);
+            database.ref('games_squad').off('child_added', searchListener);
+            searchListener = null;
+        }
+
+        if (rpsSearchListener) {
+            database.ref('games_rps').off('child_added', rpsSearchListener);
+            rpsSearchListener = null;
+        }
+
+        if (warSearchListener) {
+            database.ref('games_war').off('child_added', warSearchListener);
+            warSearchListener = null;
+        }
+
+        if (chatListener) {
+            database.ref('chats').off('child_added', chatListener);
+            chatListener = null;
+        }
+
+        console.log('✅ Matchmaking fixed! All queues cleared.');
+        showNotification('Matchmaking Fixed!', 'All queue entries cleared. You can now search again.', '✅');
+
+        // Return to main menu
+        setTimeout(() => {
+            window.gameNavigation.goToMenu();
+        }, 1000);
+
+    } catch (error) {
+        console.error('❌ Error fixing matchmaking:', error);
+        alert('Error fixing matchmaking: ' + error.message);
+    }
+}
+
 // Reset app data (keeps username and account)
 function resetAppData() {
     if (!confirm('Reset app data? This will clear your local game data but keep your username and account.')) {
