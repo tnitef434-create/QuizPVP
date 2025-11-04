@@ -3921,29 +3921,17 @@ function showRPSResults() {
     const won = currentRPSGame.myScore > currentRPSGame.opponentScore;
     const draw = currentRPSGame.myScore === currentRPSGame.opponentScore;
 
-    // Show banner
+    // Show banner (matching math game style)
     const banner = document.getElementById('rpsResultBanner');
     if (won) {
         banner.textContent = '🎉 VICTORY! 🎉';
-        banner.className = 'result-banner victory rps-result-banner-large';
+        banner.className = 'result-banner victory';
     } else if (draw) {
-        banner.textContent = '🤝 DRAW! 🤝';
-        banner.className = 'result-banner draw rps-result-banner-large';
+        banner.textContent = '🤝 DRAW 🤝';
+        banner.className = 'result-banner draw';
     } else {
         banner.textContent = '💔 DEFEAT 💔';
-        banner.className = 'result-banner defeat rps-result-banner-large';
-    }
-
-    // Show match summary
-    const summaryEl = document.getElementById('rpsMatchSummary');
-    if (summaryEl) {
-        if (won) {
-            summaryEl.textContent = `You dominated with ${currentRPSGame.myScore} rounds won! Great job!`;
-        } else if (draw) {
-            summaryEl.textContent = `You both won ${currentRPSGame.myScore} rounds. It's a perfect tie!`;
-        } else {
-            summaryEl.textContent = `You won ${currentRPSGame.myScore} rounds. Better luck next time!`;
-        }
+        banner.className = 'result-banner defeat';
     }
 
     // Show final scores
@@ -3988,29 +3976,25 @@ function showRPSResults() {
     playerData.points += pointsEarned;
     awardXP(xpEarned);
 
+    // Show points earned (matching math game style)
     document.getElementById('rpsPointsEarned').innerHTML = `
-        <div style="font-size: 1.4rem; font-weight: 800;">
-            ⭐ +${pointsEarned} Points | +${xpEarned} XP ⭐
-        </div>
+        <strong>+${pointsEarned} Points</strong> | +${xpEarned} XP
     `;
 
-    // Show rounds review
+    // Show rounds review (matching answers review style)
     const reviewDiv = document.getElementById('rpsRoundsReview');
-    reviewDiv.innerHTML = '<h3 style="color: #333; margin-bottom: 15px;">Round History</h3>';
+    reviewDiv.innerHTML = '<h3>Round History</h3>';
 
     currentRPSGame.rounds.forEach((round, index) => {
-        const resultClass = round.result === 'win' ? 'win' : round.result === 'lose' ? 'lose' : 'draw';
+        const resultClass = round.result === 'win' ? 'correct' : round.result === 'lose' ? 'incorrect' : 'draw';
+        const resultIcon = round.result === 'win' ? '✓' : round.result === 'lose' ? '✗' : '−';
         const resultText = round.result === 'win' ? 'WIN' : round.result === 'lose' ? 'LOSS' : 'DRAW';
 
         reviewDiv.innerHTML += `
-            <div class="rps-round-item">
-                <div class="rps-round-number">Round ${round.round}</div>
-                <div class="rps-round-moves">
-                    <div class="rps-round-move">${getRPSEmoji(round.myChoice)}</div>
-                    <span style="color: #999;">vs</span>
-                    <div class="rps-round-move">${getRPSEmoji(round.opponentChoice)}</div>
-                </div>
-                <div class="rps-round-result ${resultClass}">${resultText}</div>
+            <div class="answer-item ${resultClass}">
+                <span class="question-num">Round ${round.round}</span>
+                <span class="user-answer">${getRPSEmoji(round.myChoice)} vs ${getRPSEmoji(round.opponentChoice)}</span>
+                <span class="result-icon">${resultIcon}</span>
             </div>
         `;
     });

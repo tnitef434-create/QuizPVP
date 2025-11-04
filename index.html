@@ -305,46 +305,28 @@
     <!-- RPS Results Screen -->
     <div id="rpsResultsScreen" class="screen">
         <div class="container">
-            <!-- Large Dramatic Result Banner -->
-            <div id="rpsResultBanner" class="result-banner rps-result-banner-large"></div>
+            <div id="rpsResultBanner" class="result-banner"></div>
 
             <div class="results-card">
-                <!-- Match Summary -->
-                <div class="rps-match-summary">
-                    <h2 style="color: #333; margin-bottom: 10px;">Match Complete!</h2>
-                    <p id="rpsMatchSummary" style="color: #666; font-size: 1.1rem; margin-bottom: 20px;"></p>
-                </div>
-
-                <!-- Final Score Display -->
-                <div class="rps-final-score">
-                    <h2>Final Score</h2>
-                    <div class="score-comparison">
-                        <div class="score-box">
-                            <div class="score-label">You</div>
-                            <div class="score-value rps-score-large" id="rpsFinalYourScore">0</div>
-                        </div>
-                        <div class="score-divider">-</div>
-                        <div class="score-box">
-                            <div class="score-label">Opponent</div>
-                            <div class="score-value rps-score-large" id="rpsFinalOpponentScore">0</div>
-                        </div>
+                <div class="score-comparison">
+                    <div class="score-box">
+                        <div class="score-label">Your Score</div>
+                        <div class="score-value" id="rpsFinalYourScore">0</div>
+                    </div>
+                    <div class="score-divider">-</div>
+                    <div class="score-box">
+                        <div class="score-label">Opponent</div>
+                        <div class="score-value" id="rpsFinalOpponentScore">0</div>
                     </div>
                 </div>
 
-                <!-- Points & XP Earned -->
-                <div id="rpsPointsEarned" class="points-earned rps-points-large"></div>
+                <div id="rpsPointsEarned" class="points-earned"></div>
 
-                <!-- Round by Round History -->
-                <div class="rps-rounds-review" id="rpsRoundsReview"></div>
+                <div class="answers-review" id="rpsRoundsReview"></div>
 
-                <!-- Action Buttons -->
-                <div class="results-buttons rps-results-buttons">
-                    <button id="rpsPlayAgainBtn" class="btn btn-primary btn-large">
-                        <span style="font-size: 1.2rem;">🔄 Play Again</span>
-                    </button>
-                    <button id="rpsBackToMenuBtn" class="btn btn-secondary btn-large">
-                        <span style="font-size: 1.2rem;">🏠 Back to Menu</span>
-                    </button>
+                <div class="results-buttons">
+                    <button id="rpsPlayAgainBtn" class="btn btn-primary">Play Again</button>
+                    <button id="rpsBackToMenuBtn" class="btn btn-secondary">Back to Menu</button>
                 </div>
             </div>
         </div>
