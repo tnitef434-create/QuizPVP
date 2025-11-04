@@ -517,6 +517,7 @@ async function loadPlayerData() {
             trackActivePlayerCount();
             trackModePlayerCounts(); // V3.0
             trackRPSModePlayerCounts(); // RPS tracking
+            trackWarModePlayerCounts(); // War tracking
             loadFriendsList();
             loadFriendRequests();
             cleanupOldGames();
@@ -1902,6 +1903,8 @@ function cancelSearch() {
         database.ref(`waiting_rps1v1/${playerData.id}`).remove();
         database.ref(`waiting_rps1v2/${playerData.id}`).remove();
         database.ref(`waiting_rps1v3/${playerData.id}`).remove();
+        // War queues
+        database.ref(`waiting_war1v1/${playerData.id}`).remove();
     }
 
     // Remove game listeners
@@ -1916,6 +1919,12 @@ function cancelSearch() {
     if (rpsSearchListener) {
         database.ref('games_rps').off('child_added', rpsSearchListener);
         rpsSearchListener = null;
+    }
+
+    // Remove War listeners
+    if (warSearchListener) {
+        database.ref('waiting_war1v1').off('child_added', warSearchListener);
+        warSearchListener = null;
     }
 
     // Remove chat listeners
@@ -1942,6 +1951,9 @@ function cancelSearch() {
     } else if (currentMode && (currentMode.startsWith('rps'))) {
         console.log('✊ Returning to RPS Mode selection');
         showScreen('rpsModeScreen');
+    } else if (currentMode && (currentMode.startsWith('war'))) {
+        console.log('🃏 Returning to War Mode selection');
+        showScreen('warModeScreen');
     } else {
         console.log('🎮 Returning to Math Mode selection');
         showScreen('mathModeScreen');
@@ -4029,6 +4041,743 @@ function startRPSBotGame() {
     startRPSGame(gameId, gameData);
 }
 
+// ============================================================================
+// WAR CARD GAME
+// ============================================================================
+
+// War Game state
+let currentWarGame = {
+    gameId: '',
+    mode: 'war1v1',
+    currentRound: 1,
+    totalRounds: 7,
+    myScore: 0,
+    opponentScore: 0,
+    rounds: [],
+    myCard: null,
+    opponentCard: null,
+    deck: [],
+    opponentDeck: [],
+    isWarRound: false // Flag for when cards tie
+};
+
+let warGameListener = null;
+let warSearchListener = null;
+
+// Card generation utilities
+const CARD_SUITS = ['♠️', '♥️', '♦️', '♣️'];
+const CARD_VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+const CARD_RANKS = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+
+function generateDeck() {
+    const deck = [];
+    for (const suit of CARD_SUITS) {
+        for (const value of CARD_VALUES) {
+            deck.push({ suit, value, rank: CARD_RANKS[value] });
+        }
+    }
+    return shuffleDeck(deck);
+}
+
+function shuffleDeck(deck) {
+    const shuffled = [...deck];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+function getCardDisplay(card) {
+    if (!card) return '?';
+    return `${card.value}${card.suit}`;
+}
+
+function getCardColor(card) {
+    if (!card) return '#333';
+    return (card.suit === '♥️' || card.suit === '♦️') ? '#e74c3c' : '#2c3e50';
+}
+
+// Track War player counts
+function trackWarModePlayerCounts() {
+    if (!database) return;
+
+    database.ref('waiting_war1v1').on('value', (snapshot) => {
+        const count = snapshot.numChildren();
+        const el = document.getElementById('countWar1v1');
+        if (el) el.textContent = count;
+    });
+
+    console.log('✅ War mode player count tracking initialized');
+}
+
+// War Mode Selection Handlers
+function selectWarMode(mode) {
+    currentMode = mode;
+    console.log('🃏 War mode selected:', mode);
+
+    // Update button states
+    const modes = ['warMode1v1Btn', 'warModeVsBotBtn'];
+    modes.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.classList.remove('active');
+    });
+
+    const modeMap = {
+        'war1v1': 'warMode1v1Btn',
+        'warbot': 'warModeVsBotBtn'
+    };
+
+    const activeBtn = document.getElementById(modeMap[mode]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // Update button visibility
+    const findMatchBtn = document.getElementById('findWarMatchBtn');
+    const startBotBtn = document.getElementById('startWarBotBtn');
+
+    if (mode === 'warbot') {
+        if (findMatchBtn) findMatchBtn.style.display = 'none';
+        if (startBotBtn) {
+            startBotBtn.style.display = 'block';
+            startBotBtn.textContent = 'Play VS Bot';
+        }
+    } else {
+        if (findMatchBtn) {
+            findMatchBtn.style.display = 'block';
+            findMatchBtn.textContent = 'Find Match (1v1)';
+        }
+        if (startBotBtn) startBotBtn.style.display = 'none';
+    }
+}
+
+// Start War matchmaking
+async function startWarMatchmaking() {
+    if (!isFirebaseReady || !database) {
+        alert('⚠️ Firebase is not connected!');
+        console.error('❌ Firebase not ready. Cannot start War matchmaking.');
+        showScreen('warModeScreen');
+        return;
+    }
+
+    currentSearchType = 'game';
+    showScreen('searchingScreen');
+
+    if (currentMode === 'war1v1') {
+        await findWar1v1Match();
+    }
+}
+
+// Find War 1v1 match
+async function findWar1v1Match() {
+    try {
+        const waitingRef = database.ref('waiting_war1v1');
+        console.log('📡 Checking War 1v1 queue...');
+
+        // Clean stale entries (15 seconds)
+        const snapshot = await waitingRef.once('value');
+        const waiting = snapshot.val() || {};
+        const now = Date.now();
+
+        const cleanupPromises = [];
+        Object.keys(waiting).forEach(key => {
+            if (waiting[key] && now - waiting[key].timestamp > 15000) {
+                console.log('🗑️ Removing stale War player:', key);
+                cleanupPromises.push(waitingRef.child(key).remove());
+            }
+        });
+        await Promise.all(cleanupPromises);
+
+        // Get fresh snapshot
+        const freshSnapshot = await waitingRef.once('value');
+        const freshWaiting = freshSnapshot.val() || {};
+        const availablePlayers = Object.entries(freshWaiting)
+            .filter(([id]) => id !== playerData.id);
+
+        console.log('Available War opponents:', availablePlayers.length);
+
+        if (availablePlayers.length > 0) {
+            const [opponentId, opponentData] = availablePlayers[0];
+            console.log('🎮 Found War opponent:', opponentData.username);
+
+            // CRITICAL: Remove both players FIRST to prevent double-matching
+            await waitingRef.child(opponentId).remove();
+            await waitingRef.child(playerData.id).remove();
+
+            // Verify removal
+            const verifySnapshot = await waitingRef.once('value');
+            const verifyWaiting = verifySnapshot.val() || {};
+            if (verifyWaiting[opponentId] || verifyWaiting[playerData.id]) {
+                console.error('❌ Failed to remove players from queue');
+                showScreen('warModeScreen');
+                return;
+            }
+
+            // Create game
+            const gameId = 'war_' + generateId();
+            const deck1 = generateDeck();
+            const deck2 = generateDeck();
+
+            const gameData = {
+                id: gameId,
+                mode: 'war1v1',
+                player1: {
+                    id: playerData.id,
+                    username: playerData.username,
+                    color: playerData.color,
+                    level: playerData.level || 1,
+                    score: 0,
+                    cards: {},
+                    deck: deck1
+                },
+                player2: {
+                    id: opponentId,
+                    username: opponentData.username,
+                    color: opponentData.color,
+                    level: opponentData.level || 1,
+                    score: 0,
+                    cards: {},
+                    deck: deck2
+                },
+                currentRound: 1,
+                totalRounds: 7,
+                rounds: {},
+                createdAt: Date.now(),
+                finished: false
+            };
+
+            await database.ref(`games_war/${gameId}`).set(gameData);
+            console.log('✅ War game created:', gameId);
+
+            startWarGame(gameId, gameData);
+        } else {
+            console.log('⏳ No War opponents available. Joining queue...');
+
+            await waitingRef.child(playerData.id).set({
+                username: playerData.username,
+                level: playerData.level || 1,
+                color: playerData.color,
+                timestamp: Date.now(),
+                searching: true
+            });
+
+            warSearchListener = waitingRef.on('child_added', async (snapshot) => {
+                const otherPlayer = snapshot.val();
+                const otherId = snapshot.key;
+
+                if (otherId !== playerData.id && otherPlayer.searching) {
+                    console.log('🎮 War opponent joined:', otherPlayer.username);
+
+                    waitingRef.off('child_added', warSearchListener);
+                    warSearchListener = null;
+
+                    await waitingRef.child(otherId).remove();
+                    await waitingRef.child(playerData.id).remove();
+
+                    const gameId = 'war_' + generateId();
+                    const deck1 = generateDeck();
+                    const deck2 = generateDeck();
+
+                    const gameData = {
+                        id: gameId,
+                        mode: 'war1v1',
+                        player1: {
+                            id: playerData.id,
+                            username: playerData.username,
+                            color: playerData.color,
+                            level: playerData.level || 1,
+                            score: 0,
+                            cards: {},
+                            deck: deck1
+                        },
+                        player2: {
+                            id: otherId,
+                            username: otherPlayer.username,
+                            color: otherPlayer.color,
+                            level: otherPlayer.level || 1,
+                            score: 0,
+                            cards: {},
+                            deck: deck2
+                        },
+                        currentRound: 1,
+                        totalRounds: 7,
+                        rounds: {},
+                        createdAt: Date.now(),
+                        finished: false
+                    };
+
+                    await database.ref(`games_war/${gameId}`).set(gameData);
+                    startWarGame(gameId, gameData);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ War matchmaking error:', error);
+        showScreen('warModeScreen');
+    }
+}
+
+// Start War game
+function startWarGame(gameId, gameData) {
+    console.log('🃏 Starting War game:', gameId);
+
+    currentWarGame.gameId = gameId;
+    currentWarGame.mode = gameData.mode;
+    currentWarGame.currentRound = gameData.currentRound || 1;
+    currentWarGame.totalRounds = gameData.totalRounds || 7;
+    currentWarGame.rounds = [];
+    currentWarGame.isWarRound = false;
+
+    const iAmPlayer1 = gameData.player1.id === playerData.id;
+    const opponent = iAmPlayer1 ? gameData.player2 : gameData.player1;
+    const me = iAmPlayer1 ? gameData.player1 : gameData.player2;
+
+    currentWarGame.myScore = me.score || 0;
+    currentWarGame.opponentScore = opponent.score || 0;
+    currentWarGame.deck = me.deck || [];
+    currentWarGame.opponentDeck = opponent.deck || [];
+
+    showScreen('warGameScreen');
+
+    // Update UI
+    document.getElementById('warOpponentName').textContent = opponent.username;
+    document.getElementById('warOpponentLabel').textContent = opponent.username;
+    updateWarUI();
+
+    const isBotGame = gameId.startsWith('bot_');
+
+    if (!isBotGame) {
+        // Listen to game updates
+        const gameRef = database.ref(`games_war/${gameId}`);
+        warGameListener = gameRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            if (data.finished) {
+                finishWarGame(data);
+                return;
+            }
+
+            const iAmP1 = data.player1.id === playerData.id;
+            const me = iAmP1 ? data.player1 : data.player2;
+            const opp = iAmP1 ? data.player2 : data.player1;
+
+            currentWarGame.myScore = me.score || 0;
+            currentWarGame.opponentScore = opp.score || 0;
+            currentWarGame.currentRound = data.currentRound || 1;
+
+            updateWarUI();
+
+            // Check if opponent played
+            const currentRound = data.currentRound;
+            const myCard = me.cards[currentRound];
+            const oppCard = opp.cards[currentRound];
+
+            if (myCard && oppCard) {
+                // Both played - show result
+                displayWarRoundResult(myCard, oppCard);
+            } else if (myCard && !oppCard) {
+                // Waiting for opponent
+                document.getElementById('warWaitingMsg').style.display = 'block';
+                document.getElementById('warFlipBtn').style.display = 'none';
+            }
+        });
+    }
+
+    // Setup leave button
+    const leaveBtn = document.getElementById('warLeaveBtn');
+    if (leaveBtn) {
+        leaveBtn.onclick = () => {
+            if (confirm('Are you sure you want to leave this game?')) {
+                leaveWarGame();
+            }
+        };
+    }
+
+    // Setup flip button
+    const flipBtn = document.getElementById('warFlipBtn');
+    if (flipBtn) {
+        flipBtn.onclick = () => playWarCard();
+    }
+
+    // Setup next round button
+    const nextBtn = document.getElementById('warNextRoundBtn');
+    if (nextBtn) {
+        nextBtn.onclick = () => nextWarRound();
+    }
+}
+
+// Update War UI
+function updateWarUI() {
+    document.getElementById('warCurrentRound').textContent = currentWarGame.currentRound;
+    document.getElementById('warYourScore').textContent = currentWarGame.myScore;
+    document.getElementById('warOpponentScore').textContent = currentWarGame.opponentScore;
+
+    // Reset cards
+    const playerCard = document.getElementById('warPlayerCard');
+    const opponentCard = document.getElementById('warOpponentCard');
+
+    playerCard.className = 'war-card card-back';
+    playerCard.innerHTML = '<div class="card-content">?</div>';
+
+    opponentCard.className = 'war-card card-back';
+    opponentCard.innerHTML = '<div class="card-content">?</div>';
+
+    // Hide messages
+    document.getElementById('warWaitingMsg').style.display = 'none';
+    document.getElementById('warRoundResult').style.display = 'none';
+    document.getElementById('warAnnouncement').style.display = 'none';
+    document.getElementById('warNextRoundBtn').style.display = 'none';
+
+    // Show flip button
+    document.getElementById('warFlipBtn').style.display = 'block';
+}
+
+// Play a card
+async function playWarCard() {
+    const roundNum = currentWarGame.currentRound;
+
+    // Draw card from deck
+    const myCard = currentWarGame.deck[roundNum - 1];
+    if (!myCard) {
+        console.error('❌ No card available');
+        return;
+    }
+
+    currentWarGame.myCard = myCard;
+
+    // Display my card
+    const playerCardEl = document.getElementById('warPlayerCard');
+    playerCardEl.className = 'war-card card-revealed';
+    playerCardEl.innerHTML = `<div class="card-content" style="color: ${getCardColor(myCard)}">${getCardDisplay(myCard)}</div>`;
+    playerCardEl.classList.add('flip-animation');
+
+    document.getElementById('warFlipBtn').style.display = 'none';
+
+    const isBotGame = currentWarGame.gameId.startsWith('bot_');
+
+    if (isBotGame) {
+        // Bot plays immediately
+        setTimeout(() => {
+            botPlayWarCard();
+        }, 800);
+    } else {
+        // Save to Firebase
+        const gameRef = database.ref(`games_war/${currentWarGame.gameId}`);
+        const iAmPlayer1 = (await gameRef.child('player1/id').once('value')).val() === playerData.id;
+        const playerPath = iAmPlayer1 ? 'player1' : 'player2';
+
+        await gameRef.child(`${playerPath}/cards/${roundNum}`).set(myCard);
+
+        // Check if opponent already played
+        const opponentPath = iAmPlayer1 ? 'player2' : 'player1';
+        const oppCardSnap = await gameRef.child(`${opponentPath}/cards/${roundNum}`).once('value');
+
+        if (oppCardSnap.exists()) {
+            const oppCard = oppCardSnap.val();
+            displayWarRoundResult(myCard, oppCard);
+        } else {
+            document.getElementById('warWaitingMsg').style.display = 'block';
+        }
+    }
+}
+
+// Bot plays card
+function botPlayWarCard() {
+    const roundNum = currentWarGame.currentRound;
+    const botCard = currentWarGame.opponentDeck[roundNum - 1];
+
+    currentWarGame.opponentCard = botCard;
+
+    // Display bot card
+    const opponentCardEl = document.getElementById('warOpponentCard');
+    opponentCardEl.className = 'war-card card-revealed';
+    opponentCardEl.innerHTML = `<div class="card-content" style="color: ${getCardColor(botCard)}">${getCardDisplay(botCard)}</div>`;
+    opponentCardEl.classList.add('flip-animation');
+
+    setTimeout(() => {
+        displayWarRoundResult(currentWarGame.myCard, botCard);
+    }, 500);
+}
+
+// Display round result
+function displayWarRoundResult(myCard, oppCard) {
+    document.getElementById('warWaitingMsg').style.display = 'none';
+
+    // Show opponent's card if not already shown
+    const opponentCardEl = document.getElementById('warOpponentCard');
+    if (opponentCardEl.classList.contains('card-back')) {
+        opponentCardEl.className = 'war-card card-revealed';
+        opponentCardEl.innerHTML = `<div class="card-content" style="color: ${getCardColor(oppCard)}">${getCardDisplay(oppCard)}</div>`;
+        opponentCardEl.classList.add('flip-animation');
+    }
+
+    const myRank = myCard.rank;
+    const oppRank = oppCard.rank;
+
+    let resultText = '';
+    let roundPoints = 1;
+
+    if (myRank > oppRank) {
+        resultText = '🎉 You Win This Round! 🎉';
+        currentWarGame.myScore += roundPoints;
+    } else if (oppRank > myRank) {
+        resultText = '😞 Opponent Wins This Round';
+        currentWarGame.opponentScore += roundPoints;
+    } else {
+        // WAR!
+        resultText = '⚔️ WAR! Equal Cards! ⚔️';
+        document.getElementById('warAnnouncement').style.display = 'block';
+        roundPoints = 2; // War rounds worth more!
+
+        // Determine war winner (higher card rank from original comparison, or random if truly equal)
+        const warWinner = Math.random() > 0.5;
+        if (warWinner) {
+            currentWarGame.myScore += roundPoints;
+            resultText += '<br>You Win The War! 🏆';
+        } else {
+            currentWarGame.opponentScore += roundPoints;
+            resultText += '<br>Opponent Wins The War!';
+        }
+    }
+
+    // Save round
+    currentWarGame.rounds.push({
+        round: currentWarGame.currentRound,
+        myCard: myCard,
+        opponentCard: oppCard,
+        winner: myRank > oppRank ? 'me' : (oppRank > myRank ? 'opponent' : 'war')
+    });
+
+    // Display result
+    const resultEl = document.getElementById('warRoundResult');
+    resultEl.innerHTML = resultText;
+    resultEl.style.display = 'block';
+
+    // Update scores
+    updateWarScores();
+
+    // Check if game is over
+    if (currentWarGame.currentRound >= currentWarGame.totalRounds) {
+        setTimeout(() => {
+            endWarGame();
+        }, 2000);
+    } else {
+        document.getElementById('warNextRoundBtn').style.display = 'block';
+    }
+}
+
+// Update scores
+function updateWarScores() {
+    document.getElementById('warYourScore').textContent = currentWarGame.myScore;
+    document.getElementById('warOpponentScore').textContent = currentWarGame.opponentScore;
+
+    const isBotGame = currentWarGame.gameId.startsWith('bot_');
+
+    if (!isBotGame && database) {
+        const gameRef = database.ref(`games_war/${currentWarGame.gameId}`);
+        gameRef.child('player1/id').once('value').then((snapshot) => {
+            const iAmPlayer1 = snapshot.val() === playerData.id;
+            const playerPath = iAmPlayer1 ? 'player1' : 'player2';
+            const opponentPath = iAmPlayer1 ? 'player2' : 'player1';
+
+            gameRef.child(`${playerPath}/score`).set(currentWarGame.myScore);
+            gameRef.child(`${opponentPath}/score`).set(currentWarGame.opponentScore);
+        });
+    }
+}
+
+// Next round
+function nextWarRound() {
+    currentWarGame.currentRound++;
+
+    const isBotGame = currentWarGame.gameId.startsWith('bot_');
+
+    if (!isBotGame && database) {
+        database.ref(`games_war/${currentWarGame.gameId}/currentRound`).set(currentWarGame.currentRound);
+    }
+
+    updateWarUI();
+}
+
+// End War game
+async function endWarGame() {
+    const isBotGame = currentWarGame.gameId.startsWith('bot_');
+
+    if (!isBotGame && database) {
+        await database.ref(`games_war/${currentWarGame.gameId}/finished`).set(true);
+    } else {
+        // Bot game - finish locally
+        finishWarGame({
+            player1: {
+                id: playerData.id,
+                username: playerData.username,
+                score: currentWarGame.myScore
+            },
+            player2: {
+                id: 'bot',
+                username: '🤖 Bot',
+                score: currentWarGame.opponentScore
+            },
+            finished: true,
+            mode: 'warbot'
+        });
+    }
+}
+
+// Finish War game
+function finishWarGame(gameData) {
+    console.log('🏁 War game finished');
+
+    if (warGameListener && database) {
+        database.ref(`games_war/${currentWarGame.gameId}`).off('value', warGameListener);
+        warGameListener = null;
+    }
+
+    const iAmPlayer1 = gameData.player1.id === playerData.id;
+    const me = iAmPlayer1 ? gameData.player1 : gameData.player2;
+    const opponent = iAmPlayer1 ? gameData.player2 : gameData.player1;
+
+    const myScore = me.score || currentWarGame.myScore;
+    const opponentScore = opponent.score || currentWarGame.opponentScore;
+    const won = myScore > opponentScore;
+    const draw = myScore === opponentScore;
+
+    // Calculate rewards
+    const isBotGame = currentWarGame.gameId.startsWith('bot_');
+    let pointsEarned = 0;
+    let xpEarned = 0;
+
+    if (isBotGame) {
+        // Bot games give ZERO rewards (practice mode)
+        pointsEarned = 0;
+        xpEarned = 0;
+        console.log('🤖 Bot game rewards: +0 points, +0 XP (practice mode)');
+    } else {
+        // Online game rewards
+        if (won) {
+            pointsEarned = 10;
+            xpEarned = 20;
+        } else if (draw) {
+            pointsEarned = 3;
+            xpEarned = 5;
+        } else {
+            pointsEarned = 1;
+            xpEarned = 2;
+        }
+
+        // Update player data
+        playerData.points = (playerData.points || 0) + pointsEarned;
+        playerData.xp = (playerData.xp || 0) + xpEarned;
+
+        if (database) {
+            database.ref(`players/${playerData.id}`).update({
+                points: playerData.points,
+                xp: playerData.xp
+            });
+        }
+
+        updatePlayerUI();
+    }
+
+    showWarResults(won, draw, myScore, opponentScore, opponent.username, pointsEarned, xpEarned);
+}
+
+// Show War results
+function showWarResults(won, draw, myScore, opponentScore, opponentName, pointsEarned, xpEarned) {
+    showScreen('warResultsScreen');
+
+    const banner = document.getElementById('warResultBanner');
+    if (won) {
+        banner.textContent = '🎉 VICTORY! 🎉';
+        banner.className = 'result-banner victory';
+    } else if (draw) {
+        banner.textContent = '🤝 DRAW! 🤝';
+        banner.className = 'result-banner draw';
+    } else {
+        banner.textContent = '😞 DEFEAT 😞';
+        banner.className = 'result-banner defeat';
+    }
+
+    document.getElementById('warFinalYourScore').textContent = myScore;
+    document.getElementById('warFinalOpponentScore').textContent = opponentScore;
+
+    document.getElementById('warPointsEarned').innerHTML = `
+        <strong>+${pointsEarned} Points</strong> | +${xpEarned} XP
+    `;
+
+    // Show rounds review
+    const reviewDiv = document.getElementById('warRoundsReview');
+    reviewDiv.innerHTML = '<h3>Round History</h3>';
+
+    currentWarGame.rounds.forEach(round => {
+        const resultClass = round.winner === 'me' ? 'correct' : (round.winner === 'opponent' ? 'wrong' : 'war');
+        const resultIcon = round.winner === 'me' ? '✓' : (round.winner === 'opponent' ? '✗' : '⚔️');
+
+        reviewDiv.innerHTML += `
+            <div class="answer-item ${resultClass}">
+                <span class="question-num">Round ${round.round}</span>
+                <span class="user-answer">${getCardDisplay(round.myCard)} vs ${getCardDisplay(round.opponentCard)}</span>
+                <span class="result-icon">${resultIcon}</span>
+            </div>
+        `;
+    });
+}
+
+// Leave War game
+function leaveWarGame() {
+    if (warGameListener && database) {
+        database.ref(`games_war/${currentWarGame.gameId}`).off('value', warGameListener);
+        warGameListener = null;
+    }
+
+    if (warSearchListener && database) {
+        database.ref('waiting_war1v1').off('child_added', warSearchListener);
+        warSearchListener = null;
+    }
+
+    showScreen('warModeScreen');
+}
+
+// Start War bot game
+function startWarBotGame() {
+    console.log('🤖 Starting War bot game...');
+
+    const gameId = 'bot_' + generateId();
+    const deck1 = generateDeck();
+    const deck2 = generateDeck();
+
+    const gameData = {
+        id: gameId,
+        mode: 'warbot',
+        isBot: true,
+        player1: {
+            id: playerData.id,
+            username: playerData.username,
+            color: playerData.color,
+            level: playerData.level || 1,
+            score: 0,
+            cards: {},
+            deck: deck1
+        },
+        player2: {
+            id: 'bot',
+            username: '🤖 Bot',
+            color: '#999',
+            level: 1,
+            score: 0,
+            cards: {},
+            deck: deck2
+        },
+        currentRound: 1,
+        totalRounds: 7,
+        rounds: {},
+        createdAt: Date.now(),
+        finished: false
+    };
+
+    startWarGame(gameId, gameData);
+}
+
 // Setup all event listeners - called after DOM is ready
 function setupEventListeners() {
     console.log('🎯 Setting up event listeners...');
@@ -4449,6 +5198,35 @@ function setupEventListeners() {
     safeAddListener('rpsBackToMenuBtn', 'click', () => {
         showScreen('menuScreen');
     }, 'RPS Back to Menu');
+
+    // === WAR CARD GAME ===
+    console.log('🃏 Setting up War card game buttons...');
+
+    // War mode selection buttons
+    safeAddListener('warMode1v1Btn', 'click', () => {
+        selectWarMode('war1v1');
+    }, 'War 1v1 Mode');
+
+    safeAddListener('warModeVsBotBtn', 'click', () => {
+        selectWarMode('warbot');
+    }, 'War VS Bot Mode');
+
+    safeAddListener('findWarMatchBtn', 'click', () => {
+        startWarMatchmaking();
+    }, 'Find War Match');
+
+    safeAddListener('startWarBotBtn', 'click', () => {
+        startWarBotGame();
+    }, 'Start War Bot Game');
+
+    // War results buttons
+    safeAddListener('warPlayAgainBtn', 'click', () => {
+        showScreen('warModeScreen');
+    }, 'War Play Again');
+
+    safeAddListener('warBackToMenuBtn', 'click', () => {
+        showScreen('menuScreen');
+    }, 'War Back to Menu');
 
     console.log('✅ All event listeners attached successfully!');
 }

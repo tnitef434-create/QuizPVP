@@ -131,10 +131,11 @@
                     <span class="game-type-title">Rock Paper Scissors</span>
                     <span class="game-type-desc">Battle with RPS!</span>
                 </div>
-                <div class="game-type-btn coming-soon" onclick="alert('War game coming soon!')">
+                <div class="game-type-btn" onclick="window.gameNavigation.showScreen('warModeScreen')">
+                    <span class="game-type-badge new-badge">NEW</span>
                     <span class="game-type-icon">🃏</span>
                     <span class="game-type-title">War</span>
-                    <span class="game-type-desc">Coming Soon!</span>
+                    <span class="game-type-desc">Card Battle!</span>
                 </div>
             </div>
 
@@ -329,6 +330,143 @@
                 <div class="results-buttons">
                     <button id="rpsPlayAgainBtn" class="btn btn-primary">Play Again</button>
                     <button id="rpsBackToMenuBtn" class="btn btn-secondary">Back to Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- War Mode Selection -->
+    <div id="warModeScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h2>🃏 War - Select Mode</h2>
+            </div>
+
+            <div class="mode-selection">
+                <div class="mode-buttons">
+                    <button id="warMode1v1Btn" class="mode-btn active">
+                        <span class="mode-icon">🃏</span>
+                        <span class="mode-title">1v1</span>
+                        <span class="mode-desc">Best of 7 rounds</span>
+                        <span class="mode-player-count">
+                            <span class="mode-player-count-dot"></span>
+                            <span id="countWar1v1">0</span> playing
+                        </span>
+                    </button>
+                    <button id="warModeVsBotBtn" class="mode-btn">
+                        <span class="mode-icon">🤖</span>
+                        <span class="mode-title">VS Bot</span>
+                        <span class="mode-desc">Practice mode</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="findWarMatchBtn" class="btn btn-primary btn-large">Find Match (1v1)</button>
+                <button id="startWarBotBtn" class="btn btn-primary btn-large" style="display: none;">Play VS Bot</button>
+                <button class="btn btn-secondary" onclick="window.gameNavigation.showScreen('playScreen')">Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- War Game Screen -->
+    <div id="warGameScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h3 id="warOpponentName">Opponent</h3>
+            </div>
+
+            <div class="war-game-area">
+                <!-- Round Info -->
+                <div class="round-info">
+                    <span class="round-text">Round <span id="warCurrentRound">1</span> of 7</span>
+                </div>
+
+                <!-- Score Display -->
+                <div class="score-display">
+                    <div class="player-score">
+                        <span class="score-label">You</span>
+                        <span class="score-value" id="warYourScore">0</span>
+                    </div>
+                    <div class="score-divider">-</div>
+                    <div class="player-score">
+                        <span class="score-label" id="warOpponentLabel">Opponent</span>
+                        <span class="score-value" id="warOpponentScore">0</span>
+                    </div>
+                </div>
+
+                <!-- Cards Display -->
+                <div class="cards-container">
+                    <div class="card-area player-card-area">
+                        <div class="card-label">Your Card</div>
+                        <div id="warPlayerCard" class="war-card card-back">
+                            <div class="card-content">?</div>
+                        </div>
+                    </div>
+
+                    <div class="vs-text">VS</div>
+
+                    <div class="card-area opponent-card-area">
+                        <div class="card-label">Opponent's Card</div>
+                        <div id="warOpponentCard" class="war-card card-back">
+                            <div class="card-content">?</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- War Announcement -->
+                <div id="warAnnouncement" class="war-announcement" style="display: none;">
+                    ⚔️ WAR! ⚔️
+                </div>
+
+                <!-- Round Result -->
+                <div id="warRoundResult" class="round-result" style="display: none;"></div>
+
+                <!-- Flip Button -->
+                <button id="warFlipBtn" class="btn btn-primary btn-large war-flip-btn">
+                    Flip Card 🎴
+                </button>
+
+                <!-- Next Round Button -->
+                <button id="warNextRoundBtn" class="btn btn-primary" style="display: none;">
+                    Next Round →
+                </button>
+
+                <!-- Waiting Message -->
+                <div id="warWaitingMsg" class="waiting-msg" style="display: none;">
+                    Waiting for opponent...
+                </div>
+            </div>
+
+            <button class="btn btn-secondary btn-small" id="warLeaveBtn">Leave Game</button>
+        </div>
+    </div>
+
+    <!-- War Results Screen -->
+    <div id="warResultsScreen" class="screen">
+        <div class="container">
+            <div id="warResultBanner" class="result-banner"></div>
+
+            <div class="results-card">
+                <div class="score-comparison">
+                    <div class="score-box">
+                        <div class="score-label">Your Score</div>
+                        <div class="score-value" id="warFinalYourScore">0</div>
+                    </div>
+                    <div class="score-divider">-</div>
+                    <div class="score-box">
+                        <div class="score-label">Opponent</div>
+                        <div class="score-value" id="warFinalOpponentScore">0</div>
+                    </div>
+                </div>
+
+                <div id="warPointsEarned" class="points-earned"></div>
+
+                <div class="answers-review" id="warRoundsReview"></div>
+
+                <div class="results-buttons">
+                    <button id="warPlayAgainBtn" class="btn btn-primary">Play Again</button>
+                    <button id="warBackToMenuBtn" class="btn btn-secondary">Back to Menu</button>
                 </div>
             </div>
         </div>

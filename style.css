@@ -2912,3 +2912,285 @@ input[type="color"] {
         gap: 15px;
     }
 }
+
+/* ============================================================================
+   WAR CARD GAME
+   ============================================================================ */
+
+/* NEW Badge */
+.game-type-badge.new-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(135deg, #ff6b6b, #ff4757);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 4px 10px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
+    animation: pulse 2s infinite;
+    z-index: 10;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* War Game Area */
+.war-game-area {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Round Info */
+.round-info {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.round-text {
+    font-size: 1.2rem;
+    color: #ecf0f1;
+    font-weight: bold;
+}
+
+/* Score Display */
+.score-display {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+
+.player-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.score-label {
+    font-size: 0.9rem;
+    color: #bdc3c7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.score-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #3498db;
+}
+
+/* Cards Container */
+.cards-container {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.card-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.card-label {
+    font-size: 1rem;
+    color: #bdc3c7;
+    font-weight: 600;
+}
+
+.vs-text {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #e74c3c;
+    text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+/* War Cards */
+.war-card {
+    width: 140px;
+    height: 200px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+}
+
+.war-card.card-back {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 3px solid #5a67d8;
+}
+
+.war-card.card-back .card-content {
+    font-size: 3rem;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.war-card.card-revealed {
+    background: white;
+    border: 3px solid #34495e;
+}
+
+.war-card.card-revealed .card-content {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+.war-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* Flip Animation */
+@keyframes cardFlip {
+    0% {
+        transform: rotateY(0deg) scale(1);
+    }
+    50% {
+        transform: rotateY(90deg) scale(1.1);
+    }
+    100% {
+        transform: rotateY(0deg) scale(1);
+    }
+}
+
+.war-card.flip-animation {
+    animation: cardFlip 0.6s ease-in-out;
+}
+
+/* War Announcement */
+.war-announcement {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #e74c3c;
+    text-align: center;
+    text-shadow: 0 0 20px rgba(231, 76, 60, 0.8);
+    animation: warPulse 1s infinite;
+    margin: 20px 0;
+}
+
+@keyframes warPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Round Result */
+.round-result {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+    padding: 15px 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin: 20px 0;
+    color: #ecf0f1;
+    animation: slideIn 0.5s ease;
+}
+
+/* Flip Button */
+.war-flip-btn {
+    margin-top: 20px;
+    padding: 15px 40px;
+    font-size: 1.3rem;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border: none;
+    color: white;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+}
+
+.war-flip-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.6);
+    background: linear-gradient(135deg, #2980b9, #3498db);
+}
+
+.war-flip-btn:active {
+    transform: translateY(0);
+}
+
+/* Waiting Message */
+.waiting-msg {
+    font-size: 1.2rem;
+    color: #f39c12;
+    text-align: center;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* War Results - using standard classes but adding war-specific styling */
+.answer-item.war {
+    background: rgba(241, 196, 15, 0.1);
+    border-left: 4px solid #f1c40f;
+}
+
+/* Responsive Design for War */
+@media (max-width: 768px) {
+    .cards-container {
+        gap: 20px;
+    }
+
+    .war-card {
+        width: 110px;
+        height: 160px;
+    }
+
+    .war-card.card-back .card-content,
+    .war-card.card-revealed .card-content {
+        font-size: 2rem;
+    }
+
+    .vs-text {
+        font-size: 1.3rem;
+    }
+
+    .war-announcement {
+        font-size: 1.8rem;
+    }
+
+    .round-result {
+        font-size: 1.2rem;
+        padding: 10px 20px;
+    }
+
+    .score-value {
+        font-size: 1.5rem;
+    }
+}
