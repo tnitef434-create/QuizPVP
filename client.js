@@ -116,7 +116,7 @@ window.showScreen = window.gameNavigation.showScreen.bind(window.gameNavigation)
 
 console.log('✅ Global navigation system initialized');
 
-// ===== V3.0 FEATURES =====
+// ===== v1.5 FEATURES =====
 
 // In-App Notification System
 window.showNotification = function(title, message, icon = '✨') {
@@ -176,7 +176,7 @@ function handleTabSwitchLoss() {
     }, 500);
 }
 
-// V3.0 - Track player count per mode
+// v1.5 - Track player count per mode
 function trackModePlayerCounts() {
     if (!database) return;
 
@@ -204,9 +204,9 @@ function trackModePlayerCounts() {
     console.log('✅ Mode player count tracking initialized');
 }
 
-console.log('✅ V3.0 features initialized');
+console.log('✅ v1.5 features initialized');
 
-// V3.0: Level system - Calculate XP required for next level
+// v1.5: Level system - Calculate XP required for next level
 function getXPForLevel(level) {
     // Exponential progression: level 1->2 needs 100 XP, level 2->3 needs 150 XP, etc.
     return Math.floor(100 * Math.pow(1.5, level - 1));
@@ -306,7 +306,7 @@ let currentChatSession = {
 let chatListener = null;
 let chatSearchListener = null;
 
-// V3.0 - Track search type for proper cancel navigation
+// v1.5 - Track search type for proper cancel navigation
 let currentSearchType = 'game'; // 'game' or 'chat'
 
 // ===== PLAYER PRESENCE & ACTIVE COUNT SYSTEM =====
@@ -515,7 +515,7 @@ async function loadPlayerData() {
             showScreen('menuScreen');
             setupPlayerPresence();
             trackActivePlayerCount();
-            trackModePlayerCounts(); // V3.0
+            trackModePlayerCounts(); // v1.5
             trackRPSModePlayerCounts(); // RPS tracking
             trackWarModePlayerCounts(); // War tracking
             loadFriendsList();
@@ -701,7 +701,7 @@ async function find1v1Match() {
             console.log('🎮 Creating game:', gameId);
             await database.ref(`games/${gameId}`).set(gameData);
 
-            // V3.0: Show match found notification
+            // v1.5: Show match found notification
             showNotification('Match Found!', `Starting ${currentMode.toUpperCase()} game...`, '🎮');
 
             // Start game for both players
@@ -730,7 +730,7 @@ async function find1v1Match() {
                 if (game && game.player2 && game.player2.id === playerData.id) {
                     // Found a game!
                     console.log('✅ Matched! Starting game...');
-                    showNotification('Match Found!', `Opponent found! Starting 1v1...`, '⚔️'); // V3.0
+                    showNotification('Match Found!', `Opponent found! Starting 1v1...`, '⚔️'); // v1.5
 
                     if (searchListener) {
                         database.ref('games').off('child_added', searchListener);
@@ -740,7 +740,7 @@ async function find1v1Match() {
                     // Remove from waiting
                     database.ref(`waiting_1v1/${playerData.id}`).remove();
 
-                    setTimeout(() => startGame(game.id, game), 1000); // V3.0: Delay for notification
+                    setTimeout(() => startGame(game.id, game), 1000); // v1.5: Delay for notification
                 }
             });
         }
@@ -842,7 +842,7 @@ async function findTriosMatch() {
 
                 if (imInGame) {
                     console.log('✅ Joined trios game!');
-                    showNotification('Match Found!', `Trios match ready! Starting 1v2...`, '🔺'); // V3.0
+                    showNotification('Match Found!', `Trios match ready! Starting 1v2...`, '🔺'); // v1.5
 
                     if (searchListener) {
                         database.ref('games_trios').off('child_added', searchListener);
@@ -850,7 +850,7 @@ async function findTriosMatch() {
                     }
 
                     database.ref(`waiting_trios/${playerData.id}`).remove();
-                    setTimeout(() => startTriosGame(game.id, game), 1000); // V3.0: Delay for notification
+                    setTimeout(() => startTriosGame(game.id, game), 1000); // v1.5: Delay for notification
                 }
             });
         }
@@ -952,7 +952,7 @@ async function findSquadMatch() {
 
                 if (imInGame) {
                     console.log('✅ Joined squad game!');
-                    showNotification('Match Found!', `Squad ready! Starting 1v3...`, '👥'); // V3.0
+                    showNotification('Match Found!', `Squad ready! Starting 1v3...`, '👥'); // v1.5
 
                     if (searchListener) {
                         database.ref('games_squad').off('child_added', searchListener);
@@ -960,7 +960,7 @@ async function findSquadMatch() {
                     }
 
                     database.ref(`waiting_squad/${playerData.id}`).remove();
-                    setTimeout(() => startSquadGame(game.id, game), 1000); // V3.0: Delay for notification
+                    setTimeout(() => startSquadGame(game.id, game), 1000); // v1.5: Delay for notification
                 }
             });
         }
@@ -995,7 +995,7 @@ function handleMatchmakingError(error) {
 
 // Start game (1v1)
 function startGame(gameId, gameData) {
-    antiCheatActive = true; // V3.0: Enable anti-tab-switch detection
+    antiCheatActive = true; // v1.5: Enable anti-tab-switch detection
     currentGame.gameId = gameId;
     currentGame.questions = gameData.questions;
     currentGame.answers = [];
@@ -1195,7 +1195,7 @@ function checkIfResultsReady() {
     }
 }
 
-// V3.0: Vote to Skip Timer System
+// v1.5: Vote to Skip Timer System
 let voteSkipListener = null;
 let hasVoted = false;
 
@@ -1454,7 +1454,7 @@ async function submitAnswers() {
                      'Waiting for opponent to finish...';
     document.getElementById('waitingResultsText').textContent = waitText;
 
-    // V3.0: ALWAYS show vote to skip timer - no matter when you finish
+    // v1.5: ALWAYS show vote to skip timer - no matter when you finish
     setupVoteToSkipTimer();
 
     // Continue updating the timer display on the waiting screen
@@ -1847,7 +1847,7 @@ function purchaseColor(colorType, customCost = null) {
     let colorValue = '';
     let colorName = '';
 
-    // V3.0: Support direct hex color purchases
+    // v1.5: Support direct hex color purchases
     if (colorType.startsWith('#')) {
         cost = customCost || 100;
         colorValue = colorType;
@@ -1889,7 +1889,7 @@ function closeModal() {
     });
 }
 
-// V3.0 - Cancel search (smart navigation based on search type)
+// v1.5 - Cancel search (smart navigation based on search type)
 function cancelSearch() {
     console.log('🚫 Search cancelled by user');
 
@@ -1937,7 +1937,7 @@ function cancelSearch() {
     document.querySelector('.searching-animation h2').textContent = 'Finding Opponent...';
     document.querySelector('.searching-text').textContent = 'Matching you with another player';
 
-    // V3.0: Smart navigation based on what was being searched for
+    // v1.5: Smart navigation based on what was being searched for
     if (currentSearchType === 'chat') {
         console.log('📱 Returning to Social (Chat tab)');
         showScreen('socialScreen');
@@ -2132,7 +2132,7 @@ function endWhoAmIGame() {
 
 // ===== CHAT MODE FUNCTIONS =====
 
-// V3.0 - Destroy current chat completely
+// v1.5 - Destroy current chat completely
 async function destroyCurrentChat() {
     console.log('🗑️ Destroying current chat session...');
 
@@ -2176,7 +2176,7 @@ async function destroyCurrentChat() {
     console.log('✅ Chat session destroyed');
 }
 
-// V3.0 - Completely rebuilt chat system
+// v1.5 - Completely rebuilt chat system
 async function findChatPartner() {
     try {
         // Track that we're searching for chat (for cancel button)
@@ -2271,7 +2271,7 @@ async function findChatPartner() {
     }
 }
 
-// V3.0 - Fixed startChatSession (prevents duplication)
+// v1.5 - Fixed startChatSession (prevents duplication)
 function startChatSession(chatId, chatData) {
     // Clean up any previous listeners first (critical!)
     if (chatListener) {
@@ -2326,7 +2326,7 @@ function startChatSession(chatId, chatData) {
     sendBtn.style.opacity = '';
     sendBtn.style.cursor = '';
 
-    // V3.0 FIX: Track displayed message IDs to prevent duplication
+    // v1.5 FIX: Track displayed message IDs to prevent duplication
     const displayedMessageIds = new Set();
 
     // Listen for new messages (ONLY ONCE!)
@@ -2427,7 +2427,7 @@ async function sendChatMessage() {
     }
 }
 
-// V3.0 - Fixed skip (destroys chat and finds new partner)
+// v1.5 - Fixed skip (destroys chat and finds new partner)
 async function skipChatPartner() {
     console.log('⏭️ Skipping to next partner...');
     showNotification('Skipping', 'Finding you a new partner...', '⏭️');
@@ -2439,7 +2439,7 @@ async function skipChatPartner() {
     await findChatPartner();
 }
 
-// V3.0 - Fixed leave (destroys chat and returns to menu)
+// v1.5 - Fixed leave (destroys chat and returns to menu)
 async function leaveChat() {
     console.log('👋 Leaving chat...');
 
@@ -2797,7 +2797,7 @@ async function sendFriendMessage() {
     }
 }
 
-// V3.0: Invite friend to 1v1 game
+// v1.5: Invite friend to 1v1 game
 async function inviteFriendTo1v1(friendId, friendUsername) {
     try {
         // Check if friend is online
@@ -2848,7 +2848,7 @@ async function inviteFriendTo1v1(friendId, friendUsername) {
     }
 }
 
-// V3.0: Listen for incoming friend requests (real-time)
+// v1.5: Listen for incoming friend requests (real-time)
 let currentFriendRequest = null;
 
 function setupFriendRequestListener() {
@@ -3089,7 +3089,7 @@ function viewResults() {
         return;
     }
 
-    // V3.0: Clean up vote listener
+    // v1.5: Clean up vote listener
     if (voteSkipListener) {
         const gameRef = currentGame.mode === 'squad'
             ? database.ref(`games_squad/${currentGame.gameId}`)
@@ -3149,7 +3149,7 @@ function resetAppData() {
     window.location.reload();
 }
 
-// V3.0 - Fixed clear account (fully works now)
+// v1.5 - Fixed clear account (fully works now)
 async function clearAccount() {
     if (!confirm('Delete everything and start fresh? This cannot be undone!')) {
         return;
@@ -3204,7 +3204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load player data first
     await loadPlayerData();
 
-    // V3.0: Setup real-time listeners
+    // v1.5: Setup real-time listeners
     setupGameInviteListener();
     setupFriendRequestListener();
 
@@ -3238,6 +3238,13 @@ window.gameNavigation.goToRPSMode = function() {
     console.log('✊ RPS mode selected');
     this.showScreen('rpsModeScreen');
     currentMode = 'rps1v1';
+};
+
+// Add navigation function for War mode
+window.gameNavigation.goToWarMode = function() {
+    console.log('🃏 War mode selected');
+    this.showScreen('warModeScreen');
+    currentMode = 'war1v1';
 };
 
 // Track RPS player counts
@@ -3286,50 +3293,88 @@ async function startRPSMatchmaking() {
     }
 }
 
-// Find RPS 1v1 match
+// Find RPS 1v1 match - FULLY REWORKED v1.5
 async function findRPS1v1Match() {
     try {
         const waitingRef = database.ref('waiting_rps1v1');
-        console.log('📡 Checking RPS 1v1 queue...');
+        const presenceRef = database.ref('online_players');
+        console.log('📡 Checking RPS 1v1 queue (v1.5 matchmaking)...');
 
-        // Clean stale entries first (more aggressive - 15 seconds)
+        // AGGRESSIVE cleanup - 5 seconds only (was 15)
         const snapshot = await waitingRef.once('value');
         const waiting = snapshot.val() || {};
         const now = Date.now();
 
         const cleanupPromises = [];
-        Object.keys(waiting).forEach(key => {
-            if (waiting[key] && now - waiting[key].timestamp > 15000) {
-                console.log('🗑️ Removing stale RPS player:', key);
+        for (const key of Object.keys(waiting)) {
+            if (waiting[key] && now - waiting[key].timestamp > 5000) {
+                console.log('🗑️ Removing stale RPS player (>5s):', key);
                 cleanupPromises.push(waitingRef.child(key).remove());
             }
-        });
+        }
         await Promise.all(cleanupPromises);
 
         // Get fresh snapshot after cleanup
         const freshSnapshot = await waitingRef.once('value');
         const freshWaiting = freshSnapshot.val() || {};
-        const availablePlayers = Object.entries(freshWaiting)
-            .filter(([id]) => id !== playerData.id);
 
-        console.log('Available RPS opponents:', availablePlayers.length);
+        // Get online players for verification
+        const onlineSnapshot = await presenceRef.once('value');
+        const onlinePlayers = onlineSnapshot.val() || {};
+
+        // Filter for valid opponents: not self, online, and actually searching
+        const availablePlayers = Object.entries(freshWaiting).filter(([id, data]) => {
+            if (id === playerData.id) return false;
+            if (!data || !data.searching) return false;
+
+            // CRITICAL: Verify opponent is actually online
+            const isOnline = onlinePlayers[id] && onlinePlayers[id].online;
+            if (!isOnline) {
+                console.log('🚫 Skipping offline player:', id);
+                waitingRef.child(id).remove(); // Clean up offline players
+                return false;
+            }
+
+            // Verify timestamp is very recent (within 5 seconds)
+            const timeDiff = now - (data.timestamp || 0);
+            if (timeDiff > 5000) {
+                console.log('🚫 Skipping stale player entry:', id, `(${timeDiff}ms old)`);
+                waitingRef.child(id).remove();
+                return false;
+            }
+
+            return true;
+        });
+
+        console.log(`✅ Found ${availablePlayers.length} valid RPS opponent(s)`);
 
         if (availablePlayers.length > 0) {
             const [opponentId, opponentData] = availablePlayers[0];
-            console.log('✅ RPS Match found! Opponent:', opponentData.username);
+            console.log('🎮 Creating match with:', opponentData.username);
 
-            // CRITICAL: Remove both players from queue FIRST to prevent double-matching
-            await waitingRef.child(opponentId).remove();
-            await waitingRef.child(playerData.id).remove();
+            // ATOMIC TRANSACTION: Remove both players immediately
+            const updates = {};
+            updates[`waiting_rps1v1/${opponentId}`] = null;
+            updates[`waiting_rps1v1/${playerData.id}`] = null;
+            await database.ref().update(updates);
 
-            // Verify opponent is still valid (not in another game)
-            const verifySnapshot = await waitingRef.child(opponentId).once('value');
-            if (verifySnapshot.exists()) {
-                console.log('⚠️ Opponent rejoined queue, retrying...');
+            // Double-check they were actually removed
+            const verifyRemoval = await waitingRef.once('value');
+            const afterRemoval = verifyRemoval.val() || {};
+            if (afterRemoval[opponentId] || afterRemoval[playerData.id]) {
+                console.error('❌ Failed to remove players from queue atomically');
                 return findRPS1v1Match(); // Retry
             }
 
-            const gameId = generateId();
+            // Verify opponent is STILL online before creating game
+            const finalOnlineCheck = await presenceRef.child(opponentId).once('value');
+            const opponentOnline = finalOnlineCheck.val();
+            if (!opponentOnline || !opponentOnline.online) {
+                console.log('⚠️ Opponent went offline, retrying...');
+                return findRPS1v1Match();
+            }
+
+            const gameId = 'rps_' + generateId();
             const gameData = {
                 id: gameId,
                 mode: 'rps1v1',
@@ -3357,46 +3402,67 @@ async function findRPS1v1Match() {
             };
 
             await database.ref(`games_rps/${gameId}`).set(gameData);
+            console.log('✅ RPS game created successfully:', gameId);
             showNotification('Match Found!', 'Starting RPS battle!', '✊');
             setTimeout(() => startRPSGame(gameId, gameData), 1000);
         } else {
-            // No opponents found, join queue
-            console.log('⏳ No RPS opponents found. Joining waiting queue...');
+            // No valid opponents, join queue with heartbeat
+            console.log('⏳ No valid opponents. Joining queue with heartbeat...');
 
-            // Remove self from queue first (cleanup any old entries)
+            // Remove old entry first
             await waitingRef.child(playerData.id).remove();
 
-            // Add to queue with fresh timestamp
-            await waitingRef.child(playerData.id).set({
+            // Add to queue
+            const queueEntry = {
                 username: playerData.username,
                 color: playerData.color,
                 level: playerData.level || 1,
                 timestamp: Date.now(),
                 searching: true
-            });
+            };
+            await waitingRef.child(playerData.id).set(queueEntry);
+
+            // Setup heartbeat to keep entry fresh (update every 2 seconds)
+            const heartbeatInterval = setInterval(async () => {
+                try {
+                    const stillSearching = document.getElementById('searchingScreen').classList.contains('active');
+                    if (stillSearching && currentMode === 'rps1v1') {
+                        await waitingRef.child(playerData.id).update({
+                            timestamp: Date.now()
+                        });
+                        console.log('💓 RPS queue heartbeat sent');
+                    } else {
+                        clearInterval(heartbeatInterval);
+                    }
+                } catch (err) {
+                    clearInterval(heartbeatInterval);
+                }
+            }, 2000);
 
             // Clean up old listener
             if (rpsSearchListener) {
                 database.ref('games_rps').off('child_added', rpsSearchListener);
+                rpsSearchListener = null;
             }
 
-            // Listen for game creation (only if I'm player2)
-            rpsSearchListener = database.ref('games_rps').on('child_added', (snapshot) => {
+            // Listen for game creation
+            rpsSearchListener = database.ref('games_rps').on('child_added', async (snapshot) => {
                 const game = snapshot.val();
 
-                // Only respond if this is a NEW game and I'm player2
+                // Only respond if I'm player2 in this game
                 if (game && game.mode === 'rps1v1' && game.player2 && game.player2.id === playerData.id) {
-                    console.log('✅ Matched! Starting RPS game...');
-                    showNotification('Match Found!', 'RPS opponent found!', '✊');
+                    console.log('✅ RPS Match found! Starting game...');
+                    clearInterval(heartbeatInterval);
 
                     if (rpsSearchListener) {
                         database.ref('games_rps').off('child_added', rpsSearchListener);
                         rpsSearchListener = null;
                     }
 
-                    // Remove from waiting queue
-                    database.ref(`waiting_rps1v1/${playerData.id}`).remove();
+                    // Remove from queue
+                    await waitingRef.child(playerData.id).remove();
 
+                    showNotification('Match Found!', 'RPS opponent found!', '✊');
                     setTimeout(() => startRPSGame(game.id, game), 1000);
                 }
             });
@@ -4934,7 +5000,7 @@ function setupEventListeners() {
         showScreen('menuScreen');
         setupPlayerPresence();
         trackActivePlayerCount();
-        trackModePlayerCounts(); // V3.0
+        trackModePlayerCounts(); // v1.5
         loadFriendsList();
         loadFriendRequests();
         cleanupOldGames();
@@ -4990,12 +5056,12 @@ function setupEventListeners() {
         viewResults();
     }, 'View Results');
 
-    // V3.0: Vote to skip timer button
+    // v1.5: Vote to skip timer button
     safeAddListener('voteSkipBtn', 'click', () => {
         voteToSkipTimer();
     }, 'Vote to Skip Timer');
 
-    // V3.0: Friend request notification buttons
+    // v1.5: Friend request notification buttons
     safeAddListener('acceptFriendNotifBtn', 'click', () => {
         acceptFriendRequestFromNotification();
     }, 'Accept Friend Request Notification');
@@ -5004,7 +5070,7 @@ function setupEventListeners() {
         rejectFriendRequestFromNotification();
     }, 'Reject Friend Request Notification');
 
-    // V3.0: Game invite notification buttons
+    // v1.5: Game invite notification buttons
     safeAddListener('acceptGameInviteBtn', 'click', () => {
         acceptGameInviteFromNotification();
     }, 'Accept Game Invite');
@@ -5046,11 +5112,11 @@ function setupEventListeners() {
     }
 
     safeAddListener('skipChatBtn', 'click', () => {
-        skipChatPartner(); // V3.0: No confirm needed
+        skipChatPartner(); // v1.5: No confirm needed
     }, 'Skip Chat Partner');
 
     safeAddListener('leaveChatBtn', 'click', () => {
-        leaveChat(); // V3.0: No confirm needed
+        leaveChat(); // v1.5: No confirm needed
     }, 'Leave Chat');
 
     safeAddListener('addFriendBtn', 'click', () => {

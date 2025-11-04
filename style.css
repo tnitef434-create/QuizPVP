@@ -3207,28 +3207,29 @@ input[type="color"] {
 }
 
 .tutorial-section {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 15px;
     padding: 25px;
     margin-bottom: 25px;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .tutorial-section.highlight {
-    background: rgba(231, 76, 60, 0.1);
-    border: 2px solid rgba(231, 76, 60, 0.3);
+    background: rgba(255, 235, 235, 0.95);
+    border: 2px solid rgba(231, 76, 60, 0.5);
 }
 
 .tutorial-heading {
-    color: #3498db;
+    color: #2980b9;
     font-size: 1.5rem;
     margin-bottom: 15px;
     font-weight: bold;
 }
 
 .tutorial-text {
-    color: #ecf0f1;
+    color: #2c3e50;
     font-size: 1.1rem;
     line-height: 1.8;
 }
@@ -3238,11 +3239,11 @@ input[type="color"] {
 }
 
 .tutorial-text strong {
-    color: #f39c12;
+    color: #d35400;
 }
 
 .tutorial-text em {
-    color: #95a5a6;
+    color: #7f8c8d;
     font-style: italic;
 }
 
@@ -3256,8 +3257,9 @@ input[type="color"] {
     padding-left: 10px;
     border-left: 3px solid #3498db;
     margin-bottom: 10px;
-    background: rgba(52, 152, 219, 0.1);
+    background: rgba(52, 152, 219, 0.15);
     border-radius: 5px;
+    color: #2c3e50;
 }
 
 /* Card Hierarchy */
@@ -3275,7 +3277,7 @@ input[type="color"] {
     align-items: center;
     gap: 10px;
     padding: 15px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(52, 152, 219, 0.1);
     border-radius: 10px;
     min-width: 100px;
     transition: transform 0.3s ease;
@@ -3286,7 +3288,7 @@ input[type="color"] {
 }
 
 .card-example.ace {
-    background: rgba(241, 196, 15, 0.2);
+    background: rgba(241, 196, 15, 0.3);
     border: 2px solid #f1c40f;
 }
 
@@ -3306,8 +3308,9 @@ input[type="color"] {
 
 .card-rank {
     font-size: 0.9rem;
-    color: #bdc3c7;
+    color: #34495e;
     text-align: center;
+    font-weight: 600;
 }
 
 /* Suits Grid */
@@ -3324,7 +3327,7 @@ input[type="color"] {
     align-items: center;
     gap: 10px;
     padding: 20px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(52, 152, 219, 0.1);
     border-radius: 10px;
 }
 
@@ -3342,18 +3345,18 @@ input[type="color"] {
 
 .suit-name {
     font-size: 1rem;
-    color: #ecf0f1;
+    color: #2c3e50;
     font-weight: 600;
 }
 
 /* War Example */
 .war-example {
-    background: rgba(231, 76, 60, 0.2);
+    background: rgba(231, 76, 60, 0.15);
     padding: 15px;
     border-radius: 10px;
     border-left: 4px solid #e74c3c;
     font-weight: bold;
-    color: #ecf0f1;
+    color: #c0392b;
 }
 
 /* Rewards Grid */
@@ -3371,29 +3374,29 @@ input[type="color"] {
     gap: 10px;
     padding: 20px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.5);
     border: 2px solid transparent;
     transition: all 0.3s ease;
 }
 
 .reward-example:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .reward-example.victory {
     border-color: #2ecc71;
-    background: rgba(46, 204, 113, 0.1);
+    background: rgba(46, 204, 113, 0.2);
 }
 
 .reward-example.draw {
     border-color: #f39c12;
-    background: rgba(243, 156, 18, 0.1);
+    background: rgba(243, 156, 18, 0.2);
 }
 
 .reward-example.defeat {
     border-color: #e74c3c;
-    background: rgba(231, 76, 60, 0.1);
+    background: rgba(231, 76, 60, 0.2);
 }
 
 .reward-icon {
@@ -3403,12 +3406,12 @@ input[type="color"] {
 .reward-label {
     font-size: 1.1rem;
     font-weight: bold;
-    color: #ecf0f1;
+    color: #2c3e50;
 }
 
 .reward-value {
     font-size: 0.9rem;
-    color: #bdc3c7;
+    color: #34495e;
 }
 
 /* Responsive Tutorial */
