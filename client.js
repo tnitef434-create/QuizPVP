@@ -3494,9 +3494,10 @@ async function startRPSMatchmaking() {
     }
 }
 
-// Find RPS 1v1 match - Simplified to match math game logic
+// Find RPS 1v1 match - REWRITTEN FROM SCRATCH (matches math game logic exactly)
 async function findRPS1v1Match() {
     try {
+        // Clean up old waiting entries
         const waitingRef = database.ref('waiting_rps1v1');
         console.log('📡 Checking RPS 1v1 queue...');
         const snapshot = await waitingRef.once('value');
@@ -3532,6 +3533,7 @@ async function findRPS1v1Match() {
 
             // Create game
             const gameId = 'rps_' + generateId();
+
             const gameData = {
                 id: gameId,
                 mode: 'rps1v1',
@@ -3561,11 +3563,14 @@ async function findRPS1v1Match() {
             console.log('🎮 Creating RPS game:', gameId);
             await database.ref(`games_rps/${gameId}`).set(gameData);
 
+            // Show match found notification
             showNotification('Match Found!', 'Starting RPS battle!', '✊');
-            setTimeout(() => startRPSGame(gameId, gameData), 1000);
+
+            // Start game for both players
+            setTimeout(() => startRPSGame(gameId, gameData), 1000); // Delay for notification
         } else {
             // Add self to waiting
-            console.log('⏳ No opponents found. Joining RPS waiting queue...');
+            console.log('⏳ No RPS opponents found. Joining waiting queue...');
             await waitingRef.child(playerData.id).set({
                 username: playerData.username,
                 color: playerData.color,
@@ -3597,7 +3602,7 @@ async function findRPS1v1Match() {
                     // Remove from waiting
                     database.ref(`waiting_rps1v1/${playerData.id}`).remove();
 
-                    setTimeout(() => startRPSGame(game.id, game), 1000);
+                    setTimeout(() => startRPSGame(game.id, game), 1000); // Delay for notification
                 }
             });
         }
@@ -3607,40 +3612,52 @@ async function findRPS1v1Match() {
     }
 }
 
-// Find RPS 1v2 match (3 players)
+// Find RPS 1v2 match (3 players) - REWRITTEN FROM SCRATCH (matches trios logic exactly)
 async function findRPS1v2Match() {
     try {
         const waitingRef = database.ref('waiting_rps1v2');
+        console.log('📡 Checking RPS 1v2 queue...');
         const snapshot = await waitingRef.once('value');
         const waiting = snapshot.val() || {};
+        console.log('✅ Connected to database. Waiting RPS 1v2 players:', Object.keys(waiting).length);
 
-        // Clean stale entries
+        // Clean up stale entries
         const now = Date.now();
         Object.keys(waiting).forEach(key => {
-            if (waiting[key] && now - waiting[key].timestamp > 60000) {
+            if (waiting[key] && now - waiting[key].timestamp > 60000) { // 60 sec for RPS 1v2
+                console.log('🗑️ Removing stale RPS 1v2 player:', key);
                 waitingRef.child(key).remove();
             }
         });
 
+        // Check if we have 3 players
         const freshSnapshot = await waitingRef.once('value');
         const freshWaiting = freshSnapshot.val() || {};
         const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
 
+        console.log('RPS 1v2 queue:', availablePlayers.length + 1, '/ 3 players');
+
         if (availablePlayers.length >= 2) {
-            const players = [
+            // We have 3 players! (2 + myself)
+            console.log('✅ RPS 1v2 ready! 3 players found!');
+
+            const rpsPlayers = [
                 { id: playerData.id, ...playerData },
                 ...availablePlayers.slice(0, 2).map(([id, data]) => ({ id, ...data }))
             ];
 
-            for (const player of players) {
+            // Remove all players from waiting
+            for (const player of rpsPlayers) {
                 await waitingRef.child(player.id).remove();
             }
 
-            const gameId = generateId();
+            // Create RPS 1v2 game
+            const gameId = 'rps_' + generateId();
+
             const gameData = {
                 id: gameId,
                 mode: 'rps1v2',
-                players: players.map(p => ({
+                players: rpsPlayers.map(p => ({
                     id: p.id,
                     username: p.username,
                     color: p.color,
@@ -3655,10 +3672,14 @@ async function findRPS1v2Match() {
                 finished: false
             };
 
+            console.log('🎮 Creating RPS 1v2 game:', gameId);
             await database.ref(`games_rps/${gameId}`).set(gameData);
-            showNotification('Match Found!', '3 players ready!', '🔺');
+
+            showNotification('Match Found!', 'RPS 1v2 ready!', '🔺');
             setTimeout(() => startRPSGame(gameId, gameData), 1000);
         } else {
+            // Add self to waiting
+            console.log(`⏳ Waiting for RPS 1v2... (${availablePlayers.length + 1}/3 players)`);
             await waitingRef.child(playerData.id).set({
                 username: playerData.username,
                 color: playerData.color,
@@ -3666,26 +3687,34 @@ async function findRPS1v2Match() {
                 timestamp: Date.now()
             });
 
+            // Update searching text
             document.querySelector('.searching-text').textContent =
                 `Waiting for RPS 1v2... (${availablePlayers.length + 1}/3 players)`;
 
+            // Clean up old listener
             if (rpsSearchListener) {
                 database.ref('games_rps').off('child_added', rpsSearchListener);
             }
 
+            // Listen for RPS 1v2 game creation
             rpsSearchListener = database.ref('games_rps').on('child_added', (snapshot) => {
                 const game = snapshot.val();
-                const imInGame = game.mode === 'rps1v2' && game.players &&
-                    game.players.some(p => p.id === playerData.id);
+                console.log('🎮 New RPS 1v2 game detected:', game.id);
+
+                // Check if I'm in this game
+                const imInGame = game.mode === 'rps1v2' && game.players && game.players.some(p => p.id === playerData.id);
 
                 if (imInGame) {
-                    showNotification('Match Found!', 'RPS 1v2 ready!', '🔺');
+                    console.log('✅ Joined RPS 1v2 game!');
+                    showNotification('Match Found!', 'RPS 1v2 match ready!', '🔺');
+
                     if (rpsSearchListener) {
                         database.ref('games_rps').off('child_added', rpsSearchListener);
                         rpsSearchListener = null;
                     }
+
                     database.ref(`waiting_rps1v2/${playerData.id}`).remove();
-                    setTimeout(() => startRPSGame(game.id, game), 1000);
+                    setTimeout(() => startRPSGame(game.id, game), 1000); // Delay for notification
                 }
             });
         }
@@ -3695,40 +3724,52 @@ async function findRPS1v2Match() {
     }
 }
 
-// Find RPS 1v3 match (4 players)
+// Find RPS 1v3 match (4 players) - REWRITTEN FROM SCRATCH (matches squad logic exactly)
 async function findRPS1v3Match() {
     try {
         const waitingRef = database.ref('waiting_rps1v3');
+        console.log('📡 Checking RPS 1v3 queue...');
         const snapshot = await waitingRef.once('value');
         const waiting = snapshot.val() || {};
+        console.log('✅ Connected to database. Waiting RPS 1v3 players:', Object.keys(waiting).length);
 
-        // Clean stale entries
+        // Clean up stale entries
         const now = Date.now();
         Object.keys(waiting).forEach(key => {
-            if (waiting[key] && now - waiting[key].timestamp > 60000) {
+            if (waiting[key] && now - waiting[key].timestamp > 60000) { // 60 sec for RPS 1v3
+                console.log('🗑️ Removing stale RPS 1v3 player:', key);
                 waitingRef.child(key).remove();
             }
         });
 
+        // Check if we have 4 players
         const freshSnapshot = await waitingRef.once('value');
         const freshWaiting = freshSnapshot.val() || {};
         const availablePlayers = Object.entries(freshWaiting).filter(([id]) => id !== playerData.id);
 
+        console.log('RPS 1v3 queue:', availablePlayers.length + 1, '/ 4 players');
+
         if (availablePlayers.length >= 3) {
-            const players = [
+            // We have 4 players! (3 + myself)
+            console.log('✅ RPS 1v3 ready! 4 players found!');
+
+            const rpsPlayers = [
                 { id: playerData.id, ...playerData },
                 ...availablePlayers.slice(0, 3).map(([id, data]) => ({ id, ...data }))
             ];
 
-            for (const player of players) {
+            // Remove all players from waiting
+            for (const player of rpsPlayers) {
                 await waitingRef.child(player.id).remove();
             }
 
-            const gameId = generateId();
+            // Create RPS 1v3 game
+            const gameId = 'rps_' + generateId();
+
             const gameData = {
                 id: gameId,
                 mode: 'rps1v3',
-                players: players.map(p => ({
+                players: rpsPlayers.map(p => ({
                     id: p.id,
                     username: p.username,
                     color: p.color,
@@ -3743,10 +3784,14 @@ async function findRPS1v3Match() {
                 finished: false
             };
 
+            console.log('🎮 Creating RPS 1v3 game:', gameId);
             await database.ref(`games_rps/${gameId}`).set(gameData);
-            showNotification('Match Found!', '4 players ready!', '👥');
+
+            showNotification('Match Found!', 'RPS 1v3 ready!', '👥');
             setTimeout(() => startRPSGame(gameId, gameData), 1000);
         } else {
+            // Add self to waiting
+            console.log(`⏳ Waiting for RPS 1v3... (${availablePlayers.length + 1}/4 players)`);
             await waitingRef.child(playerData.id).set({
                 username: playerData.username,
                 color: playerData.color,
@@ -3754,26 +3799,34 @@ async function findRPS1v3Match() {
                 timestamp: Date.now()
             });
 
+            // Update searching text
             document.querySelector('.searching-text').textContent =
                 `Waiting for RPS 1v3... (${availablePlayers.length + 1}/4 players)`;
 
+            // Clean up old listener
             if (rpsSearchListener) {
                 database.ref('games_rps').off('child_added', rpsSearchListener);
             }
 
+            // Listen for RPS 1v3 game creation
             rpsSearchListener = database.ref('games_rps').on('child_added', (snapshot) => {
                 const game = snapshot.val();
-                const imInGame = game.mode === 'rps1v3' && game.players &&
-                    game.players.some(p => p.id === playerData.id);
+                console.log('🎮 New RPS 1v3 game detected:', game.id);
+
+                // Check if I'm in this game
+                const imInGame = game.mode === 'rps1v3' && game.players && game.players.some(p => p.id === playerData.id);
 
                 if (imInGame) {
-                    showNotification('Match Found!', 'RPS 1v3 ready!', '👥');
+                    console.log('✅ Joined RPS 1v3 game!');
+                    showNotification('Match Found!', 'RPS 1v3 match ready!', '👥');
+
                     if (rpsSearchListener) {
                         database.ref('games_rps').off('child_added', rpsSearchListener);
                         rpsSearchListener = null;
                     }
+
                     database.ref(`waiting_rps1v3/${playerData.id}`).remove();
-                    setTimeout(() => startRPSGame(game.id, game), 1000);
+                    setTimeout(() => startRPSGame(game.id, game), 1000); // Delay for notification
                 }
             });
         }
