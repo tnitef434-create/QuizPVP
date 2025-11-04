@@ -3681,11 +3681,22 @@ async function playRPSMove(choice) {
 
     // Check if this is a bot game
     if (currentRPSGame.mode === 'rpsbot' || currentRPSGame.gameId.startsWith('bot_')) {
+        console.log(`👤 Player chose: ${choice}`);
+
         // Bot game - make bot choice after a short delay
         setTimeout(() => {
+            // Make bot choice INDEPENDENT of player choice
             const botChoice = botMakeChoice();
             currentRPSGame.opponentChoice = botChoice;
-            console.log(`🎮 Round ${currentRPSGame.currentRound}: You chose ${currentRPSGame.myChoice}, Bot chose ${botChoice}`);
+
+            console.log(`🎮 Round ${currentRPSGame.currentRound} - Player: ${currentRPSGame.myChoice} vs Bot: ${botChoice}`);
+
+            // Verify choices are different (at least sometimes)
+            if (currentRPSGame.myChoice === botChoice) {
+                console.log('🤝 Same choice - will be a draw');
+            } else {
+                console.log('⚔️ Different choices - someone will win!');
+            }
 
             // Show round result
             showRPSRoundResult(currentRPSGame.myChoice, currentRPSGame.opponentChoice);
@@ -3713,10 +3724,23 @@ async function playRPSMove(choice) {
     }
 }
 
-// Bot makes random choice
+// Bot makes random choice with improved randomization
 function botMakeChoice() {
     const choices = ['rock', 'paper', 'scissors'];
-    return choices[Math.floor(Math.random() * choices.length)];
+
+    // Use crypto.getRandomValues for better randomness if available
+    let randomIndex;
+    if (window.crypto && window.crypto.getRandomValues) {
+        const randomArray = new Uint32Array(1);
+        window.crypto.getRandomValues(randomArray);
+        randomIndex = randomArray[0] % 3;
+    } else {
+        randomIndex = Math.floor(Math.random() * 3);
+    }
+
+    const choice = choices[randomIndex];
+    console.log(`🤖 Bot randomly selected: ${choice} (index: ${randomIndex})`);
+    return choice;
 }
 
 // Check if round is complete
@@ -3926,19 +3950,39 @@ function showRPSResults() {
     document.getElementById('rpsFinalYourScore').textContent = currentRPSGame.myScore;
     document.getElementById('rpsFinalOpponentScore').textContent = currentRPSGame.opponentScore;
 
+    // Check if this is a bot game for different rewards
+    const isBotGame = currentRPSGame.mode === 'rpsbot' || currentRPSGame.gameId.startsWith('bot_');
+
     // Award points and XP
     let pointsEarned = 0;
     let xpEarned = 0;
 
-    if (won) {
-        pointsEarned = 100;
-        xpEarned = 50;
-    } else if (draw) {
-        pointsEarned = 50;
-        xpEarned = 25;
+    if (isBotGame) {
+        // Bot game rewards - much smaller (practice mode)
+        if (won) {
+            pointsEarned = 1;  // Just 1 point for beating bot
+            xpEarned = 5;      // Small XP reward
+        } else if (draw) {
+            pointsEarned = 0;
+            xpEarned = 2;
+        } else {
+            pointsEarned = 0;
+            xpEarned = 1;
+        }
+        console.log('🤖 Bot game rewards: +' + pointsEarned + ' points, +' + xpEarned + ' XP');
     } else {
-        pointsEarned = 20;
-        xpEarned = 20;
+        // Online game rewards - full points
+        if (won) {
+            pointsEarned = 100;
+            xpEarned = 50;
+        } else if (draw) {
+            pointsEarned = 50;
+            xpEarned = 25;
+        } else {
+            pointsEarned = 20;
+            xpEarned = 20;
+        }
+        console.log('🎮 Online game rewards: +' + pointsEarned + ' points, +' + xpEarned + ' XP');
     }
 
     playerData.points += pointsEarned;
