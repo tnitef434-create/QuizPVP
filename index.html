@@ -741,114 +741,47 @@
     <div id="shopScreen" class="screen">
         <div class="container">
             <div class="shop-header">
-                <h2>Shop</h2>
-                <div class="points-display">
-                    <span class="points-icon">★</span>
-                    <span id="shopPointsDisplay">0</span> points
+                <h2>🛒 Cosmetics Shop</h2>
+                <div class="player-stats-row">
+                    <div class="stat-item">
+                        <span class="stat-icon">★</span>
+                        <span id="shopPointsDisplay">0</span> points
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">🏆</span>
+                        <span id="shopWinsDisplay">0</span> wins
+                    </div>
                 </div>
             </div>
 
-            <div class="shop-items">
-                <!-- v1.5: Affordable Color Presets -->
-                <div class="shop-item affordable">
-                    <div class="shop-item-icon" style="background: #FF5252;"></div>
-                    <div class="shop-item-info">
-                        <h3>Red Color</h3>
-                        <p>Bold and vibrant red</p>
-                    </div>
-                    <div class="shop-item-price">100 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#FF5252', 100)">Buy</button>
-                </div>
+            <!-- Shop Tabs -->
+            <div class="shop-tabs">
+                <button class="shop-tab active" data-tab="colors">Colors</button>
+                <button class="shop-tab" data-tab="premium">Premium</button>
+                <button class="shop-tab" data-tab="unlockables">Win Unlockables</button>
+                <button class="shop-tab" data-tab="other">Other</button>
+            </div>
 
-                <div class="shop-item affordable">
-                    <div class="shop-item-icon" style="background: #2196F3;"></div>
-                    <div class="shop-item-info">
-                        <h3>Blue Color</h3>
-                        <p>Cool ocean blue</p>
-                    </div>
-                    <div class="shop-item-price">100 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#2196F3', 100)">Buy</button>
-                </div>
+            <!-- Shop Content Sections -->
+            <div id="shopColorsTab" class="shop-tab-content active">
+                <h3 class="shop-section-title">Basic Colors</h3>
+                <div class="shop-items" id="shopColorsBasic"></div>
+            </div>
 
-                <div class="shop-item affordable">
-                    <div class="shop-item-icon" style="background: #4CAF50;"></div>
-                    <div class="shop-item-info">
-                        <h3>Green Color</h3>
-                        <p>Fresh emerald green</p>
-                    </div>
-                    <div class="shop-item-price">100 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#4CAF50', 100)">Buy</button>
-                </div>
+            <div id="shopPremiumTab" class="shop-tab-content">
+                <h3 class="shop-section-title">Premium Colors</h3>
+                <div class="shop-items" id="shopColorsPremium"></div>
+            </div>
 
-                <div class="shop-item affordable">
-                    <div class="shop-item-icon" style="background: #9C27B0;"></div>
-                    <div class="shop-item-info">
-                        <h3>Purple Color</h3>
-                        <p>Royal purple</p>
-                    </div>
-                    <div class="shop-item-price">150 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#9C27B0', 150)">Buy</button>
-                </div>
+            <div id="shopUnlockablesTab" class="shop-tab-content">
+                <h3 class="shop-section-title">Win-Based Unlockables</h3>
+                <p class="shop-hint">🏆 Win games to unlock these exclusive cosmetics!</p>
+                <div class="shop-items" id="shopUnlockables"></div>
+            </div>
 
-                <div class="shop-item affordable">
-                    <div class="shop-item-icon" style="background: #E91E63;"></div>
-                    <div class="shop-item-info">
-                        <h3>Pink Color</h3>
-                        <p>Sweet bubblegum pink</p>
-                    </div>
-                    <div class="shop-item-price">150 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#E91E63', 150)">Buy</button>
-                </div>
-
-                <div class="shop-item affordable">
-                    <div class="shop-item-icon" style="background: #FF9800;"></div>
-                    <div class="shop-item-info">
-                        <h3>Orange Color</h3>
-                        <p>Warm sunset orange</p>
-                    </div>
-                    <div class="shop-item-price">150 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('#FF9800', 150)">Buy</button>
-                </div>
-
-                <div class="shop-item">
-                    <div class="shop-item-icon">✏️</div>
-                    <div class="shop-item-info">
-                        <h3>Change Username</h3>
-                        <p>Choose a new username</p>
-                    </div>
-                    <div class="shop-item-price">1,000 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="openUsernameChange()">Buy</button>
-                </div>
-
-                <div class="shop-item">
-                    <div class="shop-item-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
-                    <div class="shop-item-info">
-                        <h3>Custom Color</h3>
-                        <p>Choose any color you like</p>
-                    </div>
-                    <div class="shop-item-price">5,000 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="openColorPicker()">Buy</button>
-                </div>
-
-                <div class="shop-item special">
-                    <div class="shop-item-icon gold-icon"></div>
-                    <div class="shop-item-info">
-                        <h3>Gold Color</h3>
-                        <p>Shine like a champion</p>
-                    </div>
-                    <div class="shop-item-price">10,000 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('gold')">Buy</button>
-                </div>
-
-                <div class="shop-item legendary">
-                    <div class="shop-item-icon rainbow-icon"></div>
-                    <div class="shop-item-info">
-                        <h3>Rainbow Color</h3>
-                        <p>Animated rainbow effect</p>
-                    </div>
-                    <div class="shop-item-price">50,000 pts</div>
-                    <button class="btn btn-primary btn-small" onclick="purchaseColor('rainbow')">Buy</button>
-                </div>
+            <div id="shopOtherTab" class="shop-tab-content">
+                <h3 class="shop-section-title">Customization</h3>
+                <div class="shop-items" id="shopOther"></div>
             </div>
 
             <button id="closeShopBtn" class="btn btn-secondary" onclick="window.gameNavigation.goToMenu()">Back to Menu</button>

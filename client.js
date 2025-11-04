@@ -1827,20 +1827,32 @@ const COSMETICS = {
     'lightning': { id: 'lightning', name: '⚡ Lightning Legend', desc: 'Electric lightning aura', cost: 15000, type: 'color', value: '#FFD700', winsRequired: 50, legendary: true }
 };
 
-// Render the shop with dynamic cosmetics
+// Render the shop with dynamic cosmetics (Organized into tabs)
 function renderShop() {
-    const shopItemsContainer = document.querySelector('.shop-items');
-    if (!shopItemsContainer) return;
+    // Update stats display
+    document.getElementById('shopPointsDisplay').textContent = playerData.points.toLocaleString();
+    document.getElementById('shopWinsDisplay').textContent = (playerData.wins || 0).toString();
 
-    // Clear existing items except username and custom color (we'll re-add them)
-    shopItemsContainer.innerHTML = '';
+    // Get containers
+    const basicContainer = document.getElementById('shopColorsBasic');
+    const premiumContainer = document.getElementById('shopColorsPremium');
+    const unlockablesContainer = document.getElementById('shopUnlockables');
+    const otherContainer = document.getElementById('shopOther');
 
-    // Add cosmetic items
-    Object.values(COSMETICS).forEach(cosmetic => {
+    if (!basicContainer || !premiumContainer || !unlockablesContainer || !otherContainer) return;
+
+    // Clear all containers
+    basicContainer.innerHTML = '';
+    premiumContainer.innerHTML = '';
+    unlockablesContainer.innerHTML = '';
+    otherContainer.innerHTML = '';
+
+    // Helper function to create cosmetic HTML
+    function createCosmeticHTML(cosmetic) {
         const isOwned = (playerData.ownedCosmetics || []).includes(cosmetic.id);
         const isEquipped = playerData.equippedCosmetic === cosmetic.id;
         const hasWins = (playerData.wins || 0) >= cosmetic.winsRequired;
-        const isLocked = !hasWins;
+        const isLocked = cosmetic.winsRequired > 0 && !hasWins;
 
         let itemClass = 'shop-item';
         if (cosmetic.cost <= 150) itemClass += ' affordable';
@@ -1855,7 +1867,7 @@ function renderShop() {
             buttonAction = `alert('Win ${cosmetic.winsRequired} games to unlock this!')`;
             buttonClass = 'btn btn-secondary btn-small';
         } else if (isEquipped) {
-            buttonText = 'Equipped';
+            buttonText = '✓ Equipped';
             buttonAction = ``;
             buttonClass = 'btn btn-success btn-small';
         } else if (isOwned) {
@@ -1880,7 +1892,7 @@ function renderShop() {
             }
         }
 
-        const itemHTML = `
+        return `
             <div class="${itemClass}">
                 ${iconHTML}
                 <div class="shop-item-info">
@@ -1892,12 +1904,28 @@ function renderShop() {
                 <button class="${buttonClass}" ${buttonAction ? `onclick="${buttonAction}"` : 'disabled'}>${buttonText}</button>
             </div>
         `;
+    }
 
-        shopItemsContainer.insertAdjacentHTML('beforeend', itemHTML);
+    // Sort cosmetics into categories
+    Object.values(COSMETICS).forEach(cosmetic => {
+        const html = createCosmeticHTML(cosmetic);
+
+        // Basic colors (no wins required, cost <= 150)
+        if (cosmetic.winsRequired === 0 && cosmetic.cost <= 150) {
+            basicContainer.insertAdjacentHTML('beforeend', html);
+        }
+        // Premium colors (no wins required, expensive)
+        else if (cosmetic.winsRequired === 0 && cosmetic.cost > 150) {
+            premiumContainer.insertAdjacentHTML('beforeend', html);
+        }
+        // Win-based unlockables
+        else if (cosmetic.winsRequired > 0) {
+            unlockablesContainer.insertAdjacentHTML('beforeend', html);
+        }
     });
 
-    // Add username change option
-    shopItemsContainer.insertAdjacentHTML('beforeend', `
+    // Add username change and custom color picker to "Other" tab
+    otherContainer.innerHTML = `
         <div class="shop-item">
             <div class="shop-item-icon">✏️</div>
             <div class="shop-item-info">
@@ -1907,20 +1935,57 @@ function renderShop() {
             <div class="shop-item-price">1,000 pts</div>
             <button class="btn btn-primary btn-small" onclick="openUsernameChange()">Buy</button>
         </div>
-    `);
 
-    // Add custom color picker
-    shopItemsContainer.insertAdjacentHTML('beforeend', `
         <div class="shop-item">
             <div class="shop-item-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
             <div class="shop-item-info">
-                <h3>Custom Color</h3>
+                <h3>Custom Color Picker</h3>
                 <p>Choose any color you like</p>
             </div>
             <div class="shop-item-price">5,000 pts</div>
             <button class="btn btn-primary btn-small" onclick="openColorPicker()">Buy</button>
         </div>
-    `);
+    `;
+
+    // Setup tab switching (if not already done)
+    setupShopTabs();
+}
+
+// Setup shop tab switching
+function setupShopTabs() {
+    const tabs = document.querySelectorAll('.shop-tab');
+
+    tabs.forEach(tab => {
+        // Remove old listeners
+        tab.replaceWith(tab.cloneNode(true));
+    });
+
+    // Re-select after replacing
+    document.querySelectorAll('.shop-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const targetTab = tab.getAttribute('data-tab');
+
+            // Remove active from all tabs
+            document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.shop-tab-content').forEach(c => c.classList.remove('active'));
+
+            // Add active to clicked tab
+            tab.classList.add('active');
+
+            // Show corresponding content
+            const tabMap = {
+                'colors': 'shopColorsTab',
+                'premium': 'shopPremiumTab',
+                'unlockables': 'shopUnlockablesTab',
+                'other': 'shopOtherTab'
+            };
+
+            const contentId = tabMap[targetTab];
+            if (contentId) {
+                document.getElementById(contentId).classList.add('active');
+            }
+        });
+    });
 }
 
 // Purchase a cosmetic

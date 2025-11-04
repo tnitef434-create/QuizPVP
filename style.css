@@ -628,8 +628,93 @@ input[type="color"] {
     background: white;
     border-radius: 20px;
     padding: 20px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+.shop-header h2 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.8rem;
+}
+
+.player-stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.stat-icon {
+    font-size: 1.3rem;
+}
+
+/* Shop Tabs */
+.shop-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.shop-tab {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    padding: 12px 24px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+    color: #666;
+}
+
+.shop-tab:hover {
+    background: #f5f5f5;
+    border-color: #667eea;
+}
+
+.shop-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+}
+
+/* Shop Tab Content */
+.shop-tab-content {
+    display: none;
+}
+
+.shop-tab-content.active {
+    display: block;
+}
+
+.shop-section-title {
+    color: #333;
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eee;
+}
+
+.shop-hint {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 15px;
+    color: #856404;
+    font-weight: 600;
 }
 
 .shop-items {
@@ -656,12 +741,22 @@ input[type="color"] {
 
 .shop-item.special {
     border: 3px solid #FFD700;
+    background: linear-gradient(135deg, #fff9e6 0%, #fffaf0 100%);
 }
 
 .shop-item.legendary {
     border: 3px solid transparent;
     background: linear-gradient(white, white) padding-box,
                 linear-gradient(135deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff) border-box;
+}
+
+.shop-item.locked {
+    opacity: 0.6;
+    background: #f5f5f5;
+}
+
+.shop-item.locked:hover {
+    transform: none;
 }
 
 .shop-item.affordable {
@@ -672,6 +767,13 @@ input[type="color"] {
 .shop-item.affordable .shop-item-price {
     color: #4CAF50;
     font-weight: 700;
+}
+
+.unlock-req {
+    color: #ff6b6b;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-top: 5px;
 }
 
 .shop-item-icon {
