@@ -1807,24 +1807,58 @@ function showResults(myScore, opponentScore, won, draw) {
     });
 }
 
-// Cosmetics Database
+// Cosmetics Database - EXPANDED
 const COSMETICS = {
-    // Basic colors (always available)
-    'red': { id: 'red', name: 'Red Color', desc: 'Bold and vibrant red', cost: 100, type: 'color', value: '#FF5252', winsRequired: 0 },
-    'blue': { id: 'blue', name: 'Blue Color', desc: 'Cool ocean blue', cost: 100, type: 'color', value: '#2196F3', winsRequired: 0 },
-    'green': { id: 'green', name: 'Green Color', desc: 'Fresh emerald green', cost: 100, type: 'color', value: '#4CAF50', winsRequired: 0 },
-    'purple': { id: 'purple', name: 'Purple Color', desc: 'Royal purple', cost: 150, type: 'color', value: '#9C27B0', winsRequired: 0 },
-    'pink': { id: 'pink', name: 'Pink Color', desc: 'Sweet bubblegum pink', cost: 150, type: 'color', value: '#E91E63', winsRequired: 0 },
-    'orange': { id: 'orange', name: 'Orange Color', desc: 'Warm sunset orange', cost: 150, type: 'color', value: '#FF9800', winsRequired: 0 },
+    // Ultra cheap colors (50-75 pts)
+    'brown': { id: 'brown', name: 'Brown', desc: 'Earthy brown', cost: 50, type: 'color', value: '#795548', winsRequired: 0 },
+    'gray': { id: 'gray', name: 'Gray', desc: 'Neutral gray', cost: 50, type: 'color', value: '#9E9E9E', winsRequired: 0 },
+    'lime': { id: 'lime', name: 'Lime Green', desc: 'Bright lime', cost: 75, type: 'color', value: '#CDDC39', winsRequired: 0 },
+    'cyan': { id: 'cyan', name: 'Cyan', desc: 'Electric cyan', cost: 75, type: 'color', value: '#00BCD4', winsRequired: 0 },
 
-    // Premium colors
-    'gold': { id: 'gold', name: 'Gold Color', desc: 'Shine like a champion', cost: 10000, type: 'color', value: 'gold', winsRequired: 0, special: true },
-    'rainbow': { id: 'rainbow', name: 'Rainbow Color', desc: 'Animated rainbow effect', cost: 50000, type: 'color', value: 'rainbow', winsRequired: 0, legendary: true },
+    // Basic colors (100-150 pts)
+    'red': { id: 'red', name: 'Red', desc: 'Bold and vibrant red', cost: 100, type: 'color', value: '#FF5252', winsRequired: 0 },
+    'blue': { id: 'blue', name: 'Blue', desc: 'Cool ocean blue', cost: 100, type: 'color', value: '#2196F3', winsRequired: 0 },
+    'green': { id: 'green', name: 'Green', desc: 'Fresh emerald green', cost: 100, type: 'color', value: '#4CAF50', winsRequired: 0 },
+    'purple': { id: 'purple', name: 'Purple', desc: 'Royal purple', cost: 150, type: 'color', value: '#9C27B0', winsRequired: 0 },
+    'pink': { id: 'pink', name: 'Pink', desc: 'Sweet bubblegum pink', cost: 150, type: 'color', value: '#E91E63', winsRequired: 0 },
+    'orange': { id: 'orange', name: 'Orange', desc: 'Warm sunset orange', cost: 150, type: 'color', value: '#FF9800', winsRequired: 0 },
 
-    // Win-based unlockables
+    // Premium colors (500-1000 pts)
+    'teal': { id: 'teal', name: 'Teal', desc: 'Deep teal', cost: 500, type: 'color', value: '#009688', winsRequired: 0 },
+    'indigo': { id: 'indigo', name: 'Indigo', desc: 'Deep indigo', cost: 500, type: 'color', value: '#3F51B5', winsRequired: 0 },
+    'crimson': { id: 'crimson', name: 'Crimson', desc: 'Dark crimson red', cost: 750, type: 'color', value: '#DC143C', winsRequired: 0 },
+    'emerald': { id: 'emerald', name: 'Emerald', desc: 'Rich emerald green', cost: 750, type: 'color', value: '#50C878', winsRequired: 0 },
+    'sapphire': { id: 'sapphire', name: 'Sapphire', desc: 'Deep sapphire blue', cost: 1000, type: 'color', value: '#0F52BA', winsRequired: 0 },
+    'ruby': { id: 'ruby', name: 'Ruby', desc: 'Precious ruby red', cost: 1000, type: 'color', value: '#E0115F', winsRequired: 0 },
+
+    // Expensive colors (2000-5000 pts)
+    'neon_pink': { id: 'neon_pink', name: 'Neon Pink', desc: 'Glowing neon pink', cost: 2000, type: 'color', value: '#FF10F0', winsRequired: 0, special: true },
+    'neon_green': { id: 'neon_green', name: 'Neon Green', desc: 'Radioactive green glow', cost: 2000, type: 'color', value: '#39FF14', winsRequired: 0, special: true },
+    'electric_blue': { id: 'electric_blue', name: 'Electric Blue', desc: 'Shocking electric blue', cost: 2500, type: 'color', value: '#7DF9FF', winsRequired: 0, special: true },
+    'toxic_yellow': { id: 'toxic_yellow', name: 'Toxic Yellow', desc: 'Radioactive yellow', cost: 2500, type: 'color', value: '#DFFF00', winsRequired: 0, special: true },
+    'magenta': { id: 'magenta', name: 'Magenta', desc: 'Vibrant magenta', cost: 3000, type: 'color', value: '#FF00FF', winsRequired: 0, special: true },
+    'turquoise': { id: 'turquoise', name: 'Turquoise', desc: 'Tropical turquoise', cost: 3000, type: 'color', value: '#40E0D0', winsRequired: 0, special: true },
+
+    // Very expensive (10000+ pts)
+    'gold': { id: 'gold', name: 'Gold', desc: 'Shine like a champion', cost: 10000, type: 'color', value: '#FFD700', winsRequired: 0, special: true },
+    'silver': { id: 'silver', name: 'Silver', desc: 'Metallic silver shine', cost: 15000, type: 'color', value: '#C0C0C0', winsRequired: 0, special: true },
+    'platinum': { id: 'platinum', name: 'Platinum', desc: 'Ultra rare platinum', cost: 25000, type: 'color', value: '#E5E4E2', winsRequired: 0, legendary: true },
+    'obsidian': { id: 'obsidian', name: 'Obsidian', desc: 'Dark volcanic glass', cost: 30000, type: 'color', value: '#0B1215', winsRequired: 0, legendary: true },
+    'rainbow': { id: 'rainbow', name: 'Rainbow', desc: 'Animated rainbow effect', cost: 50000, type: 'color', value: 'rainbow', winsRequired: 0, legendary: true },
+
+    // Ultra expensive (75000-100000+ pts)
+    'cosmic': { id: 'cosmic', name: '🌌 Cosmic', desc: 'Stars and galaxies', cost: 75000, type: 'color', value: '#4B0082', winsRequired: 0, legendary: true },
+    'aurora': { id: 'aurora', name: '🌠 Aurora', desc: 'Northern lights effect', cost: 100000, type: 'color', value: '#00FF7F', winsRequired: 0, legendary: true },
+    'void': { id: 'void', name: '⚫ Void', desc: 'Darkness incarnate', cost: 150000, type: 'color', value: '#000000', winsRequired: 0, legendary: true },
+
+    // Win-based unlockables (require wins + points)
+    'bronze': { id: 'bronze', name: '🥉 Bronze Medal', desc: 'Bronze achievement', cost: 1000, type: 'color', value: '#CD7F32', winsRequired: 5, special: true },
     'diamond': { id: 'diamond', name: '💎 Diamond Aura', desc: 'Sparkling diamond effect', cost: 5000, type: 'color', value: '#B9F2FF', winsRequired: 10, special: true },
     'fire': { id: 'fire', name: '🔥 Fire Champion', desc: 'Blazing fire effect', cost: 10000, type: 'color', value: '#FF4500', winsRequired: 25, special: true },
-    'lightning': { id: 'lightning', name: '⚡ Lightning Legend', desc: 'Electric lightning aura', cost: 15000, type: 'color', value: '#FFD700', winsRequired: 50, legendary: true }
+    'ice': { id: 'ice', name: '❄️ Ice Master', desc: 'Frozen ice effect', cost: 15000, type: 'color', value: '#B0E0E6', winsRequired: 40, special: true },
+    'lightning': { id: 'lightning', name: '⚡ Lightning Legend', desc: 'Electric lightning aura', cost: 20000, type: 'color', value: '#FFFF00', winsRequired: 50, legendary: true },
+    'shadow': { id: 'shadow', name: '👤 Shadow Master', desc: 'Master of shadows', cost: 30000, type: 'color', value: '#2F4F4F', winsRequired: 75, legendary: true },
+    'celestial': { id: 'celestial', name: '✨ Celestial', desc: 'Blessed by the stars', cost: 50000, type: 'color', value: '#E6E6FA', winsRequired: 100, legendary: true }
 };
 
 // Render the shop with dynamic cosmetics (Organized into tabs)
@@ -1921,27 +1955,34 @@ function renderShop() {
     const cosmeticsList = Object.values(COSMETICS);
     console.log(`Found ${cosmeticsList.length} cosmetics`);
 
+    let basicCount = 0;
+    let premiumCount = 0;
+    let unlockableCount = 0;
+
     cosmeticsList.forEach(cosmetic => {
         const html = createCosmeticHTML(cosmetic);
 
-        // Basic colors (no wins required, cost <= 150)
-        if (cosmetic.winsRequired === 0 && cosmetic.cost <= 150) {
+        // Win-based unlockables (check first, regardless of cost)
+        if (cosmetic.winsRequired > 0) {
+            unlockablesContainer.insertAdjacentHTML('beforeend', html);
+            unlockableCount++;
+            console.log('Added unlockable:', cosmetic.name);
+        }
+        // Basic colors (no wins required, cost <= 500)
+        else if (cosmetic.winsRequired === 0 && cosmetic.cost <= 500) {
             basicContainer.insertAdjacentHTML('beforeend', html);
+            basicCount++;
             console.log('Added basic color:', cosmetic.name);
         }
-        // Premium colors (no wins required, expensive)
-        else if (cosmetic.winsRequired === 0 && cosmetic.cost > 150) {
+        // Premium colors (no wins required, expensive > 500)
+        else if (cosmetic.winsRequired === 0 && cosmetic.cost > 500) {
             premiumContainer.insertAdjacentHTML('beforeend', html);
+            premiumCount++;
             console.log('Added premium color:', cosmetic.name);
-        }
-        // Win-based unlockables
-        else if (cosmetic.winsRequired > 0) {
-            unlockablesContainer.insertAdjacentHTML('beforeend', html);
-            console.log('Added unlockable:', cosmetic.name);
         }
     });
 
-    console.log('✅ Shop rendering complete');
+    console.log(`✅ Shop rendering complete: ${basicCount} basic, ${premiumCount} premium, ${unlockableCount} unlockables`);
 
     // Add username change and custom color picker to "Other" tab
     otherContainer.innerHTML = `
@@ -4634,24 +4675,33 @@ async function startWarMatchmaking() {
     }
 }
 
-// Find War 1v1 match - COMPLETELY REWRITTEN (matches math game pattern)
+// Find War 1v1 match - FIXED with better error handling
 async function findWar1v1Match() {
+    console.log('🃏 findWar1v1Match called');
+    console.log('Current mode:', currentMode);
+    console.log('Player ID:', playerData.id);
+    console.log('Firebase ready:', isFirebaseReady);
+
     try {
         const waitingRef = database.ref('waiting_war1v1');
         console.log('📡 Checking War 1v1 queue...');
 
         const snapshot = await waitingRef.once('value');
         const waiting = snapshot.val() || {};
-        console.log('✅ Connected. Waiting War players:', Object.keys(waiting).length);
+        console.log('✅ Connected. Waiting War players:', Object.keys(waiting).length, waiting);
 
         // Remove stale entries (older than 30 seconds)
         const now = Date.now();
-        Object.keys(waiting).forEach(key => {
-            if (waiting[key] && now - waiting[key].timestamp > 30000) {
-                console.log('🗑️ Removing stale War player:', key);
-                waitingRef.child(key).remove();
+        const staleKeys = Object.keys(waiting).filter(key =>
+            waiting[key] && now - waiting[key].timestamp > 30000
+        );
+
+        if (staleKeys.length > 0) {
+            console.log('🗑️ Removing', staleKeys.length, 'stale War players');
+            for (const key of staleKeys) {
+                await waitingRef.child(key).remove();
             }
-        });
+        }
 
         // Check for available opponent
         const freshSnapshot = await waitingRef.once('value');
@@ -4668,6 +4718,7 @@ async function findWar1v1Match() {
             // Remove both from waiting
             await waitingRef.child(opponentId).remove();
             await waitingRef.child(playerData.id).remove();
+            console.log('Removed both players from queue');
 
             // Create game
             const gameId = 'war_' + generateId();
@@ -4703,11 +4754,15 @@ async function findWar1v1Match() {
             };
 
             console.log('🎮 Creating War game:', gameId);
+            console.log('Game data:', gameData);
+
             await database.ref(`games_war/${gameId}`).set(gameData);
+            console.log('✅ War game created successfully in database');
 
             showNotification('Match Found!', 'Starting War battle!', '🃏');
 
             // Start game for player1 (creator)
+            console.log('Starting game for player 1...');
             setTimeout(() => startWarGame(gameId, gameData), 1000);
         } else {
             // Add self to waiting
@@ -4722,34 +4777,58 @@ async function findWar1v1Match() {
 
             // Clean up old listener if exists
             if (warSearchListener) {
+                console.log('Cleaning up old War listener');
                 database.ref('games_war').off('child_added', warSearchListener);
+                warSearchListener = null;
             }
 
             // Listen for game creation (BOTH players use this!)
+            console.log('Setting up War game listener for player 2...');
             warSearchListener = database.ref('games_war').on('child_added', (snapshot) => {
                 const game = snapshot.val();
-                console.log('🎮 New War game detected:', game.id);
+                console.log('🎮 New War game detected:', game ? game.id : 'null game');
+                console.log('Game data:', game);
+
+                if (!game) {
+                    console.log('⚠️ Game data is null');
+                    return;
+                }
+
+                console.log('Checking if this is my game...');
+                console.log('Game mode:', game.mode);
+                console.log('Player2 exists:', !!game.player2);
+                console.log('Player2 ID:', game.player2 ? game.player2.id : 'null');
+                console.log('My ID:', playerData.id);
+                console.log('Match:', game.player2 && game.player2.id === playerData.id);
 
                 // Check if I'm player2 in this game
                 if (game && game.mode === 'war1v1' && game.player2 && game.player2.id === playerData.id) {
                     // Found my game!
-                    console.log('✅ War matched! Starting game...');
+                    console.log('✅✅✅ War matched! This is MY game! Starting...');
                     showNotification('Match Found!', 'War opponent found!', '🃏');
 
                     if (warSearchListener) {
+                        console.log('Cleaning up War listener after match');
                         database.ref('games_war').off('child_added', warSearchListener);
                         warSearchListener = null;
                     }
 
                     // Remove from waiting
+                    console.log('Removing player 2 from waiting queue');
                     database.ref(`waiting_war1v1/${playerData.id}`).remove();
 
+                    console.log('Starting game for player 2...');
                     setTimeout(() => startWarGame(game.id, game), 1000);
+                } else {
+                    console.log('Not my game, skipping...');
                 }
             });
+
+            console.log('✅ War listener set up successfully');
         }
     } catch (error) {
         console.error('❌ War matchmaking error:', error);
+        console.error('Error stack:', error.stack);
         handleMatchmakingError(error);
     }
 }
