@@ -1829,9 +1829,14 @@ const COSMETICS = {
 
 // Render the shop with dynamic cosmetics (Organized into tabs)
 function renderShop() {
+    console.log('🛒 Rendering shop...');
+
     // Update stats display
-    document.getElementById('shopPointsDisplay').textContent = playerData.points.toLocaleString();
-    document.getElementById('shopWinsDisplay').textContent = (playerData.wins || 0).toString();
+    const pointsEl = document.getElementById('shopPointsDisplay');
+    const winsEl = document.getElementById('shopWinsDisplay');
+
+    if (pointsEl) pointsEl.textContent = playerData.points.toLocaleString();
+    if (winsEl) winsEl.textContent = (playerData.wins || 0).toString();
 
     // Get containers
     const basicContainer = document.getElementById('shopColorsBasic');
@@ -1839,7 +1844,12 @@ function renderShop() {
     const unlockablesContainer = document.getElementById('shopUnlockables');
     const otherContainer = document.getElementById('shopOther');
 
-    if (!basicContainer || !premiumContainer || !unlockablesContainer || !otherContainer) return;
+    console.log('Shop containers:', { basicContainer, premiumContainer, unlockablesContainer, otherContainer });
+
+    if (!basicContainer || !premiumContainer || !unlockablesContainer || !otherContainer) {
+        console.error('❌ Shop containers not found!');
+        return;
+    }
 
     // Clear all containers
     basicContainer.innerHTML = '';
@@ -1907,22 +1917,31 @@ function renderShop() {
     }
 
     // Sort cosmetics into categories
-    Object.values(COSMETICS).forEach(cosmetic => {
+    console.log('COSMETICS object:', COSMETICS);
+    const cosmeticsList = Object.values(COSMETICS);
+    console.log(`Found ${cosmeticsList.length} cosmetics`);
+
+    cosmeticsList.forEach(cosmetic => {
         const html = createCosmeticHTML(cosmetic);
 
         // Basic colors (no wins required, cost <= 150)
         if (cosmetic.winsRequired === 0 && cosmetic.cost <= 150) {
             basicContainer.insertAdjacentHTML('beforeend', html);
+            console.log('Added basic color:', cosmetic.name);
         }
         // Premium colors (no wins required, expensive)
         else if (cosmetic.winsRequired === 0 && cosmetic.cost > 150) {
             premiumContainer.insertAdjacentHTML('beforeend', html);
+            console.log('Added premium color:', cosmetic.name);
         }
         // Win-based unlockables
         else if (cosmetic.winsRequired > 0) {
             unlockablesContainer.insertAdjacentHTML('beforeend', html);
+            console.log('Added unlockable:', cosmetic.name);
         }
     });
+
+    console.log('✅ Shop rendering complete');
 
     // Add username change and custom color picker to "Other" tab
     otherContainer.innerHTML = `
@@ -1952,25 +1971,30 @@ function renderShop() {
 }
 
 // Setup shop tab switching
+let shopTabsInitialized = false;
+
 function setupShopTabs() {
+    if (shopTabsInitialized) return; // Only initialize once
+
+    console.log('📑 Setting up shop tabs...');
     const tabs = document.querySelectorAll('.shop-tab');
 
-    tabs.forEach(tab => {
-        // Remove old listeners
-        tab.replaceWith(tab.cloneNode(true));
-    });
+    if (tabs.length === 0) {
+        console.warn('⚠️ No shop tabs found');
+        return;
+    }
 
-    // Re-select after replacing
-    document.querySelectorAll('.shop-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const targetTab = tab.getAttribute('data-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            console.log('Tab clicked:', targetTab);
 
             // Remove active from all tabs
             document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.shop-tab-content').forEach(c => c.classList.remove('active'));
 
             // Add active to clicked tab
-            tab.classList.add('active');
+            this.classList.add('active');
 
             // Show corresponding content
             const tabMap = {
@@ -1982,10 +2006,17 @@ function setupShopTabs() {
 
             const contentId = tabMap[targetTab];
             if (contentId) {
-                document.getElementById(contentId).classList.add('active');
+                const contentEl = document.getElementById(contentId);
+                if (contentEl) {
+                    contentEl.classList.add('active');
+                    console.log('✅ Showed tab:', contentId);
+                }
             }
         });
     });
+
+    shopTabsInitialized = true;
+    console.log('✅ Shop tabs initialized');
 }
 
 // Purchase a cosmetic
