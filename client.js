@@ -70,6 +70,16 @@ window.gameNavigation = {
             if (targetScreen) {
                 targetScreen.classList.add('active');
                 console.log(`✅ Navigation: Now showing ${screenId}`);
+
+                // Render shop when opening shop screen
+                if (screenId === 'shopScreen') {
+                    if (typeof renderShop === 'function') {
+                        renderShop();
+                    } else {
+                        console.error('❌ renderShop function not found!');
+                    }
+                }
+
                 return true;
             } else {
                 console.error(`❌ Navigation: Screen ${screenId} not found`);
@@ -1850,6 +1860,16 @@ const COSMETICS = {
     'cosmic': { id: 'cosmic', name: '🌌 Cosmic', desc: 'Stars and galaxies', cost: 75000, type: 'color', value: '#4B0082', winsRequired: 0, legendary: true },
     'aurora': { id: 'aurora', name: '🌠 Aurora', desc: 'Northern lights effect', cost: 100000, type: 'color', value: '#00FF7F', winsRequired: 0, legendary: true },
     'void': { id: 'void', name: '⚫ Void', desc: 'Darkness incarnate', cost: 150000, type: 'color', value: '#000000', winsRequired: 0, legendary: true },
+
+    // More premium colors (500-1000 pts)
+    'lavender': { id: 'lavender', name: 'Lavender', desc: 'Soft lavender purple', cost: 600, type: 'color', value: '#B57EDC', winsRequired: 0 },
+    'peach': { id: 'peach', name: 'Peach', desc: 'Sweet peach color', cost: 650, type: 'color', value: '#FFDAB9', winsRequired: 0 },
+    'mint': { id: 'mint', name: 'Mint', desc: 'Fresh mint green', cost: 700, type: 'color', value: '#98FF98', winsRequired: 0 },
+    'coral': { id: 'coral', name: 'Coral', desc: 'Ocean coral pink', cost: 800, type: 'color', value: '#FF7F50', winsRequired: 0 },
+    'violet': { id: 'violet', name: 'Violet', desc: 'Deep violet purple', cost: 850, type: 'color', value: '#8F00FF', winsRequired: 0 },
+    'maroon': { id: 'maroon', name: 'Maroon', desc: 'Rich maroon red', cost: 900, type: 'color', value: '#800000', winsRequired: 0 },
+    'navy': { id: 'navy', name: 'Navy', desc: 'Deep navy blue', cost: 950, type: 'color', value: '#000080', winsRequired: 0 },
+    'rose': { id: 'rose', name: 'Rose', desc: 'Beautiful rose pink', cost: 1000, type: 'color', value: '#FF007F', winsRequired: 0 },
 
     // Win-based unlockables (require wins + points)
     'bronze': { id: 'bronze', name: '🥉 Bronze Medal', desc: 'Bronze achievement', cost: 1000, type: 'color', value: '#CD7F32', winsRequired: 5, special: true },
