@@ -2826,8 +2826,9 @@ async function leaveChat() {
     // Destroy current chat completely
     await destroyCurrentChat();
 
-    // Always return to menu
-    showScreen('menuScreen');
+    // Return to social screen with friends list
+    showScreen('socialScreen');
+    loadFriendsList();
 }
 
 // Handle partner left
