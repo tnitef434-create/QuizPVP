@@ -3113,6 +3113,13 @@ async function openFriendChat(friendId) {
             const statusEl = document.getElementById('friendChatStatus');
             statusEl.textContent = isOnline ? 'Online' : 'Offline';
             statusEl.className = isOnline ? 'chat-status' : 'chat-status offline';
+
+            const inviteBtn = document.getElementById('inviteFriendToGameBtn');
+            if (inviteBtn) {
+                inviteBtn.disabled = !isOnline;
+                inviteBtn.style.opacity = isOnline ? '' : '0.5';
+                inviteBtn.style.cursor = isOnline ? '' : 'not-allowed';
+            }
         });
 
         // Clear previous messages
@@ -5698,11 +5705,19 @@ function setupEventListeners() {
     }
 
     safeAddListener('leaveFriendChatBtn', 'click', () => {
-        showScreen('friendsScreen');
+        showScreen('socialScreen');
+        document.getElementById('friendsTabBtn')?.classList.add('active');
+        document.getElementById('chatTabBtn')?.classList.remove('active');
+        const friendsTab = document.getElementById('friendsTabContent');
+        const chatTab = document.getElementById('chatTabContent');
+        if (friendsTab) friendsTab.style.display = 'block';
+        if (chatTab) chatTab.style.display = 'none';
     }, 'Leave Friend Chat');
 
     safeAddListener('inviteFriendToGameBtn', 'click', () => {
-        inviteFriendToGame();
+        if (currentChatSession.partnerId) {
+            inviteFriendTo1v1(currentChatSession.partnerId, currentChatSession.partnerUsername);
+        }
     }, 'Invite Friend to Game');
 
     // === REFRESH BUTTON ===
