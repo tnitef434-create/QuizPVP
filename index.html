@@ -6,6 +6,7 @@
     <title>QuizPVP - Battle Arena</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
     <link rel="stylesheet" href="style.css">
+    <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
 </head>
 <body>
     <div class="background-pattern"></div>
@@ -505,8 +506,8 @@
 
             <div class="social-tabs">
                 <button id="chatTabBtn" class="social-tab active">
-                    <span class="tab-icon">💬</span>
-                    <span class="tab-title">Random Chat</span>
+                    <span class="tab-icon">🤖</span>
+                    <span class="tab-title">AI Chat</span>
                 </button>
                 <button id="friendsTabBtn" class="social-tab">
                     <span class="tab-icon">👥</span>
@@ -515,12 +516,37 @@
                 </button>
             </div>
 
-            <!-- Chat Tab Content -->
+            <!-- AI Chat Tab Content -->
             <div id="chatTabContent" class="social-tab-content">
-                <div class="social-description">
-                    <p>Chat with random players from around the world!</p>
+                <div class="ai-chat-panel">
+                    <div class="ai-chat-top-bar">
+                        <div class="ai-chat-name-area">
+                            <div class="ai-bot-avatar">🤖</div>
+                            <div class="ai-bot-info">
+                                <div class="ai-bot-name">AI Assistant</div>
+                                <div id="aiChatStatus" class="ai-bot-status">● Ready</div>
+                            </div>
+                        </div>
+                        <div class="ai-msgs-badge">
+                            <span id="aiMsgsLeft">5</span>/5 today
+                        </div>
+                    </div>
+
+                    <div id="aiMessagesList" class="ai-messages-list">
+                        <div class="chat-message theirs">
+                            <div class="message-text">👋 Hi! I'm your AI assistant. How can I help you today?</div>
+                        </div>
+                    </div>
+
+                    <div id="aiLimitBar" class="ai-limit-bar" style="display:none">
+                        🚫 Daily limit reached! Come back tomorrow.
+                    </div>
+
+                    <div class="ai-input-area" id="aiInputArea">
+                        <input type="text" id="aiMsgInput" placeholder="Type a message..." maxlength="500" autocomplete="off">
+                        <button id="aiSendBtn" class="chat-send-btn">Send</button>
+                    </div>
                 </div>
-                <button id="startChatBtn" class="btn btn-primary btn-large">Start Chat</button>
             </div>
 
             <!-- Friends Tab Content -->
