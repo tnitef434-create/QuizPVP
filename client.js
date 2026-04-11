@@ -5850,4 +5850,34 @@ function setupEventListeners() {
     }, 'War Back to Menu');
 
     console.log('✅ All event listeners attached successfully!');
+
+    // === AI CHAT WIDGET ===
+    console.log('💬 Setting up AI Chat Widget...');
+
+    const aiChatToggleBtn = document.getElementById('aiChatToggleBtn');
+    const aiChatPopup = document.getElementById('aiChatPopup');
+    const closeAiChat = document.getElementById('closeAiChat');
+
+    if (aiChatToggleBtn) {
+        aiChatToggleBtn.addEventListener('click', () => {
+            aiChatPopup.classList.toggle('active');
+        });
+    }
+
+    if (closeAiChat) {
+        closeAiChat.addEventListener('click', () => {
+            aiChatPopup.classList.remove('active');
+        });
+    }
+
+    // Close popup when clicking outside
+    document.addEventListener('click', (e) => {
+        if (aiChatPopup && !aiChatPopup.contains(e.target) && !aiChatToggleBtn.contains(e.target)) {
+            if (aiChatPopup.classList.contains('active')) {
+                aiChatPopup.classList.remove('active');
+            }
+        }
+    });
+
+    console.log('✅ AI Chat Widget initialized!');
 }
