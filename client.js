@@ -5711,7 +5711,9 @@ function setupEventListeners() {
         loadFriendRequests();
     }, 'Friends Tab');
 
-    // AI chat listeners are initialized via initAIChat() when social screen opens
+    safeAddListener('startChatBtn', 'click', () => {
+        findChatPartner();
+    }, 'Start Chat button');
 
     // === USERNAME & JOIN ===
     console.log('👤 Setting up Username buttons...');
@@ -5860,20 +5862,39 @@ function setupEventListeners() {
     safeAddListener('friendsListTab', 'click', () => {
         document.getElementById('friendsListTab')?.classList.add('active');
         document.getElementById('friendRequestsTab')?.classList.remove('active');
+        document.getElementById('aiChatTab')?.classList.remove('active');
         const listContent = document.getElementById('friendsListContent');
         const requestsContent = document.getElementById('friendRequestsContent');
+        const aiContent = document.getElementById('aiChatContent');
         if (listContent) listContent.style.display = 'block';
         if (requestsContent) requestsContent.style.display = 'none';
+        if (aiContent) aiContent.style.display = 'none';
     }, 'Friends List Tab');
 
     safeAddListener('friendRequestsTab', 'click', () => {
         document.getElementById('friendRequestsTab')?.classList.add('active');
         document.getElementById('friendsListTab')?.classList.remove('active');
+        document.getElementById('aiChatTab')?.classList.remove('active');
         const requestsContent = document.getElementById('friendRequestsContent');
         const listContent = document.getElementById('friendsListContent');
+        const aiContent = document.getElementById('aiChatContent');
         if (requestsContent) requestsContent.style.display = 'block';
         if (listContent) listContent.style.display = 'none';
+        if (aiContent) aiContent.style.display = 'none';
     }, 'Friend Requests Tab');
+
+    safeAddListener('aiChatTab', 'click', () => {
+        document.getElementById('aiChatTab')?.classList.add('active');
+        document.getElementById('friendsListTab')?.classList.remove('active');
+        document.getElementById('friendRequestsTab')?.classList.remove('active');
+        const aiContent = document.getElementById('aiChatContent');
+        const listContent = document.getElementById('friendsListContent');
+        const requestsContent = document.getElementById('friendRequestsContent');
+        if (aiContent) aiContent.style.display = 'block';
+        if (listContent) listContent.style.display = 'none';
+        if (requestsContent) requestsContent.style.display = 'none';
+        initAIChat();
+    }, 'AI Chat Tab');
 
     safeAddListener('sendFriendMessageBtn', 'click', () => {
         sendFriendMessage();
