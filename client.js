@@ -51,6 +51,191 @@ try {
     isFirebaseReady = false;
 }
 
+// ===== AI CHAT (ElevenLabs) =====
+const AI_DAILY_LIMIT = 5;
+const ELEVEN_AGENT_ID = 'agent_0901knykkca9f8qstcr1pk6p2ywx';
+let aiWS = null;
+let aiConnecting = false;
+let aiPendingText = null;
+
+function getAIUsage() {
+    try {
+        const stored = JSON.parse(localStorage.getItem('aiChatUsage') || 'null');
+        const today = new Date().toDateString();
+        if (stored && stored.date === today) return stored;
+    } catch(e) {}
+    return { date: new Date().toDateString(), count: 0 };
+}
+
+function saveAIUsage(usage) {
+    localStorage.setItem('aiChatUsage', JSON.stringify(usage));
+}
+
+function getAIMsgsRemaining() {
+    return Math.max(0, AI_DAILY_LIMIT - getAIUsage().count);
+}
+
+function updateAIChatUI() {
+    const remaining = getAIMsgsRemaining();
+    const msgsLeft = document.getElementById('aiMsgsLeft');
+    const limitBar = document.getElementById('aiLimitBar');
+    const inputArea = document.getElementById('aiInputArea');
+    const sendBtn = document.getElementById('aiSendBtn');
+    const input = document.getElementById('aiMsgInput');
+
+    if (msgsLeft) msgsLeft.textContent = remaining;
+
+    if (remaining <= 0) {
+        if (limitBar) limitBar.style.display = 'block';
+        if (inputArea) inputArea.style.opacity = '0.5';
+        if (sendBtn) sendBtn.disabled = true;
+        if (input) { input.disabled = true; input.placeholder = 'Daily limit reached'; }
+    } else {
+        if (limitBar) limitBar.style.display = 'none';
+        if (inputArea) inputArea.style.opacity = '1';
+        if (sendBtn) sendBtn.disabled = false;
+        if (input) { input.disabled = false; input.placeholder = 'Type a message...'; }
+    }
+}
+
+function setAIChatStatus(text) {
+    const el = document.getElementById('aiChatStatus');
+    if (el) el.textContent = text;
+}
+
+function appendAIMessage(text, isUser) {
+    const list = document.getElementById('aiMessagesList');
+    if (!list) return;
+    const msg = document.createElement('div');
+    msg.className = `chat-message ${isUser ? 'mine' : 'theirs'}`;
+    const bubble = document.createElement('div');
+    bubble.className = 'message-text';
+    bubble.textContent = text;
+    msg.appendChild(bubble);
+    list.appendChild(msg);
+    list.scrollTop = list.scrollHeight;
+}
+
+function handleAIWSMessage(event) {
+    try {
+        const data = JSON.parse(event.data);
+        switch (data.type) {
+            case 'agent_response': {
+                const text = data.agent_response_event && data.agent_response_event.agent_response;
+                if (text) {
+                    appendAIMessage(text, false);
+                    setAIChatStatus('● Ready');
+                }
+                break;
+            }
+            case 'ping':
+                if (aiWS && aiWS.readyState === WebSocket.OPEN) {
+                    aiWS.send(JSON.stringify({ type: 'pong', event_id: data.ping_event.event_id }));
+                }
+                break;
+            case 'conversation_initiation_metadata':
+                setAIChatStatus('● Connected');
+                if (aiPendingText) {
+                    const txt = aiPendingText;
+                    aiPendingText = null;
+                    sendTextToAIAgent(txt);
+                }
+                break;
+        }
+    } catch(e) {
+        console.warn('AI WS parse error:', e);
+    }
+}
+
+function sendTextToAIAgent(text) {
+    if (!aiWS || aiWS.readyState !== WebSocket.OPEN) return;
+    aiWS.send(JSON.stringify({ type: 'user_message', text: text }));
+    setAIChatStatus('● Thinking...');
+}
+
+function connectAIAndSend(text) {
+    if (aiWS && aiWS.readyState === WebSocket.OPEN) {
+        sendTextToAIAgent(text);
+        return;
+    }
+    if (aiConnecting) {
+        aiPendingText = text;
+        return;
+    }
+    aiConnecting = true;
+    aiPendingText = text;
+    setAIChatStatus('● Connecting...');
+
+    const wsUrl = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${ELEVEN_AGENT_ID}`;
+    try {
+        aiWS = new WebSocket(wsUrl);
+    } catch(e) {
+        aiConnecting = false;
+        aiPendingText = null;
+        setAIChatStatus('● Error');
+        appendAIMessage('Could not connect. Please try again.', false);
+        return;
+    }
+
+    aiWS.onopen = function() {
+        aiConnecting = false;
+        aiWS.send(JSON.stringify({ type: 'conversation_initiation_client_data' }));
+    };
+    aiWS.onmessage = handleAIWSMessage;
+    aiWS.onclose = function() {
+        aiWS = null;
+        aiConnecting = false;
+        setAIChatStatus('● Ready');
+    };
+    aiWS.onerror = function() {
+        aiWS = null;
+        aiConnecting = false;
+        aiPendingText = null;
+        setAIChatStatus('● Error — try again');
+        appendAIMessage('Connection failed. Please check your internet and try again.', false);
+    };
+}
+
+function sendAIMessage() {
+    const input = document.getElementById('aiMsgInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (getAIMsgsRemaining() <= 0) {
+        updateAIChatUI();
+        return;
+    }
+
+    appendAIMessage(text, true);
+    input.value = '';
+
+    const usage = getAIUsage();
+    usage.count++;
+    saveAIUsage(usage);
+    updateAIChatUI();
+
+    connectAIAndSend(text);
+}
+
+function initAIChat() {
+    updateAIChatUI();
+
+    const sendBtn = document.getElementById('aiSendBtn');
+    const input = document.getElementById('aiMsgInput');
+
+    if (sendBtn && !sendBtn._aiListenerAttached) {
+        sendBtn.addEventListener('click', sendAIMessage);
+        sendBtn._aiListenerAttached = true;
+    }
+    if (input && !input._aiListenerAttached) {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendAIMessage();
+        });
+        input._aiListenerAttached = true;
+    }
+}
+
 // ===== GLOBAL NAVIGATION SYSTEM =====
 // This navigation system uses direct DOM manipulation and is guaranteed to work
 window.gameNavigation = {
@@ -103,6 +288,7 @@ window.gameNavigation = {
         // Load friends data if functions exist
         if (typeof loadFriendsList === 'function') loadFriendsList();
         if (typeof loadFriendRequests === 'function') loadFriendRequests();
+        if (typeof initAIChat === 'function') initAIChat();
     },
 
     goToSettings: function() {
@@ -2319,15 +2505,15 @@ function cancelSearch() {
 
     // v1.5: Smart navigation based on what was being searched for
     if (currentSearchType === 'chat') {
-        console.log('📱 Returning to Social (Chat tab)');
+        console.log('📱 Returning to Social (AI Chat tab)');
         showScreen('socialScreen');
-        // Make sure chat tab is active
         document.getElementById('chatTabBtn')?.classList.add('active');
         document.getElementById('friendsTabBtn')?.classList.remove('active');
         const chatTab = document.getElementById('chatTabContent');
         const friendsTab = document.getElementById('friendsTabContent');
         if (chatTab) chatTab.style.display = 'block';
         if (friendsTab) friendsTab.style.display = 'none';
+        initAIChat();
     } else if (currentMode && (currentMode.startsWith('rps'))) {
         console.log('✊ Returning to RPS Mode selection');
         showScreen('rpsModeScreen');
@@ -5424,6 +5610,7 @@ function setupEventListeners() {
         showScreen('socialScreen');
         loadFriendsList();
         loadFriendRequests();
+        initAIChat();
     }, 'Social button');
 
     safeAddListener('settingsHubBtn', 'click', () => {
@@ -5675,20 +5862,39 @@ function setupEventListeners() {
     safeAddListener('friendsListTab', 'click', () => {
         document.getElementById('friendsListTab')?.classList.add('active');
         document.getElementById('friendRequestsTab')?.classList.remove('active');
+        document.getElementById('aiChatTab')?.classList.remove('active');
         const listContent = document.getElementById('friendsListContent');
         const requestsContent = document.getElementById('friendRequestsContent');
+        const aiContent = document.getElementById('aiChatContent');
         if (listContent) listContent.style.display = 'block';
         if (requestsContent) requestsContent.style.display = 'none';
+        if (aiContent) aiContent.style.display = 'none';
     }, 'Friends List Tab');
 
     safeAddListener('friendRequestsTab', 'click', () => {
         document.getElementById('friendRequestsTab')?.classList.add('active');
         document.getElementById('friendsListTab')?.classList.remove('active');
+        document.getElementById('aiChatTab')?.classList.remove('active');
         const requestsContent = document.getElementById('friendRequestsContent');
         const listContent = document.getElementById('friendsListContent');
+        const aiContent = document.getElementById('aiChatContent');
         if (requestsContent) requestsContent.style.display = 'block';
         if (listContent) listContent.style.display = 'none';
+        if (aiContent) aiContent.style.display = 'none';
     }, 'Friend Requests Tab');
+
+    safeAddListener('aiChatTab', 'click', () => {
+        document.getElementById('aiChatTab')?.classList.add('active');
+        document.getElementById('friendsListTab')?.classList.remove('active');
+        document.getElementById('friendRequestsTab')?.classList.remove('active');
+        const aiContent = document.getElementById('aiChatContent');
+        const listContent = document.getElementById('friendsListContent');
+        const requestsContent = document.getElementById('friendRequestsContent');
+        if (aiContent) aiContent.style.display = 'block';
+        if (listContent) listContent.style.display = 'none';
+        if (requestsContent) requestsContent.style.display = 'none';
+        initAIChat();
+    }, 'AI Chat Tab');
 
     safeAddListener('sendFriendMessageBtn', 'click', () => {
         sendFriendMessage();

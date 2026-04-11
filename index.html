@@ -528,6 +528,7 @@
                 <div class="friends-tabs-inner">
                     <button id="friendsListTab" class="friends-tab active">Friend List</button>
                     <button id="friendRequestsTab" class="friends-tab">Requests <span id="requestsCount" class="badge">0</span></button>
+                    <button id="aiChatTab" class="friends-tab">AI Chat</button>
                 </div>
 
                 <div id="friendsListContent" class="friends-content">
@@ -539,6 +540,39 @@
                 <div id="friendRequestsContent" class="friends-content" style="display: none;">
                     <div id="friendRequestsList" class="friends-list">
                         <div class="empty-state">No friend requests</div>
+                    </div>
+                </div>
+
+                <!-- AI Chat Content -->
+                <div id="aiChatContent" class="friends-content" style="display: none;">
+                    <div class="ai-chat-panel">
+                        <div class="ai-chat-top-bar">
+                            <div class="ai-chat-name-area">
+                                <div class="ai-bot-avatar">🤖</div>
+                                <div class="ai-bot-info">
+                                    <div class="ai-bot-name">AI Assistant</div>
+                                    <div id="aiChatStatus" class="ai-bot-status">● Ready</div>
+                                </div>
+                            </div>
+                            <div class="ai-msgs-badge">
+                                <span id="aiMsgsLeft">5</span>/5 today
+                            </div>
+                        </div>
+
+                        <div id="aiMessagesList" class="ai-messages-list">
+                            <div class="chat-message theirs">
+                                <div class="message-text">👋 Hi! I'm your AI assistant. How can I help you today?</div>
+                            </div>
+                        </div>
+
+                        <div id="aiLimitBar" class="ai-limit-bar" style="display:none">
+                            🚫 Daily limit reached! Come back tomorrow.
+                        </div>
+
+                        <div class="ai-input-area" id="aiInputArea">
+                            <input type="text" id="aiMsgInput" placeholder="Type a message..." maxlength="500" autocomplete="off">
+                            <button id="aiSendBtn" class="chat-send-btn">Send</button>
+                        </div>
                     </div>
                 </div>
             </div>
