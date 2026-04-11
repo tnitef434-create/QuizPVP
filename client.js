@@ -202,11 +202,20 @@ async function sendAIMessage() {
     const text = input.value.trim();
     if (!text) return;
 
-    // Disable button immediately to prevent double-sends
+    // Disable button immediately to prevent double-sends while we check
     const sendBtn = document.getElementById('aiSendBtn');
     if (sendBtn) sendBtn.disabled = true;
 
-    const remaining = await getIPAIMsgsRemaining();
+    const usage = await getIPAIUsage();
+
+    // If IP couldn't be verified, block with a message rather than silently failing
+    if (usage.blocked) {
+        appendAIMessage('⚠️ Could not verify your session. Please disable any VPN or ad-blocker and try again.', false);
+        if (sendBtn) sendBtn.disabled = false;
+        return;
+    }
+
+    const remaining = Math.max(0, AI_DAILY_LIMIT - usage.count);
     if (remaining <= 0) {
         updateAIChatUI();
         return;
@@ -215,10 +224,9 @@ async function sendAIMessage() {
     appendAIMessage(text, true);
     input.value = '';
 
-    const usage = await getIPAIUsage();
     usage.count++;
     await saveIPAIUsage(usage);
-    updateAIChatUI(); // async — updates counter and re-enables button if limit not hit
+    updateAIChatUI(); // async — re-evaluates and updates counter
 
     connectAIAndSend(text);
 }
@@ -325,19 +333,19 @@ function _hashStr(s) {
 async function getIPAIUsage() {
     const today = new Date().toDateString();
     const ip = await fetchUserIP();
-    if (ip && isFirebaseReady) {
-        try {
-            const snap = await database.ref('ipAiUsage/' + _hashStr(ip)).once('value');
-            const d = snap.val();
-            if (d && d.date === today) return d;
-        } catch(e) {}
+    if (!ip || !isFirebaseReady) {
+        // Can't verify identity — treat as limit reached to prevent abuse
+        return { date: today, count: AI_DAILY_LIMIT, blocked: true };
     }
-    // Fallback to localStorage
-    return getAIUsage();
+    try {
+        const snap = await database.ref('ipAiUsage/' + _hashStr(ip)).once('value');
+        const d = snap.val();
+        if (d && d.date === today) return d;
+    } catch(e) {}
+    return { date: today, count: 0 };
 }
 
 async function saveIPAIUsage(usage) {
-    saveAIUsage(usage); // always persist locally too
     const ip = await fetchUserIP();
     if (ip && isFirebaseReady) {
         try { await database.ref('ipAiUsage/' + _hashStr(ip)).set(usage); } catch(e) {}
