@@ -10,6 +10,16 @@
 <body>
     <div class="background-pattern"></div>
 
+    <!-- Duplicate Tab Guard -->
+    <div id="duplicateTabOverlay" class="abuse-overlay" style="display:none">
+        <div class="abuse-overlay-card">
+            <div class="abuse-icon">🚫</div>
+            <h2>Already Open</h2>
+            <p>QuizPVP is already running in another tab.</p>
+            <p>Please close this tab and go back to the other one.</p>
+        </div>
+    </div>
+
     <!-- Version Badge -->
     <div class="version-badge">v1.5</div>
 
@@ -62,6 +72,9 @@
             <div class="card">
                 <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="15" autocomplete="off">
                 <button id="joinBtn" class="btn btn-primary">Join Game</button>
+                <p id="privateBrowsingMsg" class="private-browse-msg" style="display:none">
+                    🔒 Private / Incognito browsing is not supported. Please use a normal browser window to play.
+                </p>
             </div>
         </div>
     </div>
@@ -1053,8 +1066,6 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-
 
     <script src="client.js"></script>
 </body>
