@@ -75,8 +75,8 @@ function getAIMsgsRemaining() {
     return Math.max(0, AI_DAILY_LIMIT - getAIUsage().count);
 }
 
-function updateAIChatUI() {
-    const remaining = getAIMsgsRemaining();
+async function updateAIChatUI() {
+    const remaining = await getIPAIMsgsRemaining();
     const msgsLeft = document.getElementById('aiMsgsLeft');
     const limitBar = document.getElementById('aiLimitBar');
     const inputArea = document.getElementById('aiInputArea');
@@ -196,13 +196,18 @@ function connectAIAndSend(text) {
     };
 }
 
-function sendAIMessage() {
+async function sendAIMessage() {
     const input = document.getElementById('aiMsgInput');
     if (!input) return;
     const text = input.value.trim();
     if (!text) return;
 
-    if (getAIMsgsRemaining() <= 0) {
+    // Disable button immediately to prevent double-sends
+    const sendBtn = document.getElementById('aiSendBtn');
+    if (sendBtn) sendBtn.disabled = true;
+
+    const remaining = await getIPAIMsgsRemaining();
+    if (remaining <= 0) {
         updateAIChatUI();
         return;
     }
@@ -210,15 +215,16 @@ function sendAIMessage() {
     appendAIMessage(text, true);
     input.value = '';
 
-    const usage = getAIUsage();
+    const usage = await getIPAIUsage();
     usage.count++;
-    saveAIUsage(usage);
-    updateAIChatUI();
+    await saveIPAIUsage(usage);
+    updateAIChatUI(); // async — updates counter and re-enables button if limit not hit
 
     connectAIAndSend(text);
 }
 
 function initAIChat() {
+    fetchUserIP(); // pre-warm the IP cache so first send is instant
     updateAIChatUI();
 
     const sendBtn = document.getElementById('aiSendBtn');
@@ -234,6 +240,113 @@ function initAIChat() {
         });
         input._aiListenerAttached = true;
     }
+}
+
+// ===== ANTI-ABUSE SYSTEM =====
+
+// --- 1. Incognito / Private Browsing Detection ---
+async function detectPrivateBrowsing() {
+    try {
+        if (navigator.storage && navigator.storage.estimate) {
+            const { quota } = await navigator.storage.estimate();
+            // Incognito gives a very small quota (< 500 MB); normal mode gives several GB
+            if (quota && quota < 500 * 1024 * 1024) return true;
+        }
+    } catch(e) {}
+    return false;
+}
+
+function showPrivateBrowsingWarning() {
+    const msg = document.getElementById('privateBrowsingMsg');
+    const joinBtn = document.getElementById('joinBtn');
+    const input = document.getElementById('usernameInput');
+    if (msg) msg.style.display = 'block';
+    if (joinBtn) { joinBtn.disabled = true; joinBtn.style.opacity = '0.45'; }
+    if (input) { input.disabled = true; input.placeholder = 'Not available in private mode'; }
+}
+
+// --- 2. Multiple Tab Detection ---
+let isMainTab = false;
+let tabCheckDone = false;
+const tabChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('quizpvp_tab_guard') : null;
+
+function setupTabDetection() {
+    if (!tabChannel) { isMainTab = true; tabCheckDone = true; return; }
+
+    tabChannel.onmessage = function(e) {
+        if (e.data === 'PING') {
+            // Another tab just opened — tell it we exist
+            tabChannel.postMessage('PONG');
+        } else if (e.data === 'PONG' && !tabCheckDone) {
+            // Got a reply — a tab was already open, block this one
+            tabCheckDone = true;
+            isMainTab = false;
+            document.getElementById('duplicateTabOverlay').style.display = 'flex';
+        } else if (e.data === 'CLOSE' && !isMainTab) {
+            // The main tab closed — let this one take over
+            isMainTab = true;
+            document.getElementById('duplicateTabOverlay').style.display = 'none';
+        }
+    };
+
+    // Broadcast our presence; if nobody answers within 600ms we're the only tab
+    tabChannel.postMessage('PING');
+    setTimeout(function() {
+        if (!tabCheckDone) { tabCheckDone = true; isMainTab = true; }
+    }, 600);
+
+    window.addEventListener('beforeunload', function() {
+        tabChannel.postMessage('CLOSE');
+    });
+}
+
+// --- 3. IP-Based AI Rate Limiting ---
+let _cachedIP = null;
+
+async function fetchUserIP() {
+    if (_cachedIP) return _cachedIP;
+    try {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+        clearTimeout(t);
+        const data = await res.json();
+        _cachedIP = data.ip || null;
+    } catch(e) { _cachedIP = null; }
+    return _cachedIP;
+}
+
+function _hashStr(s) {
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) { h = ((h << 5) + h) ^ s.charCodeAt(i); h = h >>> 0; }
+    return h.toString(16);
+}
+
+async function getIPAIUsage() {
+    const today = new Date().toDateString();
+    const ip = await fetchUserIP();
+    if (ip && isFirebaseReady) {
+        try {
+            const snap = await database.ref('ipAiUsage/' + _hashStr(ip)).once('value');
+            const d = snap.val();
+            if (d && d.date === today) return d;
+        } catch(e) {}
+    }
+    // Fallback to localStorage
+    return getAIUsage();
+}
+
+async function saveIPAIUsage(usage) {
+    saveAIUsage(usage); // always persist locally too
+    const ip = await fetchUserIP();
+    if (ip && isFirebaseReady) {
+        try { await database.ref('ipAiUsage/' + _hashStr(ip)).set(usage); } catch(e) {}
+    }
+}
+
+async function getIPAIMsgsRemaining() {
+    const u = await getIPAIUsage();
+    return Math.max(0, AI_DAILY_LIMIT - u.count);
 }
 
 // ===== GLOBAL NAVIGATION SYSTEM =====
@@ -3844,6 +3957,14 @@ async function clearAccount() {
 // Initialize - ALL event listeners must be inside DOMContentLoaded
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 QuizPVP initializing...');
+
+    // Anti-abuse: multiple tab guard (runs immediately)
+    setupTabDetection();
+
+    // Anti-abuse: incognito detection (runs in background, blocks username entry if detected)
+    detectPrivateBrowsing().then(isPrivate => {
+        if (isPrivate) showPrivateBrowsingWarning();
+    });
 
     // Load player data first
     await loadPlayerData();
