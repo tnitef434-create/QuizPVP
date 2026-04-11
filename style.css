@@ -1585,6 +1585,42 @@ input[type="color"] {
     font-size: 0.9rem;
 }
 
+/* Ko-fi support item */
+.settings-item-kofi {
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid rgba(255, 94, 91, 0.25);
+}
+
+.settings-item-kofi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 94, 91, 0.18);
+    border-color: rgba(255, 94, 91, 0.5);
+}
+
+.kofi-icon-bg {
+    background: linear-gradient(135deg, #FF5E5B 0%, #FF9E7D 100%) !important;
+}
+
+.kofi-icon-img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.btn-kofi-pill {
+    background: linear-gradient(135deg, #FF5E5B 0%, #FF9E7D 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 /* ===== iOS & MOBILE OPTIMIZATIONS ===== */
 
 /* iOS-specific fixes */
