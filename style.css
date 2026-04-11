@@ -3801,6 +3801,16 @@ input[type="color"] {
     margin-bottom: 6px;
 }
 
+.ai-link {
+    color: #4361ee;
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+.ai-link:hover {
+    color: #2541b2;
+}
+
 .private-browse-msg {
     margin-top: 14px;
     padding: 12px 14px;

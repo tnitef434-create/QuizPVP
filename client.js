@@ -103,6 +103,37 @@ function setAIChatStatus(text) {
     if (el) el.textContent = text;
 }
 
+function parseAIText(text) {
+    // Safely converts **bold** and URLs into DOM nodes — no innerHTML used
+    const fragment = document.createDocumentFragment();
+    const pattern = /(\*\*(.+?)\*\*|https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
+    let lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+        }
+        if (match[0].startsWith('**')) {
+            const strong = document.createElement('strong');
+            strong.textContent = match[2];
+            fragment.appendChild(strong);
+        } else {
+            const a = document.createElement('a');
+            a.href = match[0];
+            a.textContent = match[0];
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.className = 'ai-link';
+            fragment.appendChild(a);
+        }
+        lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+    return fragment;
+}
+
 function appendAIMessage(text, isUser) {
     const list = document.getElementById('aiMessagesList');
     if (!list) return;
@@ -110,7 +141,11 @@ function appendAIMessage(text, isUser) {
     msg.className = `chat-message ${isUser ? 'mine' : 'theirs'}`;
     const bubble = document.createElement('div');
     bubble.className = 'message-text';
-    bubble.textContent = text;
+    if (isUser) {
+        bubble.textContent = text;
+    } else {
+        bubble.appendChild(parseAIText(text));
+    }
     msg.appendChild(bubble);
     list.appendChild(msg);
     list.scrollTop = list.scrollHeight;
