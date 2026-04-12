@@ -480,13 +480,22 @@ async function handleAuthStateChange(user) {
         return;
     }
 
-    if (!user.emailVerified && !user.isAnonymous) {
-        // Registered but email not yet verified
+    // Anonymous/guest: if session is already set, sign them out on reload
+    // (SESSION persistence means they disappear when the tab closes,
+    //  but onAuthStateChanged might still fire within the same session)
+    if (user.isAnonymous) {
+        // Guest is valid for this session — load their data
+        await loadPlayerDataForUser(user);
+        return;
+    }
+
+    if (!user.emailVerified) {
+        // Registered via email but not yet verified
         showScreen('emailVerifyScreen');
         return;
     }
 
-    // User is signed in (verified email or anonymous guest) — load their data
+    // Fully authenticated — load their data
     await loadPlayerDataForUser(user);
 }
 
@@ -510,9 +519,15 @@ async function loadPlayerDataForUser(user) {
         playerData.equippedCosmetic = d.equippedCosmetic || null;
 
         if (!playerData.username) {
-            // No username associated with this account — sign out and return to auth
-            console.warn('No username found for uid:', user.uid);
-            await auth.signOut();
+            // New Google user — ask them to pick a username
+            if (!user.isAnonymous) {
+                showScreen('googleUsernameScreen');
+                // Pre-focus the input
+                setTimeout(() => document.getElementById('googleUsernameInput')?.focus(), 100);
+            } else {
+                // Shouldn't happen for guests, but sign out gracefully
+                await auth.signOut();
+            }
             return;
         }
 
@@ -583,10 +598,11 @@ async function registerWithEmail(username, email, password) {
         // Send verification email
         await cred.user.sendEmailVerification();
 
-        // Show email verification screen
+        // Show email verification screen and start resend countdown
         showScreen('emailVerifyScreen');
         const verifyText = document.getElementById('verifyEmailText');
         if (verifyText) verifyText.textContent = 'We sent a verification link to ' + email + '. Click it, then press "Continue".';
+        startResendCountdown();
 
     } catch (e) {
         const msg = e.code === 'auth/email-already-in-use'
@@ -610,6 +626,7 @@ async function loginWithEmail(email, password) {
     if (btn) { btn.disabled = true; btn.textContent = 'Logging in...'; }
 
     try {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         await auth.signInWithEmailAndPassword(email, password);
         // onAuthStateChanged fires and calls handleAuthStateChange
         if (btn) { btn.disabled = false; btn.textContent = 'Log In'; }
@@ -626,33 +643,21 @@ async function loginWithEmail(email, password) {
     }
 }
 
-// Sign in anonymously with a chosen username
-async function signInAsGuest(username) {
-    const btn = document.getElementById('guestJoinBtn');
-
-    if (btn) btn.disabled = true;
+// Sign in anonymously — username auto-assigned as GUESTPLAYER + random suffix
+async function signInAsGuest() {
+    const btn = document.getElementById('authGuestBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Joining...'; }
 
     try {
-        if (username.length < 2) {
-            alert('Please enter a username (at least 2 characters)');
-            if (btn) btn.disabled = false;
-            return;
-        }
-        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-            alert('Username can only contain letters, numbers and underscores.');
-            if (btn) btn.disabled = false;
-            return;
-        }
-
-        const taken = await isUsernameTaken(username);
-        if (taken) {
-            alert('That username is already taken. Please choose a different one.');
-            if (btn) btn.disabled = false;
-            return;
-        }
+        // Use SESSION persistence so guest data clears when the browser tab is closed
+        await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
         const cred = await auth.signInAnonymously();
         const uid = cred.user.uid;
+
+        // Auto-assign a unique guest username
+        const suffix = Math.floor(1000 + Math.random() * 9000);
+        const username = 'GUESTPLAYER' + suffix;
 
         // Save guest profile
         await database.ref('users/' + uid).set({
@@ -675,10 +680,31 @@ async function signInAsGuest(username) {
     } catch (e) {
         console.error('Guest sign-in error:', e);
         const msg = e.code === 'auth/operation-not-allowed'
-            ? 'Guest sign-in is disabled. Please create an account instead.'
-            : 'Could not sign in as guest. Please check your internet connection.';
+            ? 'Guest sign-in is not enabled yet. Please create a free account.'
+            : 'Could not sign in as guest. Check your internet connection.';
         alert(msg);
-        if (btn) btn.disabled = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Play as Guest'; }
+    }
+}
+
+// Sign in with Google (shared by auth landing, login and register screens)
+async function signInWithGoogle(errorElId) {
+    const errorEl = errorElId ? document.getElementById(errorElId) : null;
+    if (errorEl) errorEl.style.display = 'none';
+
+    try {
+        // Restore LOCAL persistence for Google (real account)
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithPopup(provider);
+        // onAuthStateChanged handles the rest
+    } catch (e) {
+        if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+        const msg = e.code === 'auth/popup-blocked'
+            ? 'Popup was blocked. Please allow popups for this site and try again.'
+            : e.message || 'Google sign-in failed. Please try again.';
+        if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+        else alert(msg);
     }
 }
 
@@ -718,18 +744,78 @@ async function checkEmailVerification() {
     }
 }
 
-// Resend the verification email
+// Resend email with 60-second countdown
+let resendCountdownTimer = null;
+
+function startResendCountdown() {
+    const btn = document.getElementById('resendVerifyBtn');
+    if (!btn) return;
+    let secs = 60;
+    btn.disabled = true;
+    btn.textContent = `Resend Email (${secs}s)`;
+    clearInterval(resendCountdownTimer);
+    resendCountdownTimer = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+            clearInterval(resendCountdownTimer);
+            btn.disabled = false;
+            btn.textContent = 'Resend Email';
+        } else {
+            btn.textContent = `Resend Email (${secs}s)`;
+        }
+    }, 1000);
+}
+
 async function resendVerificationEmail() {
     const btn = document.getElementById('resendVerifyBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
 
     try {
         await auth.currentUser.sendEmailVerification();
-        alert('Verification email sent! Check your inbox (and spam folder).');
+        startResendCountdown();
     } catch (e) {
         alert('Could not send email. Please wait a moment and try again.');
-    } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Resend Email'; }
+    }
+}
+
+// Save username for a Google-authenticated user who just signed in for the first time
+async function saveGoogleUsername(username) {
+    const errorEl = document.getElementById('googleUsernameError');
+    const btn = document.getElementById('googleUsernameSubmitBtn');
+
+    if (errorEl) errorEl.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+    try {
+        if (!username || username.length < 2) throw { message: 'Username must be at least 2 characters.' };
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) throw { message: 'Only letters, numbers and underscores allowed.' };
+
+        const taken = await isUsernameTaken(username);
+        if (taken) throw { message: 'That username is taken. Please choose another.' };
+
+        const uid = auth.currentUser.uid;
+        await database.ref('users/' + uid).set({
+            username: username,
+            email: auth.currentUser.email || '',
+            points: 0,
+            color: '#4A90E2',
+            friends: [],
+            friendRequests: [],
+            level: 1,
+            xp: 0,
+            wins: 0,
+            ownedCosmetics: [],
+            equippedCosmetic: null,
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        await database.ref('usernames/' + uid).set(username);
+
+        // Now load player data and go to menu
+        await loadPlayerDataForUser(auth.currentUser);
+    } catch (e) {
+        if (errorEl) { errorEl.textContent = e.message || 'Failed. Please try again.'; errorEl.style.display = 'block'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Start Playing →'; }
     }
 }
 
@@ -4375,7 +4461,9 @@ async function clearAccount() {
 
 // Initialize - ALL event listeners must be inside DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 QuizPVP initializing...');
+    console.log('🚀 QuizPVP v1.6 initializing...');
+
+    // loadingScreen is the initial active screen — prevents any flash of auth UI on refresh
 
     // Anti-abuse: multiple tab guard
     setupTabDetection();
@@ -4383,18 +4471,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Attach all DOM event listeners (screen is ready)
     setupEventListeners();
 
+    // Fallback: if Firebase takes >4 seconds, show auth screen anyway
+    const authFallback = setTimeout(() => {
+        if (document.getElementById('loadingScreen')?.classList.contains('active')) {
+            showScreen('authScreen');
+        }
+    }, 4000);
+
     // Bootstrap auth — onAuthStateChanged is the single entry point for the app
     if (isFirebaseReady && typeof auth !== 'undefined' && auth) {
         auth.onAuthStateChanged(async (user) => {
-            console.log('🔑 Auth state changed:', user ? (user.isAnonymous ? 'guest' : user.email) : 'signed out');
+            clearTimeout(authFallback);
+            console.log('🔑 Auth:', user ? (user.isAnonymous ? 'guest' : user.email) : 'signed out');
             await handleAuthStateChange(user);
         });
     } else {
-        // Firebase not available — show auth screen anyway
+        clearTimeout(authFallback);
         showScreen('authScreen');
     }
 
-    console.log('✅ QuizPVP ready!');
+    console.log('✅ QuizPVP v1.6 ready!');
 });
 
 // ===== ROCK PAPER SCISSORS GAME =====
@@ -6258,92 +6354,52 @@ function setupEventListeners() {
     console.log('🔐 Setting up Auth buttons...');
 
     // Auth landing screen
-    safeAddListener('authShowRegisterBtn', 'click', () => {
-        showScreen('registerScreen');
-    }, 'Show Register');
-
-    safeAddListener('authShowLoginBtn', 'click', () => {
-        showScreen('loginScreen');
-    }, 'Show Login');
-
-    safeAddListener('authGuestBtn', 'click', () => {
-        showScreen('guestUsernameScreen');
-    }, 'Guest mode');
+    safeAddListener('authShowRegisterBtn', 'click', () => showScreen('registerScreen'), 'Show Register');
+    safeAddListener('authShowLoginBtn',    'click', () => showScreen('loginScreen'),    'Show Login');
+    safeAddListener('authGuestBtn',        'click', () => signInAsGuest(),              'Guest mode');
+    safeAddListener('authGoogleBtn',       'click', () => signInWithGoogle(null),       'Google (landing)');
 
     // Login screen
     safeAddListener('loginSubmitBtn', 'click', () => {
-        const email = document.getElementById('loginEmailInput')?.value.trim();
+        const email    = document.getElementById('loginEmailInput')?.value.trim();
         const password = document.getElementById('loginPasswordInput')?.value;
         loginWithEmail(email, password);
     }, 'Login submit');
+    safeAddListener('loginBackBtn',          'click', () => showScreen('authScreen'),    'Login back');
+    safeAddListener('switchToRegisterLink',  'click', () => showScreen('registerScreen'),'Switch to register');
+    safeAddListener('loginGoogleBtn',        'click', () => signInWithGoogle('loginError'), 'Google (login)');
 
-    safeAddListener('loginBackBtn', 'click', () => {
-        showScreen('authScreen');
-    }, 'Login back');
-
-    safeAddListener('switchToRegisterLink', 'click', () => {
-        showScreen('registerScreen');
-    }, 'Switch to register');
-
+    const loginEmailInput = document.getElementById('loginEmailInput');
     const loginPasswordInput = document.getElementById('loginPasswordInput');
-    if (loginPasswordInput) {
-        loginPasswordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('loginSubmitBtn')?.click();
-        });
-    }
+    if (loginEmailInput) loginEmailInput.addEventListener('keypress', e => { if (e.key === 'Enter') loginPasswordInput?.focus(); });
+    if (loginPasswordInput) loginPasswordInput.addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginSubmitBtn')?.click(); });
 
     // Register screen
     safeAddListener('registerSubmitBtn', 'click', () => {
         const username = document.getElementById('registerUsernameInput')?.value.trim();
-        const email = document.getElementById('registerEmailInput')?.value.trim();
+        const email    = document.getElementById('registerEmailInput')?.value.trim();
         const password = document.getElementById('registerPasswordInput')?.value;
         registerWithEmail(username, email, password);
     }, 'Register submit');
-
-    safeAddListener('registerBackBtn', 'click', () => {
-        showScreen('authScreen');
-    }, 'Register back');
-
-    safeAddListener('switchToLoginLink', 'click', () => {
-        showScreen('loginScreen');
-    }, 'Switch to login');
+    safeAddListener('registerBackBtn',   'click', () => showScreen('authScreen'),   'Register back');
+    safeAddListener('switchToLoginLink', 'click', () => showScreen('loginScreen'),  'Switch to login');
+    safeAddListener('registerGoogleBtn', 'click', () => signInWithGoogle('registerError'), 'Google (register)');
 
     const registerPasswordInput = document.getElementById('registerPasswordInput');
-    if (registerPasswordInput) {
-        registerPasswordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('registerSubmitBtn')?.click();
-        });
-    }
+    if (registerPasswordInput) registerPasswordInput.addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('registerSubmitBtn')?.click(); });
 
     // Email verify screen
-    safeAddListener('verifyCheckBtn', 'click', () => {
-        checkEmailVerification();
-    }, 'Verify check');
+    safeAddListener('verifyCheckBtn',  'click', () => checkEmailVerification(),    'Verify check');
+    safeAddListener('resendVerifyBtn', 'click', () => resendVerificationEmail(),   'Resend verify');
+    safeAddListener('verifySignOutBtn','click', () => signOutUser(),               'Verify sign out');
 
-    safeAddListener('resendVerifyBtn', 'click', () => {
-        resendVerificationEmail();
-    }, 'Resend verify email');
-
-    safeAddListener('verifySignOutBtn', 'click', () => {
-        signOutUser();
-    }, 'Verify sign out');
-
-    // Guest username screen
-    safeAddListener('guestJoinBtn', 'click', () => {
-        const username = document.getElementById('guestUsernameInput')?.value.trim();
-        if (username) signInAsGuest(username);
-    }, 'Guest join');
-
-    safeAddListener('guestBackBtn', 'click', () => {
-        showScreen('authScreen');
-    }, 'Guest back');
-
-    const guestUsernameInput = document.getElementById('guestUsernameInput');
-    if (guestUsernameInput) {
-        guestUsernameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('guestJoinBtn')?.click();
-        });
-    }
+    // Google username screen
+    safeAddListener('googleUsernameSubmitBtn', 'click', () => {
+        const username = document.getElementById('googleUsernameInput')?.value.trim();
+        saveGoogleUsername(username);
+    }, 'Google username submit');
+    const googleUsernameInput = document.getElementById('googleUsernameInput');
+    if (googleUsernameInput) googleUsernameInput.addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('googleUsernameSubmitBtn')?.click(); });
 
     // === GAME BUTTONS ===
     console.log('🎲 Setting up Game buttons...');
