@@ -253,8 +253,7 @@ async function sendAIMessage() {
         return;
     }
 
-    const highestCount = Math.max(usage.deviceCount, usage.accountCount, usage.ipCount);
-    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - highestCount);
+    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - usage.accountCount);
 
     if (dailyLeft <= 0) {
         // Daily limit hit — check if user has purchased bonus messages
@@ -281,7 +280,7 @@ async function sendAIMessage() {
 }
 
 function initAIChat() {
-    getAllAIUsage(); // pre-warm all three caches so first send is instant
+    getAccountAIUsage(); // pre-warm account usage so first send is instant
     updateAIChatUI();
 
     const sendBtn = document.getElementById('aiSendBtn');
@@ -357,99 +356,44 @@ function setupTabDetection() {
     });
 }
 
-// --- 3. IP-Based AI Rate Limiting ---
-let _cachedIP = null;
+// --- 3. Account-Based AI Rate Limiting ---
+// The limit is tied to the username in Firebase.
+// VPN, new device, incognito — nothing bypasses it as long as the account is the same.
 
-async function fetchUserIP() {
-    if (_cachedIP) return _cachedIP;
-    try {
-        const controller = new AbortController();
-        const t = setTimeout(() => controller.abort(), 4000);
-        const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-        clearTimeout(t);
-        const data = await res.json();
-        _cachedIP = data.ip || null;
-    } catch(e) { _cachedIP = null; }
-    return _cachedIP;
+function _getUsername() {
+    return (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
 }
 
-function _hashStr(s) {
-    let h = 5381;
-    for (let i = 0; i < s.length; i++) { h = ((h << 5) + h) ^ s.charCodeAt(i); h = h >>> 0; }
-    return h.toString(16);
-}
-
-// Returns a stable per-device ID that persists in normal sessions.
-// Falls back to this when IP fetch fails (e.g. VPN + ad-blocker blocking ipify).
-function getDeviceId() {
-    let id = localStorage.getItem('quizpvp_device_id');
-    if (!id) {
-        id = Math.random().toString(36).slice(2) + Date.now().toString(36);
-        localStorage.setItem('quizpvp_device_id', id);
-    }
-    return id;
-}
-
-// Reads today's message count from all three tracking layers in parallel.
-// Returns { today, deviceCount, accountCount, ipCount, blocked }
-async function getAllAIUsage() {
+async function getAccountAIUsage() {
     const today = new Date().toDateString();
-    if (!isFirebaseReady) return { today, deviceCount: 0, accountCount: 0, ipCount: 0, blocked: true };
-
-    const deviceId = getDeviceId();
-    const username = (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
-
-    const [deviceSnap, accountSnap, ip] = await Promise.all([
-        database.ref('deviceAiUsage/' + deviceId).once('value').catch(() => null),
-        username ? database.ref('accountAiUsage/' + username).once('value').catch(() => null) : Promise.resolve(null),
-        fetchUserIP()
-    ]);
-
-    let deviceCount = 0, accountCount = 0, ipCount = 0;
-
-    const dv = deviceSnap && deviceSnap.val();
-    if (dv && dv.date === today) deviceCount = dv.count || 0;
-
-    const ac = accountSnap && accountSnap.val();
-    if (ac && ac.date === today) accountCount = ac.count || 0;
-
-    if (ip) {
-        try {
-            const ipSnap = await database.ref('ipAiUsage/' + _hashStr(ip)).once('value');
-            const iv = ipSnap.val();
-            if (iv && iv.date === today) ipCount = iv.count || 0;
-        } catch(e) {}
-    }
-
-    return { today, deviceCount, accountCount, ipCount, blocked: false };
+    if (!isFirebaseReady) return { today, count: AI_DAILY_LIMIT, blocked: true };
+    const username = _getUsername();
+    if (!username) return { today, count: 0 }; // not logged in yet
+    try {
+        const snap = await database.ref('accountAiUsage/' + username).once('value');
+        const d = snap.val();
+        if (d && d.date === today) return { today, count: d.count || 0 };
+    } catch(e) {}
+    return { today, count: 0 };
 }
 
-// Increments all three tracking layers simultaneously.
-async function saveAllAIUsage(usage) {
+async function saveAccountAIUsage(usage) {
     if (!isFirebaseReady) return;
-    const today = usage.today || new Date().toDateString();
-    const deviceId = getDeviceId();
-    const username = (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
-    const ip = await fetchUserIP();
-
-    const writes = [
-        database.ref('deviceAiUsage/' + deviceId).set({ date: today, count: usage.deviceCount + 1 }).catch(() => {})
-    ];
-    if (username) {
-        writes.push(database.ref('accountAiUsage/' + username).set({ date: today, count: usage.accountCount + 1 }).catch(() => {}));
-    }
-    if (ip) {
-        writes.push(database.ref('ipAiUsage/' + _hashStr(ip)).set({ date: today, count: usage.ipCount + 1 }).catch(() => {}));
-    }
-    await Promise.all(writes);
+    const username = _getUsername();
+    if (!username) return;
+    try {
+        await database.ref('accountAiUsage/' + username).set({ date: usage.today, count: usage.count + 1 });
+    } catch(e) {}
 }
 
-// Returns the most restrictive remaining count across all three layers.
-async function getIPAIMsgsRemaining() {
-    const u = await getAllAIUsage();
-    if (u.blocked) return 0;
-    const highestCount = Math.max(u.deviceCount, u.accountCount, u.ipCount);
-    return Math.max(0, AI_DAILY_LIMIT - highestCount);
+// Keep getAllAIUsage/saveAllAIUsage as thin wrappers so sendAIMessage doesn't need changes
+async function getAllAIUsage() {
+    const u = await getAccountAIUsage();
+    return { today: u.today, deviceCount: 0, accountCount: u.count, ipCount: 0, blocked: u.blocked || false, _raw: u };
+}
+
+async function saveAllAIUsage(usage) {
+    await saveAccountAIUsage(usage._raw || { today: usage.today, count: usage.accountCount });
 }
 
 // --- 4. Purchased Bonus Messages ---
@@ -482,8 +426,7 @@ async function deductBonusMessage() {
 async function getTotalAIMsgsRemaining() {
     const usage = await getAllAIUsage();
     if (usage.blocked) return { total: 0, blocked: true, dailyLeft: 0, bonusLeft: 0, usage };
-    const highestCount = Math.max(usage.deviceCount, usage.accountCount, usage.ipCount);
-    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - highestCount);
+    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - usage.accountCount);
     const bonusLeft = dailyLeft > 0 ? 0 : await getBonusRemaining();
     return { total: dailyLeft + bonusLeft, blocked: false, dailyLeft, bonusLeft, usage };
 }
