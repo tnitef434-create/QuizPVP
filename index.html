@@ -100,13 +100,17 @@
             <p class="ap-subheading">Sign in to your account</p>
             <div id="loginError" class="ap-error" style="display:none"></div>
             <div class="ap-form-box">
-                <div class="ap-field">
-                    <label class="ap-label">Email</label>
-                    <input type="email" id="loginEmailInput" placeholder="you@example.com" autocomplete="email" class="ap-input">
+                <div class="ap-field-wrap">
+                    <label class="ap-label" for="loginEmailInput">Email</label>
+                    <div class="ap-field">
+                        <input type="email" id="loginEmailInput" placeholder="you@example.com" autocomplete="email" class="ap-input">
+                    </div>
                 </div>
-                <div class="ap-field">
-                    <label class="ap-label">Password</label>
-                    <input type="password" id="loginPasswordInput" placeholder="••••••••" autocomplete="current-password" class="ap-input">
+                <div class="ap-field-wrap">
+                    <label class="ap-label" for="loginPasswordInput">Password</label>
+                    <div class="ap-field">
+                        <input type="password" id="loginPasswordInput" placeholder="••••••••" autocomplete="current-password" class="ap-input">
+                    </div>
                 </div>
                 <button id="loginSubmitBtn" class="ap-btn ap-btn-gold">Log In</button>
             </div>
@@ -125,17 +129,23 @@
             <p class="ap-subheading">Free forever · takes 30 seconds</p>
             <div id="registerError" class="ap-error" style="display:none"></div>
             <div class="ap-form-box">
-                <div class="ap-field">
-                    <label class="ap-label">Username</label>
-                    <input type="text" id="registerUsernameInput" placeholder="CoolPlayer99" maxlength="15" autocomplete="off" class="ap-input">
+                <div class="ap-field-wrap">
+                    <label class="ap-label" for="registerUsernameInput">Username</label>
+                    <div class="ap-field">
+                        <input type="text" id="registerUsernameInput" placeholder="CoolPlayer99" maxlength="15" autocomplete="off" class="ap-input">
+                    </div>
                 </div>
-                <div class="ap-field">
-                    <label class="ap-label">Email</label>
-                    <input type="email" id="registerEmailInput" placeholder="you@example.com" autocomplete="email" class="ap-input">
+                <div class="ap-field-wrap">
+                    <label class="ap-label" for="registerEmailInput">Email</label>
+                    <div class="ap-field">
+                        <input type="email" id="registerEmailInput" placeholder="you@example.com" autocomplete="email" class="ap-input">
+                    </div>
                 </div>
-                <div class="ap-field">
-                    <label class="ap-label">Password</label>
-                    <input type="password" id="registerPasswordInput" placeholder="Min 6 characters" autocomplete="new-password" class="ap-input">
+                <div class="ap-field-wrap">
+                    <label class="ap-label" for="registerPasswordInput">Password</label>
+                    <div class="ap-field">
+                        <input type="password" id="registerPasswordInput" placeholder="Min 6 characters" autocomplete="new-password" class="ap-input">
+                    </div>
                 </div>
                 <button id="registerSubmitBtn" class="ap-btn ap-btn-gold">Create Account</button>
             </div>
