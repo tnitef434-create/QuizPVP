@@ -76,20 +76,24 @@ function getAIMsgsRemaining() {
 }
 
 async function updateAIChatUI() {
-    const remaining = await getIPAIMsgsRemaining();
+    const { total, blocked, bonusLeft } = await getTotalAIMsgsRemaining();
     const msgsLeft = document.getElementById('aiMsgsLeft');
     const limitBar = document.getElementById('aiLimitBar');
     const inputArea = document.getElementById('aiInputArea');
     const sendBtn = document.getElementById('aiSendBtn');
     const input = document.getElementById('aiMsgInput');
 
-    if (msgsLeft) msgsLeft.textContent = remaining;
+    if (msgsLeft) msgsLeft.textContent = total;
 
-    if (remaining <= 0) {
-        if (limitBar) limitBar.style.display = 'block';
+    // Show a ☕ badge when user is running on purchased bonus messages
+    const badge = document.getElementById('aiMsgsLeft')?.closest('.ai-msgs-badge');
+    if (badge) badge.title = bonusLeft > 0 ? `${bonusLeft} purchased messages remaining` : '';
+
+    if (total <= 0 || blocked) {
+        if (limitBar) limitBar.style.display = 'flex';
         if (inputArea) inputArea.style.opacity = '0.5';
         if (sendBtn) sendBtn.disabled = true;
-        if (input) { input.disabled = true; input.placeholder = 'Daily limit reached'; }
+        if (input) { input.disabled = true; input.placeholder = 'Limit reached'; }
     } else {
         if (limitBar) limitBar.style.display = 'none';
         if (inputArea) inputArea.style.opacity = '1';
@@ -243,26 +247,37 @@ async function sendAIMessage() {
 
     const usage = await getIPAIUsage();
 
-    // If IP couldn't be verified, block with a message rather than silently failing
+    // If IP couldn't be verified, block rather than silently failing
     if (usage.blocked) {
         appendAIMessage('⚠️ Could not verify your session. Please disable any VPN or ad-blocker and try again.', false);
         if (sendBtn) sendBtn.disabled = false;
         return;
     }
 
-    const remaining = Math.max(0, AI_DAILY_LIMIT - usage.count);
-    if (remaining <= 0) {
+    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - usage.count);
+
+    if (dailyLeft <= 0) {
+        // Daily limit hit — check if user has purchased bonus messages
+        const bonusLeft = await getBonusRemaining();
+        if (bonusLeft <= 0) {
+            updateAIChatUI();
+            return;
+        }
+        // Use a bonus message
+        appendAIMessage(text, true);
+        input.value = '';
+        await deductBonusMessage();
         updateAIChatUI();
+        connectAIAndSend(text);
         return;
     }
 
+    // Normal daily message
     appendAIMessage(text, true);
     input.value = '';
-
     usage.count++;
     await saveIPAIUsage(usage);
-    updateAIChatUI(); // async — re-evaluates and updates counter
-
+    updateAIChatUI();
     connectAIAndSend(text);
 }
 
@@ -390,6 +405,41 @@ async function saveIPAIUsage(usage) {
 async function getIPAIMsgsRemaining() {
     const u = await getIPAIUsage();
     return Math.max(0, AI_DAILY_LIMIT - u.count);
+}
+
+// --- 4. Purchased Bonus Messages ---
+// Admin flow: after a Ko-fi purchase, go to Firebase console →
+// aiChatBonus/{username} → set { remaining: 15 }
+// The client reads this and adds it on top of the daily limit.
+
+async function getBonusRemaining() {
+    const username = (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
+    if (!username || !isFirebaseReady) return 0;
+    try {
+        const snap = await database.ref('aiChatBonus/' + username).once('value');
+        const d = snap.val();
+        return (d && typeof d.remaining === 'number') ? Math.max(0, d.remaining) : 0;
+    } catch(e) { return 0; }
+}
+
+async function deductBonusMessage() {
+    const username = (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
+    if (!username || !isFirebaseReady) return;
+    try {
+        const snap = await database.ref('aiChatBonus/' + username).once('value');
+        const d = snap.val();
+        if (d && d.remaining > 0) {
+            await database.ref('aiChatBonus/' + username).set({ remaining: d.remaining - 1 });
+        }
+    } catch(e) {}
+}
+
+async function getTotalAIMsgsRemaining() {
+    const usage = await getIPAIUsage();
+    if (usage.blocked) return { total: 0, blocked: true, dailyLeft: 0, bonusLeft: 0 };
+    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - usage.count);
+    const bonusLeft = dailyLeft > 0 ? 0 : await getBonusRemaining(); // only check bonus when daily is exhausted
+    return { total: dailyLeft + bonusLeft, blocked: false, dailyLeft, bonusLeft };
 }
 
 // ===== GLOBAL NAVIGATION SYSTEM =====

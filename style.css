@@ -1621,6 +1621,76 @@ input[type="color"] {
     flex-shrink: 0;
 }
 
+/* Unlock All shop banner */
+.unlock-all-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: linear-gradient(135deg, #FF5E5B 0%, #FF9E7D 100%);
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(255, 94, 91, 0.35);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.unlock-all-banner:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 94, 91, 0.45);
+}
+
+.unlock-all-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.unlock-all-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    flex-shrink: 0;
+}
+
+.unlock-all-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.unlock-all-title {
+    color: white;
+    font-weight: 800;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.unlock-all-sub {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.8rem;
+}
+
+.unlock-all-btn {
+    background: white;
+    color: #FF5E5B;
+    font-weight: 800;
+    font-size: 0.85rem;
+    padding: 8px 18px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+    .unlock-all-title { font-size: 0.9rem; }
+    .unlock-all-sub { font-size: 0.75rem; }
+    .unlock-all-btn { font-size: 0.8rem; padding: 7px 14px; }
+}
+
 /* ===== iOS & MOBILE OPTIMIZATIONS ===== */
 
 /* iOS-specific fixes */
@@ -3695,14 +3765,46 @@ input[type="color"] {
 }
 
 .ai-limit-bar {
-    padding: 10px 16px;
-    background: #fee2e2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fff7ed;
+    border-top: 1px solid #fed7aa;
+    flex-shrink: 0;
+}
+
+.ai-limit-bar-text {
     color: #dc2626;
     font-size: 13px;
-    font-weight: 600;
-    text-align: center;
-    border-top: 1px solid #fecaca;
-    flex-shrink: 0;
+    font-weight: 700;
+}
+
+.ai-limit-kofi-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: linear-gradient(135deg, #FF5E5B 0%, #FF9E7D 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.15s;
+}
+
+.ai-limit-kofi-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.ai-limit-kofi-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
 }
 
 .ai-input-area {
