@@ -245,16 +245,16 @@ async function sendAIMessage() {
     const sendBtn = document.getElementById('aiSendBtn');
     if (sendBtn) sendBtn.disabled = true;
 
-    const usage = await getIPAIUsage();
+    const usage = await getAllAIUsage();
 
-    // If IP couldn't be verified, block rather than silently failing
     if (usage.blocked) {
-        appendAIMessage('⚠️ Could not verify your session. Please disable any VPN or ad-blocker and try again.', false);
+        appendAIMessage('⚠️ Could not connect to the server. Please check your internet and try again.', false);
         if (sendBtn) sendBtn.disabled = false;
         return;
     }
 
-    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - usage.count);
+    const highestCount = Math.max(usage.deviceCount, usage.accountCount, usage.ipCount);
+    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - highestCount);
 
     if (dailyLeft <= 0) {
         // Daily limit hit — check if user has purchased bonus messages
@@ -272,17 +272,16 @@ async function sendAIMessage() {
         return;
     }
 
-    // Normal daily message
+    // Normal daily message — write all three tracking layers
     appendAIMessage(text, true);
     input.value = '';
-    usage.count++;
-    await saveIPAIUsage(usage);
+    await saveAllAIUsage(usage);
     updateAIChatUI();
     connectAIAndSend(text);
 }
 
 function initAIChat() {
-    fetchUserIP(); // pre-warm the IP cache so first send is instant
+    getAllAIUsage(); // pre-warm all three caches so first send is instant
     updateAIChatUI();
 
     const sendBtn = document.getElementById('aiSendBtn');
@@ -391,52 +390,66 @@ function getDeviceId() {
     return id;
 }
 
-async function getIPAIUsage() {
+// Reads today's message count from all three tracking layers in parallel.
+// Returns { today, deviceCount, accountCount, ipCount, blocked }
+async function getAllAIUsage() {
     const today = new Date().toDateString();
+    if (!isFirebaseReady) return { today, deviceCount: 0, accountCount: 0, ipCount: 0, blocked: true };
 
-    if (!isFirebaseReady) {
-        // Firebase itself unreachable — block rather than give free messages
-        return { date: today, count: AI_DAILY_LIMIT, blocked: true };
-    }
-
-    const ip = await fetchUserIP();
-
-    if (ip) {
-        // Primary path: IP-based tracking (catches incognito on same network)
-        try {
-            const snap = await database.ref('ipAiUsage/' + _hashStr(ip)).once('value');
-            const d = snap.val();
-            if (d && d.date === today) return d;
-        } catch(e) {}
-        return { date: today, count: 0 };
-    }
-
-    // Fallback: IP fetch failed (VPN routing or ad-blocker blocking ipify).
-    // Use a device ID from localStorage so the user isn't outright blocked.
     const deviceId = getDeviceId();
-    try {
-        const snap = await database.ref('deviceAiUsage/' + deviceId).once('value');
-        const d = snap.val();
-        if (d && d.date === today) return { ...d, deviceFallback: true };
-    } catch(e) {}
-    return { date: today, count: 0, deviceFallback: true };
-}
+    const username = (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
 
-async function saveIPAIUsage(usage) {
-    if (!isFirebaseReady) return;
-    const ip = await fetchUserIP();
+    const [deviceSnap, accountSnap, ip] = await Promise.all([
+        database.ref('deviceAiUsage/' + deviceId).once('value').catch(() => null),
+        username ? database.ref('accountAiUsage/' + username).once('value').catch(() => null) : Promise.resolve(null),
+        fetchUserIP()
+    ]);
+
+    let deviceCount = 0, accountCount = 0, ipCount = 0;
+
+    const dv = deviceSnap && deviceSnap.val();
+    if (dv && dv.date === today) deviceCount = dv.count || 0;
+
+    const ac = accountSnap && accountSnap.val();
+    if (ac && ac.date === today) accountCount = ac.count || 0;
+
     if (ip) {
-        try { await database.ref('ipAiUsage/' + _hashStr(ip)).set({ date: usage.date, count: usage.count }); } catch(e) {}
-    } else {
-        // Save against device ID when IP unavailable
-        const deviceId = getDeviceId();
-        try { await database.ref('deviceAiUsage/' + deviceId).set({ date: usage.date, count: usage.count }); } catch(e) {}
+        try {
+            const ipSnap = await database.ref('ipAiUsage/' + _hashStr(ip)).once('value');
+            const iv = ipSnap.val();
+            if (iv && iv.date === today) ipCount = iv.count || 0;
+        } catch(e) {}
     }
+
+    return { today, deviceCount, accountCount, ipCount, blocked: false };
 }
 
+// Increments all three tracking layers simultaneously.
+async function saveAllAIUsage(usage) {
+    if (!isFirebaseReady) return;
+    const today = usage.today || new Date().toDateString();
+    const deviceId = getDeviceId();
+    const username = (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
+    const ip = await fetchUserIP();
+
+    const writes = [
+        database.ref('deviceAiUsage/' + deviceId).set({ date: today, count: usage.deviceCount + 1 }).catch(() => {})
+    ];
+    if (username) {
+        writes.push(database.ref('accountAiUsage/' + username).set({ date: today, count: usage.accountCount + 1 }).catch(() => {}));
+    }
+    if (ip) {
+        writes.push(database.ref('ipAiUsage/' + _hashStr(ip)).set({ date: today, count: usage.ipCount + 1 }).catch(() => {}));
+    }
+    await Promise.all(writes);
+}
+
+// Returns the most restrictive remaining count across all three layers.
 async function getIPAIMsgsRemaining() {
-    const u = await getIPAIUsage();
-    return Math.max(0, AI_DAILY_LIMIT - u.count);
+    const u = await getAllAIUsage();
+    if (u.blocked) return 0;
+    const highestCount = Math.max(u.deviceCount, u.accountCount, u.ipCount);
+    return Math.max(0, AI_DAILY_LIMIT - highestCount);
 }
 
 // --- 4. Purchased Bonus Messages ---
@@ -467,11 +480,12 @@ async function deductBonusMessage() {
 }
 
 async function getTotalAIMsgsRemaining() {
-    const usage = await getIPAIUsage();
-    if (usage.blocked) return { total: 0, blocked: true, dailyLeft: 0, bonusLeft: 0 };
-    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - usage.count);
-    const bonusLeft = dailyLeft > 0 ? 0 : await getBonusRemaining(); // only check bonus when daily is exhausted
-    return { total: dailyLeft + bonusLeft, blocked: false, dailyLeft, bonusLeft };
+    const usage = await getAllAIUsage();
+    if (usage.blocked) return { total: 0, blocked: true, dailyLeft: 0, bonusLeft: 0, usage };
+    const highestCount = Math.max(usage.deviceCount, usage.accountCount, usage.ipCount);
+    const dailyLeft = Math.max(0, AI_DAILY_LIMIT - highestCount);
+    const bonusLeft = dailyLeft > 0 ? 0 : await getBonusRemaining();
+    return { total: dailyLeft + bonusLeft, blocked: false, dailyLeft, bonusLeft, usage };
 }
 
 // ===== GLOBAL NAVIGATION SYSTEM =====
