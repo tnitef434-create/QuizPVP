@@ -4223,18 +4223,6 @@ input[type="color"] {
     color: rgba(255,255,255,0.7);
 }
 
-/* Google button */
-.ap-btn-google {
-    background: #18181c;
-    border: 1.5px solid rgba(255,255,255,0.1);
-    color: #fff;
-}
-
-.ap-btn-google:hover {
-    background: #222226;
-    border-color: rgba(255,255,255,0.22);
-}
-
 /* ── Divider ── */
 .ap-or {
     display: flex;

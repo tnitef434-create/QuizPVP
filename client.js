@@ -519,15 +519,8 @@ async function loadPlayerDataForUser(user) {
         playerData.equippedCosmetic = d.equippedCosmetic || null;
 
         if (!playerData.username) {
-            // New Google user — ask them to pick a username
-            if (!user.isAnonymous) {
-                showScreen('googleUsernameScreen');
-                // Pre-focus the input
-                setTimeout(() => document.getElementById('googleUsernameInput')?.focus(), 100);
-            } else {
-                // Shouldn't happen for guests, but sign out gracefully
-                await auth.signOut();
-            }
+            // No username — sign out and return to auth screen
+            await auth.signOut();
             return;
         }
 
@@ -687,26 +680,6 @@ async function signInAsGuest() {
     }
 }
 
-// Sign in with Google (shared by auth landing, login and register screens)
-async function signInWithGoogle(errorElId) {
-    const errorEl = errorElId ? document.getElementById(errorElId) : null;
-    if (errorEl) errorEl.style.display = 'none';
-
-    try {
-        // Restore LOCAL persistence for Google (real account)
-        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithPopup(provider);
-        // onAuthStateChanged handles the rest
-    } catch (e) {
-        if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
-        const msg = e.code === 'auth/popup-blocked'
-            ? 'Popup was blocked. Please allow popups for this site and try again.'
-            : e.message || 'Google sign-in failed. Please try again.';
-        if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
-        else alert(msg);
-    }
-}
 
 // Sign out the current user
 async function signOutUser() {
@@ -779,45 +752,6 @@ async function resendVerificationEmail() {
     }
 }
 
-// Save username for a Google-authenticated user who just signed in for the first time
-async function saveGoogleUsername(username) {
-    const errorEl = document.getElementById('googleUsernameError');
-    const btn = document.getElementById('googleUsernameSubmitBtn');
-
-    if (errorEl) errorEl.style.display = 'none';
-    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
-
-    try {
-        if (!username || username.length < 2) throw { message: 'Username must be at least 2 characters.' };
-        if (!/^[a-zA-Z0-9_]+$/.test(username)) throw { message: 'Only letters, numbers and underscores allowed.' };
-
-        const taken = await isUsernameTaken(username);
-        if (taken) throw { message: 'That username is taken. Please choose another.' };
-
-        const uid = auth.currentUser.uid;
-        await database.ref('users/' + uid).set({
-            username: username,
-            email: auth.currentUser.email || '',
-            points: 0,
-            color: '#4A90E2',
-            friends: [],
-            friendRequests: [],
-            level: 1,
-            xp: 0,
-            wins: 0,
-            ownedCosmetics: [],
-            equippedCosmetic: null,
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-        });
-        await database.ref('usernames/' + uid).set(username);
-
-        // Now load player data and go to menu
-        await loadPlayerDataForUser(auth.currentUser);
-    } catch (e) {
-        if (errorEl) { errorEl.textContent = e.message || 'Failed. Please try again.'; errorEl.style.display = 'block'; }
-        if (btn) { btn.disabled = false; btn.textContent = 'Start Playing →'; }
-    }
-}
 
 // ===== GLOBAL NAVIGATION SYSTEM =====
 // This navigation system uses direct DOM manipulation and is guaranteed to work
@@ -6357,7 +6291,6 @@ function setupEventListeners() {
     safeAddListener('authShowRegisterBtn', 'click', () => showScreen('registerScreen'), 'Show Register');
     safeAddListener('authShowLoginBtn',    'click', () => showScreen('loginScreen'),    'Show Login');
     safeAddListener('authGuestBtn',        'click', () => signInAsGuest(),              'Guest mode');
-    safeAddListener('authGoogleBtn',       'click', () => signInWithGoogle(null),       'Google (landing)');
 
     // Login screen
     safeAddListener('loginSubmitBtn', 'click', () => {
@@ -6367,7 +6300,6 @@ function setupEventListeners() {
     }, 'Login submit');
     safeAddListener('loginBackBtn',          'click', () => showScreen('authScreen'),    'Login back');
     safeAddListener('switchToRegisterLink',  'click', () => showScreen('registerScreen'),'Switch to register');
-    safeAddListener('loginGoogleBtn',        'click', () => signInWithGoogle('loginError'), 'Google (login)');
 
     const loginEmailInput = document.getElementById('loginEmailInput');
     const loginPasswordInput = document.getElementById('loginPasswordInput');
@@ -6383,7 +6315,6 @@ function setupEventListeners() {
     }, 'Register submit');
     safeAddListener('registerBackBtn',   'click', () => showScreen('authScreen'),   'Register back');
     safeAddListener('switchToLoginLink', 'click', () => showScreen('loginScreen'),  'Switch to login');
-    safeAddListener('registerGoogleBtn', 'click', () => signInWithGoogle('registerError'), 'Google (register)');
 
     const registerPasswordInput = document.getElementById('registerPasswordInput');
     if (registerPasswordInput) registerPasswordInput.addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('registerSubmitBtn')?.click(); });
@@ -6393,13 +6324,6 @@ function setupEventListeners() {
     safeAddListener('resendVerifyBtn', 'click', () => resendVerificationEmail(),   'Resend verify');
     safeAddListener('verifySignOutBtn','click', () => signOutUser(),               'Verify sign out');
 
-    // Google username screen
-    safeAddListener('googleUsernameSubmitBtn', 'click', () => {
-        const username = document.getElementById('googleUsernameInput')?.value.trim();
-        saveGoogleUsername(username);
-    }, 'Google username submit');
-    const googleUsernameInput = document.getElementById('googleUsernameInput');
-    if (googleUsernameInput) googleUsernameInput.addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('googleUsernameSubmitBtn')?.click(); });
 
     // === GAME BUTTONS ===
     console.log('🎲 Setting up Game buttons...');
