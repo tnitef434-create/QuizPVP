@@ -2455,6 +2455,48 @@ function closeModal() {
     });
 }
 
+// ===== PASSWORD RESET =====
+function showPasswordResetModal() {
+    const modal = document.getElementById('passwordResetModal');
+    if (modal) {
+        document.getElementById('resetEmailInput').value = '';
+        document.getElementById('resetMessage').textContent = '';
+        document.getElementById('resetMessage').className = 'reset-message';
+        modal.classList.add('active');
+    }
+}
+
+function closePasswordResetModal() {
+    const modal = document.getElementById('passwordResetModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function sendPasswordReset() {
+    const email = document.getElementById('resetEmailInput').value.trim();
+    const msgEl = document.getElementById('resetMessage');
+
+    if (!email) {
+        msgEl.textContent = 'Please enter your email address.';
+        msgEl.className = 'reset-message error';
+        return;
+    }
+
+    firebase.auth().sendPasswordResetEmail(email)
+        .then(() => {
+            msgEl.textContent = 'Reset email sent! Check your inbox.';
+            msgEl.className = 'reset-message success';
+            setTimeout(() => closePasswordResetModal(), 3000);
+        })
+        .catch((error) => {
+            let msg = 'Something went wrong. Please try again.';
+            if (error.code === 'auth/user-not-found') msg = 'No account found with that email.';
+            else if (error.code === 'auth/invalid-email') msg = 'Invalid email address.';
+            else if (error.code === 'auth/too-many-requests') msg = 'Too many attempts. Please wait and try again.';
+            msgEl.textContent = msg;
+            msgEl.className = 'reset-message error';
+        });
+}
+
 // v1.5 - Cancel search (smart navigation based on search type)
 function cancelSearch() {
     console.log('🚫 Search cancelled by user');
