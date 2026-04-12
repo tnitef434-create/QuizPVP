@@ -1,6 +1,83 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true
+    "usernames": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "online": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "waiting_1v1": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "waiting_trios": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "waiting_squad": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "waiting_chat": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "waiting_rps1v1": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "waiting_rps1v2": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "waiting_rps1v3": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "waiting_war1v1": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "games": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "games_trios": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "games_squad": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "games_rps": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "games_war": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "chats": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$chatId": {
+        "messages": {
+          "$messageId": {
+            ".validate": "!newData.exists() || (newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 200 && newData.child('senderId').isString() && newData.child('timestamp').isNumber())"
+          }
+        }
+      }
+    },
+    "friend_requests": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "notifications": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
   }
 }

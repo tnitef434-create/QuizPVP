@@ -57,7 +57,7 @@
         </div>
     </div>
 
-    <!-- Username Entry Screen -->
+    <!-- Login / Register Screen -->
     <div id="usernameScreen" class="screen active">
         <div class="container">
             <h1 class="game-title">
@@ -65,9 +65,28 @@
             </h1>
             <p class="subtitle">Battle Arena</p>
             <div class="card">
-                <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="15" autocomplete="off">
-                <button id="joinBtn" class="btn btn-primary">Join Game</button>
-                <button type="button" class="forgot-password-link" onclick="showPasswordResetModal()">Forgot password?</button>
+                <div class="auth-tabs">
+                    <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Login</button>
+                    <button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <div id="loginForm">
+                    <input type="email" id="loginEmail" placeholder="Email address" autocomplete="email">
+                    <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+                    <div id="loginError" class="auth-error"></div>
+                    <button id="loginBtn" class="btn btn-primary">Login</button>
+                    <button type="button" class="forgot-password-link" onclick="showPasswordResetModal()">Forgot password?</button>
+                </div>
+
+                <!-- Register Form -->
+                <div id="registerForm" style="display:none">
+                    <input type="email" id="registerEmail" placeholder="Email address" autocomplete="email">
+                    <input type="text" id="registerUsername" placeholder="Username (2–15 characters)" maxlength="15" autocomplete="off">
+                    <input type="password" id="registerPassword" placeholder="Password (min 6 characters)" autocomplete="new-password">
+                    <div id="registerError" class="auth-error"></div>
+                    <button id="registerBtn" class="btn btn-primary">Create Account</button>
+                </div>
             </div>
         </div>
     </div>

@@ -51,6 +51,9 @@ try {
     isFirebaseReady = false;
 }
 
+// ===== CHAT MESSAGE LIMIT =====
+const MAX_CHAT_MESSAGE_LENGTH = 200;
+
 // ===== AI CHAT (ElevenLabs) =====
 const AI_DAILY_LIMIT = 5;
 const ELEVEN_AGENT_ID = 'agent_0901knykkca9f8qstcr1pk6p2ywx';
@@ -698,15 +701,100 @@ async function registerUsername(username, userId) {
     }
 }
 
+// ===== FIREBASE AUTH FUNCTIONS =====
+
+function switchAuthTab(tab) {
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+
+    if (tab === 'login') {
+        loginForm.style.display = '';
+        registerForm.style.display = 'none';
+        loginTab.classList.add('active');
+        registerTab.classList.remove('active');
+    } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = '';
+        loginTab.classList.remove('active');
+        registerTab.classList.add('active');
+    }
+}
+
+async function loginWithEmail() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorEl = document.getElementById('loginError');
+    errorEl.textContent = '';
+
+    if (!email || !password) {
+        errorEl.textContent = 'Please enter your email and password.';
+        return;
+    }
+
+    try {
+        await firebase.auth().signInWithEmailAndPassword(email, password);
+        // onAuthStateChanged will handle the rest
+    } catch (error) {
+        let msg = 'Login failed. Please try again.';
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') msg = 'Incorrect email or password.';
+        else if (error.code === 'auth/invalid-email') msg = 'Invalid email address.';
+        else if (error.code === 'auth/too-many-requests') msg = 'Too many attempts. Please wait and try again.';
+        errorEl.textContent = msg;
+    }
+}
+
+async function registerWithEmail() {
+    const email = document.getElementById('registerEmail').value.trim();
+    const username = document.getElementById('registerUsername').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const errorEl = document.getElementById('registerError');
+    errorEl.textContent = '';
+
+    if (!email || !username || !password) {
+        errorEl.textContent = 'Please fill in all fields.';
+        return;
+    }
+    if (username.length < 2 || username.length > 15) {
+        errorEl.textContent = 'Username must be 2–15 characters.';
+        return;
+    }
+    if (password.length < 6) {
+        errorEl.textContent = 'Password must be at least 6 characters.';
+        return;
+    }
+
+    const taken = await isUsernameTaken(username);
+    if (taken) {
+        errorEl.textContent = 'That username is already taken.';
+        return;
+    }
+
+    try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        const uid = cred.user.uid;
+        playerData.username = username;
+        playerData.id = uid;
+        await registerUsername(username, uid);
+        savePlayerData();
+        // onAuthStateChanged will transition to menu
+    } catch (error) {
+        let msg = 'Registration failed. Please try again.';
+        if (error.code === 'auth/email-already-in-use') msg = 'An account with this email already exists.';
+        else if (error.code === 'auth/invalid-email') msg = 'Invalid email address.';
+        else if (error.code === 'auth/weak-password') msg = 'Password is too weak (min 6 characters).';
+        errorEl.textContent = msg;
+    }
+}
+
 // Load player data from localStorage
-async function loadPlayerData() {
+function loadLocalPlayerData() {
     const saved = localStorage.getItem('quizpvp_player');
     if (saved) {
         const data = JSON.parse(saved);
         playerData.points = data.points || 0;
         playerData.color = data.color || '#4A90E2';
-        playerData.id = data.id || generateId();
-        playerData.username = data.username || ''; // Load saved username
         playerData.friends = data.friends || [];
         playerData.friendRequests = data.friendRequests || [];
         playerData.level = data.level || 1;
@@ -714,27 +802,31 @@ async function loadPlayerData() {
         playerData.wins = data.wins || 0;
         playerData.ownedCosmetics = data.ownedCosmetics || [];
         playerData.equippedCosmetic = data.equippedCosmetic || null;
-
-        // If username exists, skip to menu and setup
-        if (playerData.username && playerData.username.length >= 2) {
-            console.log('✅ Loaded saved username:', playerData.username);
-            updatePlayerDisplay();
-            showScreen('menuScreen');
-            setupPlayerPresence();
-            trackActivePlayerCount();
-            trackModePlayerCounts(); // v1.5
-            trackRPSModePlayerCounts(); // RPS tracking
-            trackWarModePlayerCounts(); // War tracking
-            loadFriendsList();
-            loadFriendRequests();
-            cleanupOldGames();
-            setInterval(cleanupOldGames, 60000);
-            return true; // Username loaded
-        }
-    } else {
-        playerData.id = generateId();
     }
-    return false; // No username
+}
+
+// Called after successful Firebase Auth sign-in
+function enterGame(uid, username) {
+    playerData.id = uid;
+    playerData.username = username;
+    loadLocalPlayerData();
+    savePlayerData();
+    updatePlayerDisplay();
+    showScreen('menuScreen');
+    setupPlayerPresence();
+    trackActivePlayerCount();
+    trackModePlayerCounts();
+    trackRPSModePlayerCounts();
+    trackWarModePlayerCounts();
+    loadFriendsList();
+    loadFriendRequests();
+    cleanupOldGames();
+    setInterval(cleanupOldGames, 60000);
+}
+
+// Legacy: load from localStorage (kept for old sessions)
+async function loadPlayerData() {
+    return false; // Auth is now handled via Firebase Auth state
 }
 
 // Save player data to localStorage
@@ -3017,6 +3109,10 @@ async function sendChatMessage() {
     const text = input.value.trim();
 
     if (!text) return;
+    if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
+        alert(`Message too long. Maximum ${MAX_CHAT_MESSAGE_LENGTH} characters.`);
+        return;
+    }
 
     const message = {
         senderId: playerData.id,
@@ -3887,8 +3983,46 @@ async function clearAccount() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 QuizPVP initializing...');
 
-    // Load player data first
-    await loadPlayerData();
+    // Wire login/register buttons
+    document.getElementById('loginBtn')?.addEventListener('click', loginWithEmail);
+    document.getElementById('registerBtn')?.addEventListener('click', registerWithEmail);
+
+    // Allow Enter key to submit login/register
+    ['loginEmail', 'loginPassword'].forEach(id => {
+        document.getElementById(id)?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') loginWithEmail();
+        });
+    });
+    ['registerEmail', 'registerUsername', 'registerPassword'].forEach(id => {
+        document.getElementById(id)?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') registerWithEmail();
+        });
+    });
+
+    // Firebase Auth state — handles login, auto-login, and logout
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (user) {
+            // Signed in — load username from database
+            const uid = user.uid;
+            try {
+                const snap = await firebase.database().ref(`usernames/${uid}`).once('value');
+                const username = snap.val();
+                if (username) {
+                    enterGame(uid, username);
+                } else {
+                    // Auth account exists but no username — rare edge case, sign out
+                    await firebase.auth().signOut();
+                    showScreen('usernameScreen');
+                }
+            } catch (e) {
+                console.error('Error loading username:', e);
+                showScreen('usernameScreen');
+            }
+        } else {
+            // Not signed in — show login screen
+            showScreen('usernameScreen');
+        }
+    });
 
     // v1.5: Setup real-time listeners
     setupGameInviteListener();
