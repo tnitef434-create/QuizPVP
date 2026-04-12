@@ -25,6 +25,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let database;
+let auth;
 let connectedRef;
 let myConnectionRef;
 let isFirebaseReady = false;
@@ -32,6 +33,7 @@ let isFirebaseReady = false;
 try {
     firebase.initializeApp(firebaseConfig);
     database = firebase.database();
+    auth = firebase.auth();
     connectedRef = database.ref('.info/connected');
     isFirebaseReady = true;
     console.log('✅ Firebase initialized successfully');
@@ -280,6 +282,40 @@ async function sendAIMessage() {
 }
 
 function initAIChat() {
+    // Block AI chat for guest (anonymous) users
+    if (typeof auth !== 'undefined' && auth && auth.currentUser && auth.currentUser.isAnonymous) {
+        const list = document.getElementById('aiMessagesList');
+        if (list) {
+            list.textContent = '';
+            const lock = document.createElement('div');
+            lock.className = 'ai-guest-lock';
+            const icon = document.createElement('div');
+            icon.className = 'ai-guest-lock-icon';
+            icon.textContent = '🔒';
+            const text = document.createElement('p');
+            text.textContent = 'AI Chat is not available in Guest mode. Create a free account to unlock it.';
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-primary btn-small';
+            btn.textContent = 'Create a free account';
+            btn.addEventListener('click', signOutUser);
+            lock.appendChild(icon);
+            lock.appendChild(text);
+            lock.appendChild(btn);
+            list.appendChild(lock);
+        }
+        const inputArea = document.getElementById('aiInputArea');
+        if (inputArea) inputArea.style.display = 'none';
+        const topBar = document.querySelector('.ai-msgs-badge');
+        if (topBar) topBar.style.display = 'none';
+        return;
+    }
+
+    // Restore input area in case it was hidden for a previous guest session
+    const inputArea = document.getElementById('aiInputArea');
+    if (inputArea) inputArea.style.display = '';
+    const topBar = document.querySelector('.ai-msgs-badge');
+    if (topBar) topBar.style.display = '';
+
     getAccountAIUsage(); // pre-warm account usage so first send is instant
     updateAIChatUI();
 
@@ -313,12 +349,9 @@ async function detectPrivateBrowsing() {
 }
 
 function showPrivateBrowsingWarning() {
-    const msg = document.getElementById('privateBrowsingMsg');
-    const joinBtn = document.getElementById('joinBtn');
-    const input = document.getElementById('usernameInput');
-    if (msg) msg.style.display = 'block';
-    if (joinBtn) { joinBtn.disabled = true; joinBtn.style.opacity = '0.45'; }
-    if (input) { input.disabled = true; input.placeholder = 'Not available in private mode'; }
+    // Auth-based system means incognito detection is no longer used for blocking
+    // Users must sign in regardless — private browsing doesn't bypass email auth
+    console.log('ℹ️ Private browsing detected, but auth-based login is still required.');
 }
 
 // --- 2. Multiple Tab Detection ---
@@ -357,20 +390,23 @@ function setupTabDetection() {
 }
 
 // --- 3. Account-Based AI Rate Limiting ---
-// The limit is tied to the username in Firebase.
-// VPN, new device, incognito — nothing bypasses it as long as the account is the same.
+// The limit is tied to the Firebase Auth UID.
+// VPN, new device, incognito — nothing bypasses it since UID is permanent per account.
 
-function _getUsername() {
-    return (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
+function _getAIUserId() {
+    if (typeof auth !== 'undefined' && auth && auth.currentUser) return auth.currentUser.uid;
+    return null;
 }
 
 async function getAccountAIUsage() {
     const today = new Date().toDateString();
     if (!isFirebaseReady) return { today, count: AI_DAILY_LIMIT, blocked: true };
-    const username = _getUsername();
-    if (!username) return { today, count: 0 }; // not logged in yet
+    const uid = _getAIUserId();
+    if (!uid) return { today, count: 0 };
+    // Block AI chat for guest (anonymous) users
+    if (auth.currentUser.isAnonymous) return { today, count: AI_DAILY_LIMIT, blocked: true, isGuest: true };
     try {
-        const snap = await database.ref('accountAiUsage/' + username).once('value');
+        const snap = await database.ref('accountAiUsage/' + uid).once('value');
         const d = snap.val();
         if (d && d.date === today) return { today, count: d.count || 0 };
     } catch(e) {}
@@ -379,10 +415,10 @@ async function getAccountAIUsage() {
 
 async function saveAccountAIUsage(usage) {
     if (!isFirebaseReady) return;
-    const username = _getUsername();
-    if (!username) return;
+    const uid = _getAIUserId();
+    if (!uid) return;
     try {
-        await database.ref('accountAiUsage/' + username).set({ date: usage.today, count: usage.count + 1 });
+        await database.ref('accountAiUsage/' + uid).set({ date: usage.today, count: usage.count + 1 });
     } catch(e) {}
 }
 
@@ -402,23 +438,23 @@ async function saveAllAIUsage(usage) {
 // The client reads this and adds it on top of the daily limit.
 
 async function getBonusRemaining() {
-    const username = (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
-    if (!username || !isFirebaseReady) return 0;
+    const uid = _getAIUserId();
+    if (!uid || !isFirebaseReady) return 0;
     try {
-        const snap = await database.ref('aiChatBonus/' + username).once('value');
+        const snap = await database.ref('aiChatBonus/' + uid).once('value');
         const d = snap.val();
         return (d && typeof d.remaining === 'number') ? Math.max(0, d.remaining) : 0;
     } catch(e) { return 0; }
 }
 
 async function deductBonusMessage() {
-    const username = (typeof playerData !== 'undefined' && playerData.username) ? playerData.username : null;
-    if (!username || !isFirebaseReady) return;
+    const uid = _getAIUserId();
+    if (!uid || !isFirebaseReady) return;
     try {
-        const snap = await database.ref('aiChatBonus/' + username).once('value');
+        const snap = await database.ref('aiChatBonus/' + uid).once('value');
         const d = snap.val();
         if (d && d.remaining > 0) {
-            await database.ref('aiChatBonus/' + username).set({ remaining: d.remaining - 1 });
+            await database.ref('aiChatBonus/' + uid).set({ remaining: d.remaining - 1 });
         }
     } catch(e) {}
 }
@@ -429,6 +465,272 @@ async function getTotalAIMsgsRemaining() {
     const dailyLeft = Math.max(0, AI_DAILY_LIMIT - usage.accountCount);
     const bonusLeft = dailyLeft > 0 ? 0 : await getBonusRemaining();
     return { total: dailyLeft + bonusLeft, blocked: false, dailyLeft, bonusLeft, usage };
+}
+
+// ===== FIREBASE AUTH SYSTEM =====
+
+// Called by onAuthStateChanged whenever auth state changes
+async function handleAuthStateChange(user) {
+    if (!user) {
+        // Signed out — reset state and show auth screen
+        playerData.username = '';
+        playerData.uid = '';
+        playerData.id = '';
+        showScreen('authScreen');
+        return;
+    }
+
+    if (!user.emailVerified && !user.isAnonymous) {
+        // Registered but email not yet verified
+        showScreen('emailVerifyScreen');
+        return;
+    }
+
+    // User is signed in (verified email or anonymous guest) — load their data
+    await loadPlayerDataForUser(user);
+}
+
+// Load player data from Firebase for a given auth user
+async function loadPlayerDataForUser(user) {
+    try {
+        const snap = await database.ref('users/' + user.uid).once('value');
+        const d = snap.val() || {};
+
+        playerData.uid = user.uid;
+        playerData.id = user.uid;
+        playerData.username = d.username || '';
+        playerData.points = d.points || 0;
+        playerData.color = d.color || '#4A90E2';
+        playerData.friends = d.friends || [];
+        playerData.friendRequests = d.friendRequests || [];
+        playerData.level = d.level || 1;
+        playerData.xp = d.xp || 0;
+        playerData.wins = d.wins || 0;
+        playerData.ownedCosmetics = d.ownedCosmetics || [];
+        playerData.equippedCosmetic = d.equippedCosmetic || null;
+
+        if (!playerData.username) {
+            // No username associated with this account — sign out and return to auth
+            console.warn('No username found for uid:', user.uid);
+            await auth.signOut();
+            return;
+        }
+
+        setupAfterLogin(user.isAnonymous);
+    } catch (e) {
+        console.error('Error loading player data:', e);
+        showScreen('authScreen');
+    }
+}
+
+// Run after a successful login or guest sign-in
+function setupAfterLogin(isGuest) {
+    updatePlayerDisplay();
+
+    // Show / hide guest badge
+    const guestBadge = document.getElementById('guestBadge');
+    if (guestBadge) guestBadge.style.display = isGuest ? 'flex' : 'none';
+
+    showScreen('menuScreen');
+    setupPlayerPresence();
+    trackActivePlayerCount();
+    trackModePlayerCounts();
+    trackRPSModePlayerCounts();
+    trackWarModePlayerCounts();
+    setupGameInviteListener();
+    setupFriendRequestListener();
+    loadFriendsList();
+    loadFriendRequests();
+    cleanupOldGames();
+    setInterval(cleanupOldGames, 60000);
+}
+
+// Register a new account with email + password + username
+async function registerWithEmail(username, email, password) {
+    const errorEl = document.getElementById('registerError');
+    const btn = document.getElementById('registerSubmitBtn');
+
+    if (errorEl) errorEl.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
+
+    try {
+        if (username.length < 2) throw { message: 'Username must be at least 2 characters.' };
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) throw { message: 'Username can only contain letters, numbers and underscores.' };
+
+        const taken = await isUsernameTaken(username);
+        if (taken) throw { message: 'That username is already taken. Please choose another.' };
+
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        const uid = cred.user.uid;
+
+        // Save username and profile to Firebase
+        await database.ref('users/' + uid).set({
+            username: username,
+            email: email,
+            points: 0,
+            color: '#4A90E2',
+            friends: [],
+            friendRequests: [],
+            level: 1,
+            xp: 0,
+            wins: 0,
+            ownedCosmetics: [],
+            equippedCosmetic: null,
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        await database.ref('usernames/' + uid).set(username);
+
+        // Send verification email
+        await cred.user.sendEmailVerification();
+
+        // Show email verification screen
+        showScreen('emailVerifyScreen');
+        const verifyText = document.getElementById('verifyEmailText');
+        if (verifyText) verifyText.textContent = 'We sent a verification link to ' + email + '. Click it, then press "Continue".';
+
+    } catch (e) {
+        const msg = e.code === 'auth/email-already-in-use'
+            ? 'That email is already registered. Try logging in instead.'
+            : e.code === 'auth/invalid-email'
+            ? 'Please enter a valid email address.'
+            : e.code === 'auth/weak-password'
+            ? 'Password must be at least 6 characters.'
+            : e.message || 'Registration failed. Please try again.';
+        if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+    }
+}
+
+// Sign in with email + password
+async function loginWithEmail(email, password) {
+    const errorEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginSubmitBtn');
+
+    if (errorEl) errorEl.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.textContent = 'Logging in...'; }
+
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+        // onAuthStateChanged fires and calls handleAuthStateChange
+        if (btn) { btn.disabled = false; btn.textContent = 'Log In'; }
+    } catch (e) {
+        const msg = e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
+            ? 'Incorrect email or password.'
+            : e.code === 'auth/invalid-email'
+            ? 'Please enter a valid email address.'
+            : e.code === 'auth/too-many-requests'
+            ? 'Too many attempts. Please wait a moment and try again.'
+            : e.message || 'Login failed. Please try again.';
+        if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Log In'; }
+    }
+}
+
+// Sign in anonymously with a chosen username
+async function signInAsGuest(username) {
+    const btn = document.getElementById('guestJoinBtn');
+
+    if (btn) btn.disabled = true;
+
+    try {
+        if (username.length < 2) {
+            alert('Please enter a username (at least 2 characters)');
+            if (btn) btn.disabled = false;
+            return;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            alert('Username can only contain letters, numbers and underscores.');
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        const taken = await isUsernameTaken(username);
+        if (taken) {
+            alert('That username is already taken. Please choose a different one.');
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        const cred = await auth.signInAnonymously();
+        const uid = cred.user.uid;
+
+        // Save guest profile
+        await database.ref('users/' + uid).set({
+            username: username,
+            points: 0,
+            color: '#4A90E2',
+            friends: [],
+            friendRequests: [],
+            level: 1,
+            xp: 0,
+            wins: 0,
+            ownedCosmetics: [],
+            equippedCosmetic: null,
+            isGuest: true,
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        await database.ref('usernames/' + uid).set(username);
+
+        // onAuthStateChanged fires and calls handleAuthStateChange
+    } catch (e) {
+        console.error('Guest sign-in error:', e);
+        const msg = e.code === 'auth/operation-not-allowed'
+            ? 'Guest sign-in is disabled. Please create an account instead.'
+            : 'Could not sign in as guest. Please check your internet connection.';
+        alert(msg);
+        if (btn) btn.disabled = false;
+    }
+}
+
+// Sign out the current user
+async function signOutUser() {
+    try {
+        // Remove from online presence
+        if (myConnectionRef) {
+            await myConnectionRef.remove().catch(() => {});
+            myConnectionRef = null;
+        }
+        await auth.signOut();
+        localStorage.removeItem('quizpvp_player');
+        // onAuthStateChanged fires with null → shows authScreen
+    } catch (e) {
+        console.error('Sign out error:', e);
+    }
+}
+
+// Called when user clicks "I've verified — Continue"
+async function checkEmailVerification() {
+    const btn = document.getElementById('verifyCheckBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
+
+    try {
+        await auth.currentUser.reload();
+        if (auth.currentUser.emailVerified) {
+            await loadPlayerDataForUser(auth.currentUser);
+        } else {
+            alert('Email not verified yet. Please click the link in your inbox first.');
+        }
+    } catch (e) {
+        console.error('Verify check error:', e);
+        alert('Could not check verification status. Please try again.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "I've verified — Continue"; }
+    }
+}
+
+// Resend the verification email
+async function resendVerificationEmail() {
+    const btn = document.getElementById('resendVerifyBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
+    try {
+        await auth.currentUser.sendEmailVerification();
+        alert('Verification email sent! Check your inbox (and spam folder).');
+    } catch (e) {
+        alert('Could not send email. Please wait a moment and try again.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Resend Email'; }
+    }
 }
 
 // ===== GLOBAL NAVIGATION SYSTEM =====
@@ -709,7 +1011,7 @@ let currentSearchType = 'game'; // 'game' or 'chat'
 function setupPlayerPresence() {
     if (!database || !playerData.id) return;
 
-    // Reference to online players
+    // Reference to online players (playerData.id === auth UID after login)
     const onlineRef = database.ref('online/' + playerData.id);
 
     // Monitor connection status
@@ -893,52 +1195,20 @@ async function registerUsername(username, userId) {
     }
 }
 
-// Load player data from localStorage
+// Load player data — now handled by Firebase Auth (onAuthStateChanged → loadPlayerDataForUser)
+// Kept as stub for any remaining callers
 async function loadPlayerData() {
-    const saved = localStorage.getItem('quizpvp_player');
-    if (saved) {
-        const data = JSON.parse(saved);
-        playerData.points = data.points || 0;
-        playerData.color = data.color || '#4A90E2';
-        playerData.id = data.id || generateId();
-        playerData.username = data.username || ''; // Load saved username
-        playerData.friends = data.friends || [];
-        playerData.friendRequests = data.friendRequests || [];
-        playerData.level = data.level || 1;
-        playerData.xp = data.xp || 0;
-        playerData.wins = data.wins || 0;
-        playerData.ownedCosmetics = data.ownedCosmetics || [];
-        playerData.equippedCosmetic = data.equippedCosmetic || null;
-
-        // If username exists, skip to menu and setup
-        if (playerData.username && playerData.username.length >= 2) {
-            console.log('✅ Loaded saved username:', playerData.username);
-            updatePlayerDisplay();
-            showScreen('menuScreen');
-            setupPlayerPresence();
-            trackActivePlayerCount();
-            trackModePlayerCounts(); // v1.5
-            trackRPSModePlayerCounts(); // RPS tracking
-            trackWarModePlayerCounts(); // War tracking
-            loadFriendsList();
-            loadFriendRequests();
-            cleanupOldGames();
-            setInterval(cleanupOldGames, 60000);
-            return true; // Username loaded
-        }
-    } else {
-        playerData.id = generateId();
-    }
-    return false; // No username
+    // Auth-driven — onAuthStateChanged handles loading
+    return false;
 }
 
-// Save player data to localStorage
+// Save player data to localStorage and Firebase
 function savePlayerData() {
     localStorage.setItem('quizpvp_player', JSON.stringify({
         points: playerData.points,
         color: playerData.color,
         id: playerData.id,
-        username: playerData.username, // Save username too
+        username: playerData.username,
         friends: playerData.friends || [],
         friendRequests: playerData.friendRequests || [],
         level: playerData.level || 1,
@@ -947,6 +1217,21 @@ function savePlayerData() {
         ownedCosmetics: playerData.ownedCosmetics || [],
         equippedCosmetic: playerData.equippedCosmetic || null
     }));
+
+    // Also persist to Firebase so data is tied to the account, not the device
+    if (isFirebaseReady && typeof auth !== 'undefined' && auth && auth.currentUser) {
+        database.ref('users/' + auth.currentUser.uid).update({
+            points: playerData.points,
+            color: playerData.color,
+            level: playerData.level || 1,
+            xp: playerData.xp || 0,
+            wins: playerData.wins || 0,
+            ownedCosmetics: playerData.ownedCosmetics || [],
+            equippedCosmetic: playerData.equippedCosmetic || null,
+            friends: playerData.friends || [],
+            friendRequests: playerData.friendRequests || []
+        }).catch(e => console.warn('Firebase savePlayerData failed:', e));
+    }
 }
 
 // Update player display
@@ -2264,6 +2549,37 @@ const COSMETICS = {
 
 // Render the shop with dynamic cosmetics (Organized into tabs)
 function renderShop() {
+    // Block shop for guest (anonymous) users
+    if (typeof auth !== 'undefined' && auth && auth.currentUser && auth.currentUser.isAnonymous) {
+        const containers = ['shopColorsBasic', 'shopColorsPremium', 'shopUnlockables', 'shopOther'];
+        containers.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '';
+        });
+        const basicContainer = document.getElementById('shopColorsBasic');
+        if (basicContainer) {
+            const lock = document.createElement('div');
+            lock.className = 'shop-guest-lock';
+            const icon = document.createElement('div');
+            icon.className = 'shop-guest-lock-icon';
+            icon.textContent = '🔒';
+            const title = document.createElement('h3');
+            title.textContent = 'Shop requires an account';
+            const text = document.createElement('p');
+            text.textContent = 'Create a free account to buy cosmetics and support the game.';
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-primary';
+            btn.textContent = 'Create a free account';
+            btn.addEventListener('click', signOutUser);
+            lock.appendChild(icon);
+            lock.appendChild(title);
+            lock.appendChild(text);
+            lock.appendChild(btn);
+            basicContainer.appendChild(lock);
+        }
+        return;
+    }
+
     try {
         console.log('🛒 Rendering shop...');
         console.log('Player data:', playerData);
@@ -2585,9 +2901,21 @@ function confirmUsernameChange() {
     }
 
     playerData.points -= 1000;
+    const oldUsername = playerData.username;
     playerData.username = newUsername;
     savePlayerData();
     updatePlayerDisplay();
+
+    // Update username in Firebase
+    if (isFirebaseReady && typeof auth !== 'undefined' && auth && auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        // Update users/{uid}/username, usernames/{uid}, and remove old references
+        Promise.all([
+            database.ref('users/' + uid + '/username').set(newUsername),
+            database.ref('usernames/' + uid).set(newUsername)
+        ]).catch(e => console.warn('Username update in Firebase failed:', e));
+    }
+
     closeModal();
     alert('Username changed successfully!');
 }
@@ -4000,20 +4328,29 @@ async function clearAccount() {
 
     console.log('🗑️ Clearing account completely...');
 
+    const uid = (typeof auth !== 'undefined' && auth && auth.currentUser) ? auth.currentUser.uid : playerData.id;
+
     // Remove from database
-    if (playerData.id && database) {
+    if (uid && database) {
         try {
-            await database.ref(`users/${playerData.id}`).remove();
-            await database.ref(`usernames/${playerData.username}`).remove();
-            await database.ref(`online/${playerData.id}`).remove();
-            await database.ref(`waiting_chat/${playerData.id}`).remove();
-            await database.ref(`waiting_1v1/${playerData.id}`).remove();
-            await database.ref(`waiting_trios/${playerData.id}`).remove();
-            await database.ref(`waiting_squad/${playerData.id}`).remove();
+            await database.ref('users/' + uid).remove();
+            await database.ref('usernames/' + uid).remove();
+            await database.ref('online/' + uid).remove();
+            await database.ref('accountAiUsage/' + uid).remove();
+            await database.ref('aiChatBonus/' + uid).remove();
+            await database.ref('waiting_chat/' + uid).remove();
+            await database.ref('waiting_1v1/' + uid).remove();
+            await database.ref('waiting_trios/' + uid).remove();
+            await database.ref('waiting_squad/' + uid).remove();
             console.log('✅ Database entries removed');
         } catch (error) {
             console.error('❌ Error removing from database:', error);
         }
+    }
+
+    // Sign out of Firebase Auth
+    if (typeof auth !== 'undefined' && auth) {
+        try { await auth.signOut(); } catch(e) {}
     }
 
     // Clear local storage completely
@@ -4037,26 +4374,25 @@ async function clearAccount() {
 // Event listeners are now set up in setupEventListeners() function, called after DOMContentLoaded
 
 // Initialize - ALL event listeners must be inside DOMContentLoaded
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 QuizPVP initializing...');
 
-    // Anti-abuse: multiple tab guard (runs immediately)
+    // Anti-abuse: multiple tab guard
     setupTabDetection();
 
-    // Anti-abuse: incognito detection (runs in background, blocks username entry if detected)
-    detectPrivateBrowsing().then(isPrivate => {
-        if (isPrivate) showPrivateBrowsingWarning();
-    });
-
-    // Load player data first
-    await loadPlayerData();
-
-    // v1.5: Setup real-time listeners
-    setupGameInviteListener();
-    setupFriendRequestListener();
-
-    // Now attach all event listeners (DOM is ready)
+    // Attach all DOM event listeners (screen is ready)
     setupEventListeners();
+
+    // Bootstrap auth — onAuthStateChanged is the single entry point for the app
+    if (isFirebaseReady && typeof auth !== 'undefined' && auth) {
+        auth.onAuthStateChanged(async (user) => {
+            console.log('🔑 Auth state changed:', user ? (user.isAnonymous ? 'guest' : user.email) : 'signed out');
+            await handleAuthStateChange(user);
+        });
+    } else {
+        // Firebase not available — show auth screen anyway
+        showScreen('authScreen');
+    }
 
     console.log('✅ QuizPVP ready!');
 });
@@ -5918,47 +6254,95 @@ function setupEventListeners() {
         findChatPartner();
     }, 'Start Chat button');
 
-    // === USERNAME & JOIN ===
-    console.log('👤 Setting up Username buttons...');
-    safeAddListener('joinBtn', 'click', async () => {
-        const username = document.getElementById('usernameInput')?.value.trim();
+    // === AUTH BUTTONS ===
+    console.log('🔐 Setting up Auth buttons...');
 
-        if (!username || username.length < 2) {
-            alert('Please enter a username (at least 2 characters)');
-            return;
-        }
+    // Auth landing screen
+    safeAddListener('authShowRegisterBtn', 'click', () => {
+        showScreen('registerScreen');
+    }, 'Show Register');
 
-        const taken = await isUsernameTaken(username);
-        if (taken) {
-            alert('This username is already taken. Please choose a different one.');
-            return;
-        }
+    safeAddListener('authShowLoginBtn', 'click', () => {
+        showScreen('loginScreen');
+    }, 'Show Login');
 
-        playerData.username = username;
-        await registerUsername(username, playerData.id);
-        savePlayerData();
-        updatePlayerDisplay();
-        showScreen('menuScreen');
-        setupPlayerPresence();
-        trackActivePlayerCount();
-        trackModePlayerCounts(); // v1.5
-        loadFriendsList();
-        loadFriendRequests();
-        cleanupOldGames();
-        setInterval(cleanupOldGames, 60000);
+    safeAddListener('authGuestBtn', 'click', () => {
+        showScreen('guestUsernameScreen');
+    }, 'Guest mode');
 
-        console.log('✅ Player registered:', username);
-        console.log('💾 Username saved to localStorage');
-    }, 'Join button');
+    // Login screen
+    safeAddListener('loginSubmitBtn', 'click', () => {
+        const email = document.getElementById('loginEmailInput')?.value.trim();
+        const password = document.getElementById('loginPasswordInput')?.value;
+        loginWithEmail(email, password);
+    }, 'Login submit');
 
-    const usernameInput = document.getElementById('usernameInput');
-    if (usernameInput) {
-        usernameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('joinBtn')?.click();
-            }
+    safeAddListener('loginBackBtn', 'click', () => {
+        showScreen('authScreen');
+    }, 'Login back');
+
+    safeAddListener('switchToRegisterLink', 'click', () => {
+        showScreen('registerScreen');
+    }, 'Switch to register');
+
+    const loginPasswordInput = document.getElementById('loginPasswordInput');
+    if (loginPasswordInput) {
+        loginPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('loginSubmitBtn')?.click();
         });
-        console.log('✓ Username input Enter key');
+    }
+
+    // Register screen
+    safeAddListener('registerSubmitBtn', 'click', () => {
+        const username = document.getElementById('registerUsernameInput')?.value.trim();
+        const email = document.getElementById('registerEmailInput')?.value.trim();
+        const password = document.getElementById('registerPasswordInput')?.value;
+        registerWithEmail(username, email, password);
+    }, 'Register submit');
+
+    safeAddListener('registerBackBtn', 'click', () => {
+        showScreen('authScreen');
+    }, 'Register back');
+
+    safeAddListener('switchToLoginLink', 'click', () => {
+        showScreen('loginScreen');
+    }, 'Switch to login');
+
+    const registerPasswordInput = document.getElementById('registerPasswordInput');
+    if (registerPasswordInput) {
+        registerPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('registerSubmitBtn')?.click();
+        });
+    }
+
+    // Email verify screen
+    safeAddListener('verifyCheckBtn', 'click', () => {
+        checkEmailVerification();
+    }, 'Verify check');
+
+    safeAddListener('resendVerifyBtn', 'click', () => {
+        resendVerificationEmail();
+    }, 'Resend verify email');
+
+    safeAddListener('verifySignOutBtn', 'click', () => {
+        signOutUser();
+    }, 'Verify sign out');
+
+    // Guest username screen
+    safeAddListener('guestJoinBtn', 'click', () => {
+        const username = document.getElementById('guestUsernameInput')?.value.trim();
+        if (username) signInAsGuest(username);
+    }, 'Guest join');
+
+    safeAddListener('guestBackBtn', 'click', () => {
+        showScreen('authScreen');
+    }, 'Guest back');
+
+    const guestUsernameInput = document.getElementById('guestUsernameInput');
+    if (guestUsernameInput) {
+        guestUsernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('guestJoinBtn')?.click();
+        });
     }
 
     // === GAME BUTTONS ===

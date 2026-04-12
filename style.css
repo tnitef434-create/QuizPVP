@@ -3960,3 +3960,222 @@ input[type="color"] {
     line-height: 1.5;
     text-align: center;
 }
+
+/* ===== AUTH SCREENS ===== */
+
+.auth-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 28px 24px;
+    max-width: 400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.auth-main-btn {
+    width: 100%;
+    font-size: 1rem;
+    padding: 14px;
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.95rem;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.6);
+    color: white;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    margin: 2px 0;
+}
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.auth-guest-note {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: center;
+    margin-top: -4px;
+    line-height: 1.4;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.auth-input::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+}
+.auth-input:focus {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.auth-error {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+    padding: 11px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.auth-switch {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-align: center;
+    margin: 0;
+}
+
+.auth-link {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 600;
+}
+.auth-link:hover {
+    color: white;
+}
+
+/* Email verify screen */
+.auth-verify-card {
+    align-items: center;
+    text-align: center;
+    padding: 36px 28px;
+    max-width: 420px;
+}
+
+.auth-verify-icon {
+    font-size: 3.5rem;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.auth-verify-title {
+    font-size: 1.4rem;
+    color: white;
+    margin: 0;
+}
+
+.auth-verify-text {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    margin: 0;
+    max-width: 320px;
+}
+
+/* Guest username screen */
+.auth-guest-intro {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.65);
+    text-align: center;
+    line-height: 1.5;
+    margin: 0;
+    padding: 10px 0 4px;
+}
+
+/* Guest mode badge on menu */
+.guest-mode-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.guest-upgrade-link {
+    color: #f9d94e;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: underline;
+}
+.guest-upgrade-link:hover {
+    color: #ffe873;
+}
+
+/* Guest lock in AI chat panel */
+.ai-guest-lock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    height: 100%;
+}
+
+.ai-guest-lock-icon {
+    font-size: 2.5rem;
+}
+
+.ai-guest-lock p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    max-width: 220px;
+}
+
+/* Guest lock in shop */
+.shop-guest-lock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 48px 20px;
+    text-align: center;
+}
+
+.shop-guest-lock-icon {
+    font-size: 3rem;
+}
+
+.shop-guest-lock h3 {
+    color: white;
+    font-size: 1.15rem;
+    margin: 0;
+}
+
+.shop-guest-lock p {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.88rem;
+    max-width: 240px;
+    line-height: 1.5;
+    margin: 0;
+}
