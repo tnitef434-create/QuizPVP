@@ -380,25 +380,57 @@ function _hashStr(s) {
     return h.toString(16);
 }
 
+// Returns a stable per-device ID that persists in normal sessions.
+// Falls back to this when IP fetch fails (e.g. VPN + ad-blocker blocking ipify).
+function getDeviceId() {
+    let id = localStorage.getItem('quizpvp_device_id');
+    if (!id) {
+        id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('quizpvp_device_id', id);
+    }
+    return id;
+}
+
 async function getIPAIUsage() {
     const today = new Date().toDateString();
-    const ip = await fetchUserIP();
-    if (!ip || !isFirebaseReady) {
-        // Can't verify identity — treat as limit reached to prevent abuse
+
+    if (!isFirebaseReady) {
+        // Firebase itself unreachable — block rather than give free messages
         return { date: today, count: AI_DAILY_LIMIT, blocked: true };
     }
+
+    const ip = await fetchUserIP();
+
+    if (ip) {
+        // Primary path: IP-based tracking (catches incognito on same network)
+        try {
+            const snap = await database.ref('ipAiUsage/' + _hashStr(ip)).once('value');
+            const d = snap.val();
+            if (d && d.date === today) return d;
+        } catch(e) {}
+        return { date: today, count: 0 };
+    }
+
+    // Fallback: IP fetch failed (VPN routing or ad-blocker blocking ipify).
+    // Use a device ID from localStorage so the user isn't outright blocked.
+    const deviceId = getDeviceId();
     try {
-        const snap = await database.ref('ipAiUsage/' + _hashStr(ip)).once('value');
+        const snap = await database.ref('deviceAiUsage/' + deviceId).once('value');
         const d = snap.val();
-        if (d && d.date === today) return d;
+        if (d && d.date === today) return { ...d, deviceFallback: true };
     } catch(e) {}
-    return { date: today, count: 0 };
+    return { date: today, count: 0, deviceFallback: true };
 }
 
 async function saveIPAIUsage(usage) {
+    if (!isFirebaseReady) return;
     const ip = await fetchUserIP();
-    if (ip && isFirebaseReady) {
-        try { await database.ref('ipAiUsage/' + _hashStr(ip)).set(usage); } catch(e) {}
+    if (ip) {
+        try { await database.ref('ipAiUsage/' + _hashStr(ip)).set({ date: usage.date, count: usage.count }); } catch(e) {}
+    } else {
+        // Save against device ID when IP unavailable
+        const deviceId = getDeviceId();
+        try { await database.ref('deviceAiUsage/' + deviceId).set({ date: usage.date, count: usage.count }); } catch(e) {}
     }
 }
 
