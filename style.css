@@ -4106,12 +4106,28 @@ body:has(.screen.ap.active) {
 }
 
 /* ── Input field with animated gold border ── */
+.ap-field-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ap-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: rgba(255,215,0,0.7);
+    padding-left: 2px;
+}
+
 .ap-field {
     --gold-angle: 0deg;
     width: 100%;
     border-radius: 13px;
-    padding: 2px;
-    /* overflow:hidden clips the conic-gradient exactly to the rounded rect */
+    padding: 1.5px;
     overflow: hidden;
     background: conic-gradient(
         from var(--gold-angle),
@@ -4124,17 +4140,6 @@ body:has(.screen.ap.active) {
         transparent 100%
     );
     animation: gold-rotate 3.5s linear infinite;
-}
-
-.ap-label {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: rgba(255,215,0,0.7);
-    margin-bottom: 6px;
-    padding-left: 2px;
 }
 
 .ap-input {
@@ -4158,6 +4163,14 @@ body:has(.screen.ap.active) {
 
 .ap-input:focus {
     background: #18181c;
+}
+
+.ap-input:-webkit-autofill,
+.ap-input:-webkit-autofill:hover,
+.ap-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 100px #111113 inset !important;
+    -webkit-text-fill-color: #fff !important;
+    caret-color: #fff;
 }
 
 /* ── Buttons ── */
