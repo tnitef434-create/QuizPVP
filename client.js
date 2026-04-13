@@ -53,6 +53,12 @@ try {
     isFirebaseReady = false;
 }
 
+// ===== CHAT MESSAGE LIMIT =====
+const MAX_CHAT_MESSAGE_LENGTH = 200;
+
+// ===== CHAT MESSAGE LIMIT =====
+const MAX_CHAT_MESSAGE_LENGTH = 200;
+
 // ===== AI CHAT (ElevenLabs) =====
 const AI_DAILY_LIMIT = 5;
 const ELEVEN_AGENT_ID = 'agent_0901knykkca9f8qstcr1pk6p2ywx';
@@ -3518,6 +3524,10 @@ async function sendChatMessage() {
     const text = input.value.trim();
 
     if (!text) return;
+    if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
+        alert(`Message too long. Maximum ${MAX_CHAT_MESSAGE_LENGTH} characters.`);
+        return;
+    }
 
     const message = {
         senderId: playerData.id,
