@@ -4037,6 +4037,32 @@ input[type="color"] {
     to { transform: rotate(360deg); }
 }
 
+/* Prevent body gradient showing behind auth pages */
+body:has(.screen.ap.active) {
+    background: #070709 !important;
+}
+
+/* Full-screen dark overlay for every auth page */
+.screen.ap {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    background: #070709;
+    z-index: 500;
+    display: none !important;
+    overflow-y: auto;
+    padding: 0 !important;
+}
+
+.screen.ap.active {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    animation: ap-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── Loading screen ── */
 .ap-loading-wrap {
     display: flex;
