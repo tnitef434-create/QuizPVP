@@ -4173,14 +4173,25 @@ body:has(.screen.ap.active) {
 }
 
 .ap-field {
-    --gold-angle: 0deg;
     width: 100%;
     border-radius: 13px;
     padding: 1.5px;
+    position: relative;
     overflow: hidden;
-    clip-path: inset(0 round 13px);
+    background: transparent;
+}
+
+/* Rotating gold border — uses transform: rotate() for universal browser support */
+.ap-field::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    height: 200%;
+    transform: translate(-50%, -50%) rotate(0deg);
     background: conic-gradient(
-        from var(--gold-angle),
+        from 0deg,
         transparent 0%,
         transparent 32%,
         rgba(255,180,0,0.55) 44%,
@@ -4189,7 +4200,12 @@ body:has(.screen.ap.active) {
         transparent 68%,
         transparent 100%
     );
-    animation: gold-rotate 3.5s linear infinite;
+    animation: gold-rotate-transform 3.5s linear infinite;
+}
+
+@keyframes gold-rotate-transform {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .ap-input {
@@ -4205,6 +4221,8 @@ body:has(.screen.ap.active) {
     box-sizing: border-box;
     font-family: inherit;
     transition: background 0.2s;
+    position: relative;
+    z-index: 1;
 }
 
 .ap-input::placeholder {

@@ -525,8 +525,10 @@ async function loadPlayerDataForUser(user) {
         playerData.equippedCosmetic = d.equippedCosmetic || null;
 
         if (!playerData.username) {
-            // No username — sign out and return to auth screen
+            // Profile missing — likely registration DB write failed previously.
+            // Show a clear message so the user knows what to do.
             await auth.signOut();
+            showToast('Account profile not found. Go to Sign Up and use your existing email + password to restore it.', 'error');
             return;
         }
 
@@ -604,9 +606,48 @@ async function registerWithEmail(username, email, password) {
         startResendCountdown();
 
     } catch (e) {
-        const msg = e.code === 'auth/email-already-in-use'
-            ? 'That email is already registered. Try logging in instead.'
-            : e.code === 'auth/invalid-email'
+        if (e.code === 'auth/email-already-in-use') {
+            // Try to recover: sign in with these credentials and create the missing profile
+            try {
+                if (btn) btn.textContent = 'Recovering account...';
+                const recoverCred = await auth.signInWithEmailAndPassword(email, password);
+                const uid = recoverCred.user.uid;
+
+                // Check if profile already exists
+                const profileSnap = await database.ref('users/' + uid).once('value');
+                if (profileSnap.exists()) {
+                    // Profile exists — just log them in (onAuthStateChanged handles navigation)
+                    if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+                    return;
+                }
+
+                // Profile missing — create it now
+                const taken = await isUsernameTaken(username);
+                if (taken) {
+                    await auth.signOut();
+                    if (errorEl) { errorEl.textContent = 'That username is already taken. Choose another.'; errorEl.style.display = 'block'; }
+                    if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+                    return;
+                }
+                await database.ref('users/' + uid).set({
+                    username, email, points: 0, color: '#4A90E2',
+                    friends: [], friendRequests: [], level: 1, xp: 0,
+                    wins: 0, ownedCosmetics: [], equippedCosmetic: null,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+                await database.ref('usernames/' + uid).set(username);
+                // onAuthStateChanged will handle navigation after profile is ready
+                if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+                return;
+            } catch (recoverErr) {
+                // Wrong password or other error — just tell them to log in
+                if (errorEl) { errorEl.textContent = 'That email is already registered. Try logging in instead.'; errorEl.style.display = 'block'; }
+                if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+                return;
+            }
+        }
+
+        const msg = e.code === 'auth/invalid-email'
             ? 'Please enter a valid email address.'
             : e.code === 'auth/weak-password'
             ? 'Password must be at least 6 characters.'
