@@ -4178,6 +4178,7 @@ body:has(.screen.ap.active) {
     border-radius: 13px;
     padding: 1.5px;
     overflow: hidden;
+    clip-path: inset(0 round 13px);
     background: conic-gradient(
         from var(--gold-angle),
         transparent 0%,
@@ -4500,4 +4501,206 @@ body:has(.screen.ap.active) {
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.6);
     color: white;
+}
+
+/* ── Toast Notifications ── */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    pointer-events: none;
+}
+
+.toast {
+    background: #1a1a1a;
+    border: 1.5px solid rgba(212, 175, 55, 0.4);
+    color: #fff;
+    padding: 12px 22px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    max-width: 340px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: auto;
+    white-space: pre-line;
+}
+
+.toast.toast-show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.toast-success {
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
+.toast.toast-error {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.toast.toast-warning {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.toast.toast-info {
+    border-color: rgba(212, 175, 55, 0.6);
+    color: #D4AF37;
+}
+
+/* ── In-App Confirm Dialog ── */
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.confirm-box {
+    background: #111;
+    border: 1.5px solid rgba(212, 175, 55, 0.4);
+    border-radius: 18px;
+    padding: 30px 28px;
+    max-width: 360px;
+    width: 90%;
+    text-align: center;
+}
+
+.confirm-box p {
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0 0 24px;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* ── Ko-fi Unlock Banner ── */
+.unlock-all-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #1a1500 0%, #2a2000 100%);
+    border: 1.5px solid rgba(212, 175, 55, 0.5);
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    text-decoration: none;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.unlock-all-banner:hover {
+    border-color: #D4AF37;
+    background: linear-gradient(135deg, #1a1500 0%, #3a2d00 100%);
+}
+
+.unlock-all-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.unlock-all-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.unlock-all-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.unlock-all-title {
+    color: #D4AF37;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.unlock-all-sub {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.8rem;
+}
+
+.unlock-all-btn {
+    background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+    color: #000;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Ko-fi in AI limit bar ── */
+.ai-limit-kofi-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+    color: #000;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    margin-top: 6px;
+}
+
+.ai-limit-kofi-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+/* ── Ko-fi in Settings ── */
+.settings-item-kofi {
+    text-decoration: none;
+}
+
+.kofi-icon-bg {
+    background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.kofi-icon-img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
+.btn-kofi-pill {
+    background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+    color: #000;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 4px 12px;
+    border-radius: 20px;
 }

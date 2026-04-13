@@ -49,7 +49,7 @@ try {
     });
 } catch (error) {
     console.error('❌ Firebase initialization error:', error);
-    alert('Failed to connect to game server. Please check:\n1. Your Firebase config in client.js is correct\n2. Your internet connection\n3. Firebase Database is enabled in your project\n\nError: ' + error.message);
+    showToast('Failed to connect to game server. Check console.', 'error');
     isFirebaseReady = false;
 }
 
@@ -492,6 +492,9 @@ async function handleAuthStateChange(user) {
         return;
     }
 
+    // Reload token so emailVerified reflects latest state
+    try { await user.reload(); } catch(e) {}
+
     if (!user.emailVerified) {
         // Registered via email but not yet verified
         showScreen('emailVerifyScreen');
@@ -499,7 +502,7 @@ async function handleAuthStateChange(user) {
     }
 
     // Fully authenticated — load their data
-    await loadPlayerDataForUser(user);
+    await loadPlayerDataForUser(auth.currentUser || user);
 }
 
 // Load player data from Firebase for a given auth user
@@ -678,7 +681,7 @@ async function signInAsGuest() {
         const msg = e.code === 'auth/operation-not-allowed'
             ? 'Guest sign-in is not enabled yet. Please create a free account.'
             : 'Could not sign in as guest. Check your internet connection.';
-        alert(msg);
+        showToast(msg, 'error');
         if (btn) { btn.disabled = false; btn.textContent = 'Play as Guest'; }
     }
 }
@@ -710,11 +713,11 @@ async function checkEmailVerification() {
         if (auth.currentUser.emailVerified) {
             await loadPlayerDataForUser(auth.currentUser);
         } else {
-            alert('Email not verified yet. Please click the link in your inbox first.');
+            showToast('Email not verified yet. Please click the link in your inbox first.', 'warning');
         }
     } catch (e) {
         console.error('Verify check error:', e);
-        alert('Could not check verification status. Please try again.');
+        showToast('Could not check verification status. Please try again.', 'error');
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = "I've verified — Continue"; }
     }
@@ -750,7 +753,7 @@ async function resendVerificationEmail() {
         await auth.currentUser.sendEmailVerification();
         startResendCountdown();
     } catch (e) {
-        alert('Could not send email. Please wait a moment and try again.');
+        showToast('Could not send email. Please wait a moment and try again.', 'error');
         if (btn) { btn.disabled = false; btn.textContent = 'Resend Email'; }
     }
 }
@@ -854,6 +857,36 @@ window.showNotification = function(title, message, icon = '✨') {
     }, 4000);
 };
 
+// In-app toast (replaces alert)
+function showToast(message, type = 'info') {
+    // type: 'success' | 'error' | 'info' | 'warning'
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('toast-show'));
+    setTimeout(() => {
+        toast.classList.remove('toast-show');
+        setTimeout(() => toast.remove(), 350);
+    }, 3500);
+}
+
+// In-app confirm dialog (replaces confirm)
+function showConfirm(message, onConfirm, onCancel) {
+    const overlay = document.getElementById('confirmOverlay');
+    const msgEl = document.getElementById('confirmMessage');
+    const okBtn = document.getElementById('confirmOkBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    if (!overlay) { if (onConfirm) onConfirm(); return; }
+    msgEl.textContent = message;
+    overlay.style.display = 'flex';
+    const cleanup = () => { overlay.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; };
+    okBtn.onclick = () => { cleanup(); if (onConfirm) onConfirm(); };
+    cancelBtn.onclick = () => { cleanup(); if (onCancel) onCancel(); };
+}
+
 // Anti-Tab-Switch Detection (Auto-lose if you leave during game)
 let gameWindowFocused = true;
 let antiCheatActive = false;
@@ -888,7 +921,7 @@ function handleTabSwitchLoss() {
         database.ref(`games/${currentGame.gameId}/players/${playerData.id}/tabSwitch`).set(true);
 
         showScreen('menuScreen');
-        alert('You lost because you left the game window!');
+        showToast('You lost because you left the game window!', 'error');
     }, 500);
 }
 
@@ -1250,9 +1283,7 @@ function savePlayerData() {
             xp: playerData.xp || 0,
             wins: playerData.wins || 0,
             ownedCosmetics: playerData.ownedCosmetics || [],
-            equippedCosmetic: playerData.equippedCosmetic || null,
-            friends: playerData.friends || [],
-            friendRequests: playerData.friendRequests || []
+            equippedCosmetic: playerData.equippedCosmetic || null
         }).catch(e => console.warn('Firebase savePlayerData failed:', e));
     }
 }
@@ -1314,7 +1345,7 @@ async function findMatch() {
 
     // Check if Firebase is ready
     if (!isFirebaseReady || !database) {
-        alert('⚠️ Firebase is not connected!\n\nPlease check:\n1. You updated the Firebase config in client.js\n2. Your Firebase Realtime Database is enabled\n3. Database rules are set to allow read/write\n\nOpen browser console (F12) for more details.');
+        showToast('Firebase is not connected. Check your config and database settings.', 'error');
         console.error('❌ Firebase not ready. Cannot start matchmaking.');
         showScreen('menuScreen');
         return;
@@ -1702,7 +1733,7 @@ function handleMatchmakingError(error) {
         errorMessage += 'Please check browser console (F12) for details.';
     }
 
-    alert(errorMessage);
+    showToast(errorMessage, 'error');
     showScreen('menuScreen');
 }
 
@@ -2664,7 +2695,7 @@ function renderShop() {
         let buttonText, buttonAction, buttonClass;
         if (isLocked) {
             buttonText = `🔒 ${cosmetic.winsRequired} Wins`;
-            buttonAction = `alert('Win ${cosmetic.winsRequired} games to unlock this!')`;
+            buttonAction = `showToast('Win ${cosmetic.winsRequired} games to unlock this!', 'warning')`;
             buttonClass = 'btn btn-secondary btn-small';
         } else if (isEquipped) {
             buttonText = '✓ Equipped';
@@ -2770,7 +2801,7 @@ function renderShop() {
     } catch (error) {
         console.error('❌ FATAL Error rendering shop:', error);
         console.error('Error stack:', error.stack);
-        alert('Error loading shop. Check console for details.');
+        showToast('Error loading shop. Check console for details.', 'error');
     }
 }
 
@@ -2830,7 +2861,7 @@ function purchaseCosmetic(cosmeticId) {
 
     // Check if already owned
     if ((playerData.ownedCosmetics || []).includes(cosmeticId)) {
-        alert('You already own this cosmetic!');
+        showToast('You already own this cosmetic!', 'warning');
         return;
     }
 
@@ -2846,7 +2877,7 @@ function purchaseCosmetic(cosmeticId) {
         return;
     }
 
-    if (confirm(`Purchase ${cosmetic.name} for ${cosmetic.cost.toLocaleString()} points?`)) {
+    showConfirm(`Purchase ${cosmetic.name} for ${cosmetic.cost.toLocaleString()} points?`, () => {
         // Deduct points
         playerData.points -= cosmetic.cost;
 
@@ -2866,7 +2897,7 @@ function purchaseCosmetic(cosmeticId) {
         renderShop();
 
         showNotification('Purchase Successful!', `${cosmetic.name} equipped!`, '✨');
-    }
+    });
 }
 
 // Equip an owned cosmetic
@@ -2876,7 +2907,7 @@ function equipCosmetic(cosmeticId) {
 
     // Check if owned
     if (!(playerData.ownedCosmetics || []).includes(cosmeticId)) {
-        alert('You don\'t own this cosmetic!');
+        showToast("You don't own this cosmetic!", 'error');
         return;
     }
 
@@ -2894,7 +2925,7 @@ function equipCosmetic(cosmeticId) {
 // Shop functions
 function openUsernameChange() {
     if (playerData.points < 1000) {
-        alert('Not enough points! You need 1,000 points.');
+        showToast('Not enough points! You need 1,000 points.', 'error');
         return;
     }
     document.getElementById('usernameModal').classList.add('active');
@@ -2903,7 +2934,7 @@ function openUsernameChange() {
 
 function openColorPicker() {
     if (playerData.points < 5000) {
-        alert('Not enough points! You need 5,000 points.');
+        showToast('Not enough points! You need 5,000 points.', 'error');
         return;
     }
     document.getElementById('colorModal').classList.add('active');
@@ -2919,7 +2950,7 @@ function confirmUsernameChange() {
     const newUsername = document.getElementById('newUsernameInput').value.trim();
 
     if (newUsername.length < 2) {
-        alert('Username must be at least 2 characters long');
+        showToast('Username must be at least 2 characters long', 'error');
         return;
     }
 
@@ -2940,7 +2971,7 @@ function confirmUsernameChange() {
     }
 
     closeModal();
-    alert('Username changed successfully!');
+    showToast('Username changed successfully!', 'success');
 }
 
 function confirmColorChange() {
@@ -2951,7 +2982,7 @@ function confirmColorChange() {
     savePlayerData();
     updatePlayerDisplay();
     closeModal();
-    alert('Color changed successfully!');
+    showToast('Color changed successfully!', 'success');
 }
 
 function purchaseColor(colorType, customCost = null) {
@@ -2979,7 +3010,7 @@ function purchaseColor(colorType, customCost = null) {
         return;
     }
 
-    if (confirm(`Purchase ${colorName} color for ${cost.toLocaleString()} points?`)) {
+    showConfirm(`Purchase ${colorName} color for ${cost.toLocaleString()} points?`, () => {
         playerData.points -= cost;
         playerData.color = colorValue;
         savePlayerData();
@@ -2992,7 +3023,7 @@ function purchaseColor(colorType, customCost = null) {
         }
 
         showNotification('Purchase Successful!', `${colorName} color equipped!`, '✨');
-    }
+    });
 }
 
 function closeModal() {
@@ -3100,7 +3131,7 @@ async function requestOrientationPermission() {
 // Start Who Am I game
 async function startWhoAmIGame() {
     if (!detectMobile()) {
-        alert('📱 Who Am I mode is only available on mobile devices!');
+        showToast('Who Am I mode is only available on mobile devices!', 'warning');
         showScreen('menuScreen');
         return;
     }
@@ -3108,7 +3139,7 @@ async function startWhoAmIGame() {
     // Request orientation permission
     const hasPermission = await requestOrientationPermission();
     if (!hasPermission) {
-        alert('Please allow device orientation access to play this mode.');
+        showToast('Please allow device orientation access to play this mode.', 'warning');
         showScreen('menuScreen');
         return;
     }
@@ -3232,7 +3263,7 @@ function endWhoAmIGame() {
     }
 
     // Show results
-    alert(`Game Over!\n\nCorrect: ${whoAmICorrect}\nWrong/Skipped: ${whoAmIWrong}\n\nScore: ${whoAmICorrect * 10} points`);
+    showToast(`Game Over! Correct: ${whoAmICorrect}, Wrong: ${whoAmIWrong} — Score: ${whoAmICorrect * 10} pts`, 'info');
 
     // Award points
     playerData.points += whoAmICorrect * 10;
@@ -3378,7 +3409,7 @@ async function findChatPartner() {
         }
     } catch (error) {
         console.error('❌ Chat matching error:', error);
-        alert('Failed to find chat partner: ' + error.message);
+        showToast('Failed to find chat partner: ' + error.message, 'error');
         showScreen('menuScreen');
     }
 }
@@ -3522,7 +3553,7 @@ async function sendChatMessage() {
 
     if (!text) return;
     if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
-        alert(`Message too long. Maximum ${MAX_CHAT_MESSAGE_LENGTH} characters.`);
+        showToast(`Message too long. Maximum ${MAX_CHAT_MESSAGE_LENGTH} characters.`, 'warning');
         return;
     }
 
@@ -3539,7 +3570,7 @@ async function sendChatMessage() {
         input.focus();
     } catch (error) {
         console.error('❌ Failed to send message:', error);
-        alert('Failed to send message');
+        showToast('Failed to send message', 'error');
     }
 }
 
@@ -3634,10 +3665,10 @@ async function sendFriendRequest() {
         document.getElementById('addFriendBtn').textContent = 'Request Sent';
         document.getElementById('addFriendBtn').disabled = true;
 
-        alert(`Friend request sent to ${partnerUsername}!`);
+        showToast(`Friend request sent to ${partnerUsername}!`, 'success');
     } catch (error) {
         console.error('Error sending friend request:', error);
-        alert('Failed to send friend request');
+        showToast('Failed to send friend request', 'error');
     }
 }
 
@@ -3782,14 +3813,14 @@ async function acceptFriendRequest(friendId, friendUsername, friendColor) {
         // Remove friend request
         await database.ref(`users/${playerData.id}/friendRequests/${friendId}`).remove();
 
-        alert(`You are now friends with ${friendUsername}!`);
+        showToast(`You are now friends with ${friendUsername}!`, 'success');
 
         // Reload lists
         loadFriendsList();
         loadFriendRequests();
     } catch (error) {
         console.error('Error accepting friend request:', error);
-        alert('Failed to accept friend request');
+        showToast('Failed to accept friend request', 'error');
     }
 }
 
@@ -3804,21 +3835,21 @@ async function rejectFriendRequest(friendId) {
 }
 
 // Remove friend
-async function removeFriend(friendId) {
-    if (!confirm('Remove this friend?')) return;
+function removeFriend(friendId) {
+    showConfirm('Remove this friend?', async () => {
+        try {
+            // Remove from my friends
+            await database.ref(`users/${playerData.id}/friends/${friendId}`).remove();
 
-    try {
-        // Remove from my friends
-        await database.ref(`users/${playerData.id}/friends/${friendId}`).remove();
+            // Remove me from their friends
+            await database.ref(`users/${friendId}/friends/${playerData.id}`).remove();
 
-        // Remove me from their friends
-        await database.ref(`users/${friendId}/friends/${playerData.id}`).remove();
-
-        loadFriendsList();
-    } catch (error) {
-        console.error('Error removing friend:', error);
-        alert('Failed to remove friend');
-    }
+            loadFriendsList();
+        } catch (error) {
+            console.error('Error removing friend:', error);
+            showToast('Failed to remove friend', 'error');
+        }
+    });
 }
 
 // Open friend chat
@@ -3829,7 +3860,7 @@ async function openFriendChat(friendId) {
         const friend = snapshot.val();
 
         if (!friend) {
-            alert('Friend not found');
+            showToast('Friend not found', 'error');
             return;
         }
 
@@ -3875,7 +3906,7 @@ async function openFriendChat(friendId) {
 
     } catch (error) {
         console.error('Error opening friend chat:', error);
-        alert('Failed to open chat');
+        showToast('Failed to open chat', 'error');
     }
 }
 
@@ -3917,7 +3948,7 @@ async function sendFriendMessage() {
         input.focus();
     } catch (error) {
         console.error('Failed to send message:', error);
-        alert('Failed to send message');
+        showToast('Failed to send message', 'error');
     }
 }
 
@@ -4209,7 +4240,7 @@ async function declineGameInviteFromNotification() {
 // View results manually
 function viewResults() {
     if (!resultsReadyToView) {
-        alert('Results are not ready yet. Please wait...');
+        showToast('Results are not ready yet. Please wait...', 'warning');
         return;
     }
 
@@ -4253,106 +4284,102 @@ function viewResults() {
 // Fix matchmaking (clear all queue entries)
 async function fixMatchmaking() {
     if (!database || !playerData.id) {
-        alert('⚠️ Not connected to database');
+        showToast('Not connected to database', 'error');
         return;
     }
 
-    if (!confirm('Clear all matchmaking queues and reset? This will remove you from all waiting queues.')) {
-        return;
-    }
+    showConfirm('Clear all matchmaking queues and reset? This will remove you from all waiting queues.', async () => {
+        try {
+            console.log('🔧 Fixing matchmaking for player:', playerData.id);
 
-    try {
-        console.log('🔧 Fixing matchmaking for player:', playerData.id);
+            // Remove from ALL waiting queues
+            const queues = [
+                'waiting_1v1',
+                'waiting_trios',
+                'waiting_squad',
+                'waiting_chat',
+                'waiting_rps1v1',
+                'waiting_rps1v2',
+                'waiting_rps1v3',
+                'waiting_war1v1'
+            ];
 
-        // Remove from ALL waiting queues
-        const queues = [
-            'waiting_1v1',
-            'waiting_trios',
-            'waiting_squad',
-            'waiting_chat',
-            'waiting_rps1v1',
-            'waiting_rps1v2',
-            'waiting_rps1v3',
-            'waiting_war1v1'
-        ];
+            const removePromises = queues.map(queue =>
+                database.ref(`${queue}/${playerData.id}`).remove()
+            );
 
-        const removePromises = queues.map(queue =>
-            database.ref(`${queue}/${playerData.id}`).remove()
-        );
+            await Promise.all(removePromises);
 
-        await Promise.all(removePromises);
+            // Clear all active listeners
+            if (searchListener) {
+                database.ref('games').off('child_added', searchListener);
+                database.ref('games_trios').off('child_added', searchListener);
+                database.ref('games_squad').off('child_added', searchListener);
+                searchListener = null;
+            }
 
-        // Clear all active listeners
-        if (searchListener) {
-            database.ref('games').off('child_added', searchListener);
-            database.ref('games_trios').off('child_added', searchListener);
-            database.ref('games_squad').off('child_added', searchListener);
-            searchListener = null;
+            if (rpsSearchListener) {
+                database.ref('games_rps').off('child_added', rpsSearchListener);
+                rpsSearchListener = null;
+            }
+
+            if (warSearchListener) {
+                database.ref('games_war').off('child_added', warSearchListener);
+                warSearchListener = null;
+            }
+
+            if (chatListener) {
+                database.ref('chats').off('child_added', chatListener);
+                chatListener = null;
+            }
+
+            console.log('✅ Matchmaking fixed! All queues cleared.');
+            showNotification('Matchmaking Fixed!', 'All queue entries cleared. You can now search again.', '✅');
+
+            // Return to main menu
+            setTimeout(() => {
+                window.gameNavigation.goToMenu();
+            }, 1000);
+
+        } catch (error) {
+            console.error('❌ Error fixing matchmaking:', error);
+            showToast('Error fixing matchmaking: ' + error.message, 'error');
         }
-
-        if (rpsSearchListener) {
-            database.ref('games_rps').off('child_added', rpsSearchListener);
-            rpsSearchListener = null;
-        }
-
-        if (warSearchListener) {
-            database.ref('games_war').off('child_added', warSearchListener);
-            warSearchListener = null;
-        }
-
-        if (chatListener) {
-            database.ref('chats').off('child_added', chatListener);
-            chatListener = null;
-        }
-
-        console.log('✅ Matchmaking fixed! All queues cleared.');
-        showNotification('Matchmaking Fixed!', 'All queue entries cleared. You can now search again.', '✅');
-
-        // Return to main menu
-        setTimeout(() => {
-            window.gameNavigation.goToMenu();
-        }, 1000);
-
-    } catch (error) {
-        console.error('❌ Error fixing matchmaking:', error);
-        alert('Error fixing matchmaking: ' + error.message);
-    }
+    });
 }
 
 // Reset app data (keeps username and account)
 function resetAppData() {
-    if (!confirm('Reset app data? This will clear your local game data but keep your username and account.')) {
-        return;
-    }
+    showConfirm('Reset app data? This will clear your local game data but keep your username and account.', () => {
+        // Keep username and ID
+        const keepData = {
+            username: playerData.username,
+            id: playerData.id,
+            color: playerData.color,
+            points: playerData.points
+        };
 
-    // Keep username and ID
-    const keepData = {
-        username: playerData.username,
-        id: playerData.id,
-        color: playerData.color,
-        points: playerData.points
-    };
+        // Clear everything else
+        localStorage.clear();
 
-    // Clear everything else
-    localStorage.clear();
+        // Restore essential data
+        localStorage.setItem('quizpvp_player', JSON.stringify(keepData));
 
-    // Restore essential data
-    localStorage.setItem('quizpvp_player', JSON.stringify(keepData));
-
-    alert('App data reset! Reloading...');
-    window.location.reload();
+        showToast('App data reset! Reloading...', 'success');
+        setTimeout(() => window.location.reload(), 1500);
+    });
 }
 
 // v1.5 - Fixed clear account (fully works now)
-async function clearAccount() {
-    if (!confirm('Delete everything and start fresh? This cannot be undone!')) {
-        return;
-    }
+function clearAccount() {
+    showConfirm('Delete everything and start fresh? This cannot be undone!', () => {
+        showConfirm('Are you absolutely sure? Your username "' + playerData.username + '" and all progress will be lost!', async () => {
+            await _doClearAccount();
+        });
+    });
+}
 
-    if (!confirm('Are you absolutely sure? Your username "' + playerData.username + '" and all progress will be lost!')) {
-        return;
-    }
-
+async function _doClearAccount() {
     console.log('🗑️ Clearing account completely...');
 
     const uid = (typeof auth !== 'undefined' && auth && auth.currentUser) ? auth.currentUser.uid : playerData.id;
@@ -4495,7 +4522,7 @@ function trackRPSModePlayerCounts() {
 // Start RPS matchmaking
 async function startRPSMatchmaking() {
     if (!isFirebaseReady || !database) {
-        alert('⚠️ Firebase is not connected!');
+        showToast('Firebase is not connected!', 'error');
         console.error('❌ Firebase not ready. Cannot start RPS matchmaking.');
         showScreen('rpsModeScreen');
         return;
@@ -5203,47 +5230,45 @@ function forfeitRPSGame() {
     console.log('🏳️ Forfeit RPS button clicked');
 
     if (!currentRPSGame || !currentRPSGame.gameId) {
-        alert('⚠️ No active game');
+        showToast('No active game', 'error');
         return;
     }
 
-    if (!confirm('Forfeit this match? You will lose!')) {
-        return;
-    }
+    showConfirm('Forfeit this match? You will lose!', () => {
+        console.log('Forfeiting RPS game:', currentRPSGame.gameId);
 
-    console.log('Forfeiting RPS game:', currentRPSGame.gameId);
-
-    // Clean up listener
-    if (rpsGameListener) {
-        try {
-            database.ref(`games_rps/${currentRPSGame.gameId}`).off('value', rpsGameListener);
-        } catch (e) {
-            console.log('Error cleaning up listener:', e);
+        // Clean up listener
+        if (rpsGameListener) {
+            try {
+                database.ref(`games_rps/${currentRPSGame.gameId}`).off('value', rpsGameListener);
+            } catch (e) {
+                console.log('Error cleaning up listener:', e);
+            }
+            rpsGameListener = null;
         }
-        rpsGameListener = null;
-    }
 
-    // Update database if online game
-    const isBotGame = currentRPSGame.mode === 'rpsbot' || currentRPSGame.gameId.startsWith('bot_');
-    if (!isBotGame && database) {
-        try {
-            database.ref(`games_rps/${currentRPSGame.gameId}`).update({
-                finished: true,
-                forfeited: true,
-                forfeitedBy: playerData.id
-            });
-        } catch (e) {
-            console.log('Error updating forfeit:', e);
+        // Update database if online game
+        const isBotGame = currentRPSGame.mode === 'rpsbot' || currentRPSGame.gameId.startsWith('bot_');
+        if (!isBotGame && database) {
+            try {
+                database.ref(`games_rps/${currentRPSGame.gameId}`).update({
+                    finished: true,
+                    forfeited: true,
+                    forfeitedBy: playerData.id
+                });
+            } catch (e) {
+                console.log('Error updating forfeit:', e);
+            }
         }
-    }
 
-    // Set scores for loss
-    currentRPSGame.myScore = 0;
-    currentRPSGame.opponentScore = 5;
+        // Set scores for loss
+        currentRPSGame.myScore = 0;
+        currentRPSGame.opponentScore = 5;
 
-    // Show results
-    showNotification('Forfeited', 'Match forfeited', '🏳️');
-    setTimeout(() => showRPSResults(), 300);
+        // Show results
+        showNotification('Forfeited', 'Match forfeited', '🏳️');
+        setTimeout(() => showRPSResults(), 300);
+    });
 }
 
 // Show RPS results
@@ -5474,7 +5499,7 @@ function selectWarMode(mode) {
 // Start War matchmaking
 async function startWarMatchmaking() {
     if (!isFirebaseReady || !database) {
-        alert('⚠️ Firebase is not connected!');
+        showToast('Firebase is not connected!', 'error');
         console.error('❌ Firebase not ready. Cannot start War matchmaking.');
         showScreen('warModeScreen');
         return;
@@ -5717,9 +5742,9 @@ function startWarGame(gameId, gameData) {
     const leaveBtn = document.getElementById('warLeaveBtn');
     if (leaveBtn) {
         leaveBtn.onclick = () => {
-            if (confirm('Are you sure you want to leave this game?')) {
+            showConfirm('Are you sure you want to leave this game?', () => {
                 leaveWarGame();
-            }
+            });
         };
     }
 
@@ -6018,47 +6043,45 @@ function forfeitWarGame() {
     console.log('🏳️ Forfeit War button clicked');
 
     if (!currentWarGame || !currentWarGame.gameId) {
-        alert('⚠️ No active game');
+        showToast('No active game', 'error');
         return;
     }
 
-    if (!confirm('Forfeit this match? You will lose!')) {
-        return;
-    }
+    showConfirm('Forfeit this match? You will lose!', () => {
+        console.log('Forfeiting War game:', currentWarGame.gameId);
 
-    console.log('Forfeiting War game:', currentWarGame.gameId);
-
-    // Clean up listener
-    if (warGameListener) {
-        try {
-            database.ref(`games_war/${currentWarGame.gameId}`).off('value', warGameListener);
-        } catch (e) {
-            console.log('Error cleaning up listener:', e);
+        // Clean up listener
+        if (warGameListener) {
+            try {
+                database.ref(`games_war/${currentWarGame.gameId}`).off('value', warGameListener);
+            } catch (e) {
+                console.log('Error cleaning up listener:', e);
+            }
+            warGameListener = null;
         }
-        warGameListener = null;
-    }
 
-    // Update database if online game
-    const isBotGame = currentWarGame.gameId.startsWith('bot_');
-    if (!isBotGame && database) {
-        try {
-            database.ref(`games_war/${currentWarGame.gameId}`).update({
-                finished: true,
-                forfeited: true,
-                forfeitedBy: playerData.id
-            });
-        } catch (e) {
-            console.log('Error updating forfeit:', e);
+        // Update database if online game
+        const isBotGame = currentWarGame.gameId.startsWith('bot_');
+        if (!isBotGame && database) {
+            try {
+                database.ref(`games_war/${currentWarGame.gameId}`).update({
+                    finished: true,
+                    forfeited: true,
+                    forfeitedBy: playerData.id
+                });
+            } catch (e) {
+                console.log('Error updating forfeit:', e);
+            }
         }
-    }
 
-    // Set scores for loss
-    currentWarGame.myScore = 0;
-    currentWarGame.opponentScore = 7;
+        // Set scores for loss
+        currentWarGame.myScore = 0;
+        currentWarGame.opponentScore = 7;
 
-    // Show results
-    showNotification('Forfeited', 'Match forfeited', '🏳️');
-    setTimeout(() => showWarResults(false, false, 0, 7, 'Opponent', 0, 0), 300);
+        // Show results
+        showNotification('Forfeited', 'Match forfeited', '🏳️');
+        setTimeout(() => showWarResults(false, false, 0, 7, 'Opponent', 0, 0), 300);
+    });
 }
 
 // Show War results
@@ -6220,7 +6243,7 @@ function setupEventListeners() {
     }, 'Math Game button');
 
     safeAddListener('rpsGameBtn', 'click', () => {
-        alert('Rock Paper Scissors coming soon!');
+        showToast('Rock Paper Scissors coming soon!', 'info');
     }, 'RPS Game button');
 
     // === MATH MODE SELECTION ===

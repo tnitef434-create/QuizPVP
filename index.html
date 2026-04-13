@@ -1191,6 +1191,20 @@
         </div>
     </div>
 
+    <!-- Toast notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- In-app confirm dialog -->
+    <div id="confirmOverlay" class="confirm-overlay" style="display:none">
+        <div class="confirm-box">
+            <p id="confirmMessage"></p>
+            <div class="confirm-actions">
+                <button id="confirmOkBtn" class="btn btn-primary">Confirm</button>
+                <button id="confirmCancelBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>

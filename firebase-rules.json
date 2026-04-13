@@ -1,5 +1,6 @@
 {
   "rules": {
+    "users":          { ".read": "auth != null", ".write": "auth != null" },
     "usernames":      { ".read": true, ".write": "auth != null" },
     "online":         { ".read": true, ".write": "auth != null" },
     "waiting_1v1":    { ".read": true, ".write": "auth != null" },
