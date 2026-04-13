@@ -4197,12 +4197,9 @@ body:has(.screen.ap.active) {
 .ap-field::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 200%;
-    height: 200%;
-    z-index: -1;
-    transform: translate(-50%, -50%) rotate(0deg);
+    inset: 0;
+    z-index: 0;
+    border-radius: 13px;
     background: conic-gradient(
         from 0deg,
         transparent 0%,
@@ -4217,8 +4214,8 @@ body:has(.screen.ap.active) {
 }
 
 @keyframes gold-rotate-transform {
-    from { transform: translate(-50%, -50%) rotate(0deg); }
-    to   { transform: translate(-50%, -50%) rotate(360deg); }
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
 .ap-input {
