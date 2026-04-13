@@ -56,9 +56,6 @@ try {
 // ===== CHAT MESSAGE LIMIT =====
 const MAX_CHAT_MESSAGE_LENGTH = 200;
 
-// ===== CHAT MESSAGE LIMIT =====
-const MAX_CHAT_MESSAGE_LENGTH = 200;
-
 // ===== AI CHAT (ElevenLabs) =====
 const AI_DAILY_LIMIT = 5;
 const ELEVEN_AGENT_ID = 'agent_0901knykkca9f8qstcr1pk6p2ywx';
