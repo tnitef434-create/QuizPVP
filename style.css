@@ -4184,38 +4184,36 @@ body:has(.screen.ap.active) {
     padding-left: 2px;
 }
 
+/* ── Auth input animated gold border ── */
+/* clip-path always clips child transforms — no bleed like overflow:hidden */
 .ap-field {
     width: 100%;
     border-radius: 13px;
-    padding: 1px;
+    padding: 1.5px;
     position: relative;
-    overflow: hidden;
-    background: transparent;
+    clip-path: inset(0 round 13px);
 }
 
-/* Rotating gold border — uses transform: rotate() for universal browser support */
 .ap-field::before {
     content: '';
     position: absolute;
     inset: 0;
-    z-index: 0;
     border-radius: 13px;
     background: conic-gradient(
         from 0deg,
         transparent 0%,
-        transparent 32%,
-        rgba(255,180,0,0.55) 44%,
-        rgba(255,230,100,0.9) 50%,
-        rgba(255,180,0,0.55) 56%,
-        transparent 68%,
+        transparent 30%,
+        rgba(255,180,0,0.5)  42%,
+        rgba(255,220,80,0.95) 50%,
+        rgba(255,180,0,0.5)  58%,
+        transparent 70%,
         transparent 100%
     );
-    animation: gold-rotate-transform 3.5s linear infinite;
+    animation: gold-spin 3.5s linear infinite;
 }
 
-@keyframes gold-rotate-transform {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+@keyframes gold-spin {
+    to { transform: rotate(360deg); }
 }
 
 .ap-input {
