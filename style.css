@@ -808,6 +808,11 @@ input[type="color"] {
     background: linear-gradient(135deg, rgba(212,175,55,0.1) 0%, rgba(184,134,11,0.05) 100%);
 }
 
+.shop-item.special h3 {
+    color: #D4AF37;
+    font-weight: 800;
+}
+
 .shop-item.legendary {
     border: 3px solid transparent;
     background: linear-gradient(white, white) padding-box,
