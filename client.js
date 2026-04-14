@@ -555,6 +555,7 @@ function setupAfterLogin(isGuest) {
     trackWarModePlayerCounts();
     setupGameInviteListener();
     setupFriendRequestListener();
+    setupDirectMessageListeners();
     loadFriendsList();
     loadFriendRequests();
     cleanupOldGames();
@@ -4046,6 +4047,70 @@ async function inviteFriendTo1v1(friendId, friendUsername) {
 
 // v1.5: Listen for incoming friend requests (real-time)
 let currentFriendRequest = null;
+
+// ── Direct message notification listener ──
+const _dmListeners = {}; // channelId → true (prevents duplicate listeners)
+let _chatNotifFriendId = null;
+let _chatNotifTimer = null;
+
+function setupDirectMessageListeners() {
+    if (!database || !playerData.id) return;
+
+    // Re-run whenever friends change
+    database.ref(`users/${playerData.id}/friends`).on('value', (snap) => {
+        const friends = snap.val() || {};
+        Object.entries(friends).forEach(([friendId, friendData]) => {
+            const channelId = [playerData.id, friendId].sort().join('_');
+            if (_dmListeners[channelId]) return; // Already set up
+            _dmListeners[channelId] = true;
+
+            database.ref(`directMessages/${channelId}`).on('child_added', (msgSnap) => {
+                const msg = msgSnap.val();
+                if (!msg || msg.senderId === playerData.id) return;
+
+                // Ignore old messages loaded on init
+                if (Date.now() - msg.timestamp > 8000) return;
+
+                // Don't notify if already viewing this chat
+                const chatScreen = document.getElementById('friendChatScreen');
+                if (chatScreen && chatScreen.classList.contains('active') &&
+                    currentChatSession.chatId === channelId) return;
+
+                const senderName = msg.senderUsername || (friendData && friendData.username) || 'Friend';
+                const preview = msg.text.length > 45 ? msg.text.substring(0, 45) + '…' : msg.text;
+                showChatMessageNotification(friendId, senderName, preview);
+            });
+        });
+    });
+
+    // Wire up notification buttons (once)
+    const openBtn = document.getElementById('openChatNotifBtn');
+    const dismissBtn = document.getElementById('dismissChatNotifBtn');
+    if (openBtn) openBtn.onclick = () => {
+        hideChatMessageNotification();
+        if (_chatNotifFriendId) openFriendChat(_chatNotifFriendId);
+    };
+    if (dismissBtn) dismissBtn.onclick = hideChatMessageNotification;
+}
+
+function showChatMessageNotification(friendId, senderName, preview) {
+    _chatNotifFriendId = friendId;
+    const notif = document.getElementById('chatMessageNotification');
+    const senderEl = document.getElementById('chatNotifSender');
+    const previewEl = document.getElementById('chatNotifPreview');
+    if (!notif) return;
+    if (senderEl) senderEl.textContent = senderName;
+    if (previewEl) previewEl.textContent = preview;
+    notif.style.display = 'block';
+    clearTimeout(_chatNotifTimer);
+    _chatNotifTimer = setTimeout(hideChatMessageNotification, 8000);
+}
+
+function hideChatMessageNotification() {
+    const notif = document.getElementById('chatMessageNotification');
+    if (notif) notif.style.display = 'none';
+    _chatNotifFriendId = null;
+}
 
 function setupFriendRequestListener() {
     if (!database || !playerData.id) return;
