@@ -1640,6 +1640,24 @@ input[type="color"] {
     margin-left: 4px;
 }
 
+/* Red dot on a friend's chat button */
+.friend-chat-btn {
+    position: relative;
+}
+
+.friend-chat-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 10px;
+    height: 10px;
+    background: #ef4444;
+    border-radius: 50%;
+    border: 2px solid #0a0a0a;
+    display: block;
+    pointer-events: none;
+}
+
 .friends-content {
     min-height: 300px;
 }

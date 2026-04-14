@@ -3773,6 +3773,7 @@ function updateFriendsDisplay(friends) {
             const statusClass = isOnline ? '' : 'offline';
             const statusText = isOnline ? 'Online' : 'Offline';
 
+            const hasUnread = _unreadChatFriends.has(friend.id);
             friendItem.innerHTML = `
                 <div class="friend-info">
                     <div class="player-avatar" style="background: ${getColorStyle(friend.color)}"></div>
@@ -3783,7 +3784,7 @@ function updateFriendsDisplay(friends) {
                 </div>
                 <div class="friend-actions">
                     <button class="btn btn-primary btn-small" onclick="inviteFriendTo1v1('${friend.id}', '${escapeHtml(friend.username)}')">⚔️ 1v1</button>
-                    <button class="btn btn-primary btn-small" onclick="openFriendChat('${friend.id}')">💬 Chat</button>
+                    <button class="btn btn-primary btn-small friend-chat-btn" data-friend-id="${friend.id}" onclick="openFriendChat('${friend.id}')" style="position:relative;">💬 Chat${hasUnread ? '<span class="friend-chat-badge"></span>' : ''}</button>
                     <button class="btn btn-secondary btn-small" onclick="removeFriend('${friend.id}')">Remove</button>
                 </div>
             `;
@@ -4122,13 +4123,25 @@ function hideChatMessageNotification() {
 }
 
 function updateChatTabBadge() {
+    // Update the tab-level badge
     const badge = document.getElementById('chatTabBadge');
-    if (!badge) return;
-    if (_unreadChatFriends.size > 0) {
-        badge.style.display = 'block';
-    } else {
-        badge.style.display = 'none';
+    if (badge) {
+        badge.style.display = _unreadChatFriends.size > 0 ? 'block' : 'none';
     }
+    // Update individual friend chat buttons
+    document.querySelectorAll('.friend-chat-btn').forEach(btn => {
+        const fid = btn.getAttribute('data-friend-id');
+        const existing = btn.querySelector('.friend-chat-badge');
+        if (_unreadChatFriends.has(fid)) {
+            if (!existing) {
+                const dot = document.createElement('span');
+                dot.className = 'friend-chat-badge';
+                btn.appendChild(dot);
+            }
+        } else {
+            if (existing) existing.remove();
+        }
+    });
 }
 
 function clearChatTabBadge(friendId) {
