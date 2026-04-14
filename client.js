@@ -3897,6 +3897,9 @@ function removeFriend(friendId) {
 // Open friend chat
 async function openFriendChat(friendId) {
     try {
+        // Clear unread badge for this friend
+        clearChatTabBadge(friendId);
+
         // Get friend data
         const snapshot = await database.ref(`users/${playerData.id}/friends/${friendId}`).once('value');
         const friend = snapshot.val();
@@ -4052,6 +4055,7 @@ let currentFriendRequest = null;
 const _dmListeners = {}; // channelId → true (prevents duplicate listeners)
 let _chatNotifFriendId = null;
 let _chatNotifTimer = null;
+const _unreadChatFriends = new Set(); // Track friends with unread messages
 
 function setupDirectMessageListeners() {
     if (!database || !playerData.id) return;
@@ -4078,6 +4082,11 @@ function setupDirectMessageListeners() {
 
                 const senderName = msg.senderUsername || (friendData && friendData.username) || 'Friend';
                 const preview = msg.text.length > 45 ? msg.text.substring(0, 45) + '…' : msg.text;
+
+                // Mark friend as having unread messages
+                _unreadChatFriends.add(friendId);
+                updateChatTabBadge();
+
                 showChatMessageNotification(friendId, senderName, preview);
             });
         });
@@ -4110,6 +4119,25 @@ function hideChatMessageNotification() {
     const notif = document.getElementById('chatMessageNotification');
     if (notif) notif.style.display = 'none';
     _chatNotifFriendId = null;
+}
+
+function updateChatTabBadge() {
+    const badge = document.getElementById('chatTabBadge');
+    if (!badge) return;
+    if (_unreadChatFriends.size > 0) {
+        badge.style.display = 'block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function clearChatTabBadge(friendId) {
+    if (friendId) {
+        _unreadChatFriends.delete(friendId);
+    } else {
+        _unreadChatFriends.clear();
+    }
+    updateChatTabBadge();
 }
 
 function setupFriendRequestListener() {
