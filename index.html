@@ -71,7 +71,7 @@
                 <div class="friend-request-username" id="chatNotifPreview">Sent you a message</div>
             </div>
             <div class="friend-request-actions">
-                <button id="openChatNotifBtn" class="btn-accept">Open</button>
+                <button id="openChatNotifBtn" class="btn-accept">✓</button>
                 <button id="dismissChatNotifBtn" class="btn-reject">✕</button>
             </div>
         </div>
@@ -878,33 +878,28 @@
 
 
     <!-- Friend Chat Screen -->
-    <div id="friendChatScreen" class="screen">
-        <div class="container">
-            <div class="chat-header">
-                <div class="chat-partner-info">
-                    <div class="player-avatar" id="friendChatAvatar"></div>
-                    <div>
-                        <div class="player-name" id="friendChatName">Friend</div>
-                        <div class="chat-status" id="friendChatStatus">Offline</div>
-                    </div>
-                </div>
-                <div class="chat-header-actions">
-                    <button id="inviteFriendToGameBtn" class="btn btn-primary btn-small">Invite to Game</button>
+    <div id="friendChatScreen" class="screen fc-screen">
+        <div class="fc-header">
+            <button id="leaveFriendChatBtn" class="fc-back-btn">&#8592;</button>
+            <div class="fc-partner">
+                <div class="player-avatar fc-avatar" id="friendChatAvatar"></div>
+                <div>
+                    <div class="fc-name" id="friendChatName">Friend</div>
+                    <div class="fc-status" id="friendChatStatus">Offline</div>
                 </div>
             </div>
+            <button id="inviteFriendToGameBtn" class="btn btn-primary btn-small">Invite</button>
+        </div>
 
-            <div class="chat-messages" id="friendChatMessages">
-                <div class="chat-welcome">Start chatting with your friend!</div>
-            </div>
+        <div class="fc-messages" id="friendChatMessages">
+            <div class="chat-welcome">Start chatting with your friend!</div>
+        </div>
 
-            <div class="chat-input-container">
-                <input type="text" id="friendChatInput" placeholder="Type a message..." maxlength="200" autocomplete="off">
-                <button id="sendFriendMessageBtn" class="btn btn-primary">Send</button>
-            </div>
-
-            <div class="chat-actions">
-                <button id="leaveFriendChatBtn" class="btn btn-secondary">Back to Friends</button>
-            </div>
+        <div class="fc-input-row">
+            <input type="text" id="friendChatInput" class="fc-input" placeholder="Message..." maxlength="200" autocomplete="off">
+            <button id="sendFriendMessageBtn" class="fc-send-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
         </div>
     </div>
 
