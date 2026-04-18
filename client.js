@@ -6799,79 +6799,59 @@ function setupEventListeners() {
         showScreen('menuScreen');
     }, 'War Back to Menu');
 
-    // === SEARCH BAR ===
-    console.log('🔍 Setting up search bar...');
+    // === COMPREHENSIVE SEARCH BAR ===
+    console.log('🔍 Setting up advanced search engine...');
 
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
     const searchClearBtn = document.getElementById('searchClearBtn');
 
-    // Define searchable items (global so it can be accessed from onclick)
-    window.searchItems = [
-        {
-            id: 'play',
-            title: 'Play',
-            description: 'Start a math battle',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="12" r="1"/><circle cx="18" cy="10" r="1"/><rect x="2" y="7" width="20" height="10" rx="3"/></svg>',
-            action: () => window.gameNavigation.goToPlay(),
-            keywords: ['play', 'game', 'start', 'battle', 'math']
-        },
-        {
-            id: 'social',
-            title: 'Social',
-            description: 'Chat & friends',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
-            action: () => window.gameNavigation.goToSocial(),
-            keywords: ['social', 'chat', 'friends', 'message', 'people']
-        },
-        {
-            id: 'shop',
-            title: 'Shop',
-            description: 'Buy cool cosmetics',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
-            action: () => window.gameNavigation.showScreen('shopScreen'),
-            keywords: ['shop', 'buy', 'cosmetics', 'skins', 'items', 'store']
-        },
-        {
-            id: 'tutorial',
-            title: 'Tutorial',
-            description: 'Learn card games',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
-            action: () => window.gameNavigation.showScreen('tutorialScreen'),
-            keywords: ['tutorial', 'learn', 'guide', 'help', 'education', 'how']
-        },
-        {
-            id: 'settings',
-            title: 'Settings',
-            description: 'App settings',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-            action: () => window.gameNavigation.goToSettings(),
-            keywords: ['settings', 'preferences', 'config', 'options', 'gear']
-        },
-        {
-            id: 'math',
-            title: 'Math Game',
-            description: 'Quick math challenges',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-            action: () => window.gameNavigation.goToMathMode(),
-            keywords: ['math', 'puzzle', 'numbers', '1v1', 'competition']
-        },
-        {
-            id: 'rps',
-            title: 'Rock Paper Scissors',
-            description: 'Battle with RPS!',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M18 11V7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v1a3 3 0 0 0-3-3 3 3 0 0 0-3 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6"/><path d="M15 11V8a3 3 0 0 1 6 0v4"/></svg>',
-            action: () => window.gameNavigation.goToRPSMode(),
-            keywords: ['rps', 'rock', 'paper', 'scissors', 'game', 'play']
-        },
-        {
-            id: 'war',
-            title: 'War Card Game',
-            description: 'Card Battle!',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><rect x="2" y="4" width="13" height="17" rx="2"/><path d="M7 8h4"/><path d="M7 12h4"/><path d="M7 16h2"/><rect x="9" y="2" width="13" height="17" rx="2"/></svg>',
-            action: () => window.gameNavigation.goToWarMode(),
-            keywords: ['war', 'card', 'battle', 'game', 'deck']
-        }
+    // Comprehensive searchable database with locations and detailed descriptions
+    window.searchDatabase = [
+        // Main Features (Menu Level)
+        { id: 'play', title: 'Play', location: 'Main Menu', description: 'Start a game, select game type and find opponents', keywords: ['play', 'game', 'start', 'battle', 'matchmaking'], category: 'Features', action: () => window.gameNavigation.goToPlay() },
+        { id: 'social', title: 'Social', location: 'Main Menu', description: 'Connect with friends, manage friend list, send messages, view profiles', keywords: ['social', 'chat', 'friends', 'message', 'people', 'network'], category: 'Features', action: () => window.gameNavigation.goToSocial() },
+        { id: 'shop', title: 'Shop', location: 'Main Menu', description: 'Buy cosmetics, skins, avatars, nameplates, emotes, backgrounds - customize everything', keywords: ['shop', 'buy', 'cosmetics', 'skins', 'avatars', 'items', 'store', 'purchase', 'customize'], category: 'Features', action: () => window.gameNavigation.showScreen('shopScreen') },
+        { id: 'tutorial', title: 'Tutorial', location: 'Main Menu', description: 'Learn how to play, understand game rules, strategies, tips for winning', keywords: ['tutorial', 'learn', 'guide', 'help', 'how', 'rules', 'strategy', 'tips'], category: 'Features', action: () => window.gameNavigation.showScreen('tutorialScreen') },
+        { id: 'settings', title: 'Settings', location: 'Main Menu', description: 'Configure preferences, sound, privacy, theme, account settings', keywords: ['settings', 'preferences', 'config', 'options', 'gear', 'configure', 'adjust'], category: 'Features', action: () => window.gameNavigation.goToSettings() },
+
+        // Game Types
+        { id: 'math', title: 'Math Game', location: 'Play > Game Selection', description: 'Quick math challenges with multiple difficulty levels and multiplayer battles', keywords: ['math', 'puzzle', 'numbers', 'calculation', 'arithmetic', 'brain', 'challenge', 'addition', 'subtraction'], category: 'Games', action: () => window.gameNavigation.goToMathMode() },
+        { id: 'rps', title: 'Rock Paper Scissors', location: 'Play > Game Selection', description: 'Classic RPS battles against opponents in best of 5 rounds', keywords: ['rps', 'rock', 'paper', 'scissors', 'classic', 'hand', 'game', 'duel'], category: 'Games', action: () => window.gameNavigation.goToRPSMode() },
+        { id: 'war', title: 'War Card Game', location: 'Play > Game Selection', description: 'Strategic card game battles with deck management and turn-based combat', keywords: ['war', 'card', 'battle', 'game', 'deck', 'strategy', 'cards', 'combat', 'turn'], category: 'Games', action: () => window.gameNavigation.goToWarMode() },
+
+        // Game Modes
+        { id: '1v1', title: '1v1 Mode', location: 'Game Selection', description: 'One-on-one head-to-head competition against single opponent', keywords: ['1v1', 'one', 'versus', 'duel', 'solo', 'single', 'opponent', 'head-to-head'], category: 'Game Modes', action: () => {} },
+        { id: '1v2', title: '1v2 Mode', location: 'Game Selection', description: 'Three player competition in triangular battle format', keywords: ['1v2', 'three', 'players', 'trio', 'multiplayer', 'triangle'], category: 'Game Modes', action: () => {} },
+        { id: '1v3', title: '1v3 Mode', location: 'Game Selection', description: 'Four player battle royale style free-for-all competition', keywords: ['1v3', 'four', 'players', 'squad', 'teams', 'royale'], category: 'Game Modes', action: () => {} },
+        { id: 'bot', title: 'VS Bot Mode', location: 'Game Selection', description: 'Practice against AI opponents without losing rank, perfect for training', keywords: ['bot', 'ai', 'practice', 'training', 'computer', 'npc', 'pve'], category: 'Game Modes', action: () => {} },
+
+        // Cosmetics & Shop Items
+        { id: 'avatars', title: 'Avatars', location: 'Shop', description: 'Profile picture cosmetics - customize your avatar appearance with unique designs', keywords: ['avatar', 'profile', 'picture', 'icon', 'character', 'appearance', 'cosmetic'], category: 'Cosmetics', action: () => {} },
+        { id: 'skins', title: 'Skins', location: 'Shop', description: 'Game character skins - change visual appearance during gameplay', keywords: ['skin', 'character', 'outfit', 'theme', 'visual', 'costume', 'appearance'], category: 'Cosmetics', action: () => {} },
+        { id: 'backgrounds', title: 'Backgrounds', location: 'Shop', description: 'Menu and game environment backgrounds - personalize your gaming space', keywords: ['background', 'theme', 'environment', 'scenery', 'visual', 'wallpaper'], category: 'Cosmetics', action: () => {} },
+        { id: 'nameplates', title: 'Nameplates', location: 'Shop', description: 'Custom nameplates and frames - show your style with special name displays', keywords: ['nameplate', 'name', 'frame', 'label', 'tag', 'username'], category: 'Cosmetics', action: () => {} },
+        { id: 'emotes', title: 'Emotes', location: 'Shop', description: 'Animated emotes and reactions - express yourself in chat and game', keywords: ['emote', 'emotion', 'reaction', 'animation', 'expression', 'chat', 'sticker'], category: 'Cosmetics', action: () => {} },
+        { id: 'badges', title: 'Badges & Achievements', location: 'Shop', description: 'Achievement badges and status symbols - display your accomplishments', keywords: ['badge', 'achievement', 'accomplishment', 'status', 'reward', 'medal'], category: 'Cosmetics', action: () => {} },
+
+        // Settings Options
+        { id: 'sound', title: 'Sound Settings', location: 'Settings', description: 'Adjust volume levels for music, sound effects, and notifications', keywords: ['sound', 'audio', 'music', 'volume', 'sfx', 'quiet', 'mute'], category: 'Settings', action: () => {} },
+        { id: 'privacy', title: 'Privacy Settings', location: 'Settings', description: 'Control who can message, add friends, and see your profile information', keywords: ['privacy', 'private', 'visibility', 'block', 'permissions', 'security'], category: 'Settings', action: () => {} },
+        { id: 'notifications', title: 'Notifications', location: 'Settings', description: 'Configure push notifications, alerts for friends, games, messages', keywords: ['notification', 'alert', 'push', 'message', 'reminder', 'popup'], category: 'Settings', action: () => {} },
+        { id: 'theme', title: 'Theme & Appearance', location: 'Settings', description: 'Choose dark mode, light mode, or custom color themes for your interface', keywords: ['theme', 'dark', 'light', 'mode', 'color', 'appearance', 'style'], category: 'Settings', action: () => {} },
+        { id: 'account', title: 'Account Settings', location: 'Settings', description: 'Manage profile, change password, email, delete account, logout', keywords: ['account', 'profile', 'login', 'user', 'username', 'email', 'password'], category: 'Settings', action: () => {} },
+
+        // User Features
+        { id: 'profile', title: 'User Profile', location: 'Social / Account', description: 'View your profile with stats, level, badges, achievements, and customization', keywords: ['profile', 'stats', 'data', 'information', 'level', 'experience'], category: 'Profile', action: () => {} },
+        { id: 'stats', title: 'Statistics', location: 'User Profile', description: 'Detailed game statistics including win rate, total games, streaks, ranking', keywords: ['statistics', 'stats', 'record', 'wins', 'losses', 'ratio', 'data', 'history'], category: 'Profile', action: () => {} },
+        { id: 'friends', title: 'Friend List', location: 'Social', description: 'Manage your friends with online status, recent activity, and quick messaging', keywords: ['friend', 'list', 'social', 'connection', 'contact', 'buddy', 'network'], category: 'Social', action: () => {} },
+        { id: 'messages', title: 'Direct Messages', location: 'Social', description: 'Chat with friends in real-time, view conversation history, send files', keywords: ['message', 'chat', 'dm', 'direct', 'conversation', 'text', 'inbox'], category: 'Social', action: () => {} },
+        { id: 'leaderboard', title: 'Leaderboard', location: 'Stats / Rankings', description: 'Global rankings showing top players, your position, and seasonal stats', keywords: ['leaderboard', 'ranking', 'rank', 'top', 'scores', 'standings', 'position'], category: 'Rankings', action: () => {} },
+
+        // Special Features
+        { id: 'matchmaking', title: 'Matchmaking', location: 'Game Selection', description: 'Automatic fair matching system that finds opponents at your skill level', keywords: ['matchmaking', 'match', 'opponent', 'queue', 'waiting', 'lobby', 'skill'], category: 'Features', action: () => {} },
+        { id: 'points', title: 'Points System', location: 'Profile / Shop', description: 'Earn points from victories and use them to purchase cosmetics', keywords: ['points', 'coins', 'currency', 'earn', 'spend', 'reward', 'money'], category: 'Features', action: () => {} },
+        { id: 'guest', title: 'Guest Mode', location: 'Auth Screen', description: 'Play without account - limited features, data resets on browser close', keywords: ['guest', 'temporary', 'anonymous', 'no account', 'play', 'free'], category: 'Features', action: () => {} },
     ];
 
     function performSearch(query) {
@@ -6883,16 +6863,23 @@ function setupEventListeners() {
             return;
         }
 
-        const results = window.searchItems.filter(item => {
+        const results = window.searchDatabase.filter(item => {
             const titleMatch = item.title.toLowerCase().includes(normalizedQuery);
             const descMatch = item.description.toLowerCase().includes(normalizedQuery);
+            const locationMatch = item.location.toLowerCase().includes(normalizedQuery);
             const keywordMatch = item.keywords.some(keyword => keyword.includes(normalizedQuery));
 
-            return titleMatch || descMatch || keywordMatch;
+            return titleMatch || descMatch || locationMatch || keywordMatch;
+        });
+
+        results.sort((a, b) => {
+            const aTitle = a.title.toLowerCase().includes(normalizedQuery);
+            const bTitle = b.title.toLowerCase().includes(normalizedQuery);
+            return aTitle === bTitle ? 0 : aTitle ? -1 : 1;
         });
 
         displaySearchResults(results, normalizedQuery);
-        searchClearBtn.style.display = results.length > 0 || query ? 'block' : 'none';
+        searchClearBtn.style.display = query ? 'block' : 'none';
     }
 
     function displaySearchResults(results, query) {
@@ -6900,30 +6887,50 @@ function setupEventListeners() {
             searchResults.innerHTML = `
                 <div class="search-empty">
                     <svg class="search-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    <div>No results found for "${query}"</div>
+                    <div>No results found for "<strong>${query}</strong>"</div>
+                    <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.6;">Try: play, shop, chat, cosmetics, friends, settings, math, leaderboard...</div>
                 </div>
             `;
             searchResults.style.display = 'block';
             return;
         }
 
-        searchResults.innerHTML = results.map(item => `
-            <div class="search-result-item" onclick="window.searchItems.find(i => i.id === '${item.id}').action()">
-                <div class="search-result-icon">${item.icon}</div>
-                <div class="search-result-content">
-                    <div class="search-result-title">${item.title}</div>
-                    <div class="search-result-desc">${item.description}</div>
-                </div>
-            </div>
-        `).join('');
+        const grouped = {};
+        results.forEach(item => {
+            if (!grouped[item.category]) grouped[item.category] = [];
+            grouped[item.category].push(item);
+        });
 
+        let html = '';
+        const categoryOrder = ['Features', 'Games', 'Game Modes', 'Cosmetics', 'Settings', 'Profile', 'Social', 'Rankings'];
+
+        categoryOrder.forEach(cat => {
+            if (grouped[cat]) {
+                html += `<div class="search-category-label">${cat}</div>`;
+                grouped[cat].forEach(item => {
+                    html += `
+                        <div class="search-result-item" onclick="window.searchDatabase.find(i => i.id === '${item.id}').action()">
+                            <div class="search-result-main">
+                                <div class="search-result-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>
+                                </div>
+                                <div class="search-result-content">
+                                    <div class="search-result-title">${item.title}</div>
+                                    <div class="search-result-location">📍 ${item.location}</div>
+                                    <div class="search-result-desc">${item.description}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        });
+
+        searchResults.innerHTML = html;
         searchResults.style.display = 'block';
     }
 
-    // Event listeners
-    searchInput.addEventListener('input', (e) => {
-        performSearch(e.target.value);
-    });
+    searchInput.addEventListener('input', (e) => performSearch(e.target.value));
 
     searchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -6941,7 +6948,6 @@ function setupEventListeners() {
         searchInput.focus();
     });
 
-    // Close results when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.search-bar-container')) {
             searchResults.style.display = 'none';
