@@ -6799,5 +6799,154 @@ function setupEventListeners() {
         showScreen('menuScreen');
     }, 'War Back to Menu');
 
+    // === SEARCH BAR ===
+    console.log('🔍 Setting up search bar...');
+
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const searchClearBtn = document.getElementById('searchClearBtn');
+
+    // Define searchable items (global so it can be accessed from onclick)
+    window.searchItems = [
+        {
+            id: 'play',
+            title: 'Play',
+            description: 'Start a math battle',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="12" r="1"/><circle cx="18" cy="10" r="1"/><rect x="2" y="7" width="20" height="10" rx="3"/></svg>',
+            action: () => window.gameNavigation.goToPlay(),
+            keywords: ['play', 'game', 'start', 'battle', 'math']
+        },
+        {
+            id: 'social',
+            title: 'Social',
+            description: 'Chat & friends',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+            action: () => window.gameNavigation.goToSocial(),
+            keywords: ['social', 'chat', 'friends', 'message', 'people']
+        },
+        {
+            id: 'shop',
+            title: 'Shop',
+            description: 'Buy cool cosmetics',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+            action: () => window.gameNavigation.showScreen('shopScreen'),
+            keywords: ['shop', 'buy', 'cosmetics', 'skins', 'items', 'store']
+        },
+        {
+            id: 'tutorial',
+            title: 'Tutorial',
+            description: 'Learn card games',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+            action: () => window.gameNavigation.showScreen('tutorialScreen'),
+            keywords: ['tutorial', 'learn', 'guide', 'help', 'education', 'how']
+        },
+        {
+            id: 'settings',
+            title: 'Settings',
+            description: 'App settings',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+            action: () => window.gameNavigation.goToSettings(),
+            keywords: ['settings', 'preferences', 'config', 'options', 'gear']
+        },
+        {
+            id: 'math',
+            title: 'Math Game',
+            description: 'Quick math challenges',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+            action: () => window.gameNavigation.goToMathMode(),
+            keywords: ['math', 'puzzle', 'numbers', '1v1', 'competition']
+        },
+        {
+            id: 'rps',
+            title: 'Rock Paper Scissors',
+            description: 'Battle with RPS!',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M18 11V7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v1a3 3 0 0 0-3-3 3 3 0 0 0-3 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6"/><path d="M15 11V8a3 3 0 0 1 6 0v4"/></svg>',
+            action: () => window.gameNavigation.goToRPSMode(),
+            keywords: ['rps', 'rock', 'paper', 'scissors', 'game', 'play']
+        },
+        {
+            id: 'war',
+            title: 'War Card Game',
+            description: 'Card Battle!',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><rect x="2" y="4" width="13" height="17" rx="2"/><path d="M7 8h4"/><path d="M7 12h4"/><path d="M7 16h2"/><rect x="9" y="2" width="13" height="17" rx="2"/></svg>',
+            action: () => window.gameNavigation.goToWarMode(),
+            keywords: ['war', 'card', 'battle', 'game', 'deck']
+        }
+    ];
+
+    function performSearch(query) {
+        const normalizedQuery = query.toLowerCase().trim();
+
+        if (!normalizedQuery) {
+            searchResults.style.display = 'none';
+            searchClearBtn.style.display = 'none';
+            return;
+        }
+
+        const results = window.searchItems.filter(item => {
+            const titleMatch = item.title.toLowerCase().includes(normalizedQuery);
+            const descMatch = item.description.toLowerCase().includes(normalizedQuery);
+            const keywordMatch = item.keywords.some(keyword => keyword.includes(normalizedQuery));
+
+            return titleMatch || descMatch || keywordMatch;
+        });
+
+        displaySearchResults(results, normalizedQuery);
+        searchClearBtn.style.display = results.length > 0 || query ? 'block' : 'none';
+    }
+
+    function displaySearchResults(results, query) {
+        if (results.length === 0) {
+            searchResults.innerHTML = `
+                <div class="search-empty">
+                    <svg class="search-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <div>No results found for "${query}"</div>
+                </div>
+            `;
+            searchResults.style.display = 'block';
+            return;
+        }
+
+        searchResults.innerHTML = results.map(item => `
+            <div class="search-result-item" onclick="window.searchItems.find(i => i.id === '${item.id}').action()">
+                <div class="search-result-icon">${item.icon}</div>
+                <div class="search-result-content">
+                    <div class="search-result-title">${item.title}</div>
+                    <div class="search-result-desc">${item.description}</div>
+                </div>
+            </div>
+        `).join('');
+
+        searchResults.style.display = 'block';
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', (e) => {
+        performSearch(e.target.value);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            searchInput.value = '';
+            searchResults.style.display = 'none';
+            searchClearBtn.style.display = 'none';
+            searchInput.blur();
+        }
+    });
+
+    searchClearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchResults.style.display = 'none';
+        searchClearBtn.style.display = 'none';
+        searchInput.focus();
+    });
+
+    // Close results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-bar-container')) {
+            searchResults.style.display = 'none';
+        }
+    });
+
     console.log('✅ All event listeners attached successfully!');
 }
