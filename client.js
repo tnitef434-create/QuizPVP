@@ -524,6 +524,7 @@ async function loadPlayerDataForUser(user) {
         playerData.losses = d.losses || 0;
         playerData.draws = d.draws || 0;
         playerData.followerCount = d.followerCount || 0;
+        playerData.isGuest = user.isAnonymous || false;
         playerData.ownedCosmetics = d.ownedCosmetics || [];
         playerData.equippedCosmetic = d.equippedCosmetic || null;
 
@@ -1065,8 +1066,9 @@ let playerData = {
     losses: 0,
     draws: 0,
     followerCount: 0,
-    ownedCosmetics: [], // Array of owned cosmetic IDs
-    equippedCosmetic: null // Currently equipped cosmetic ID
+    isGuest: false,
+    ownedCosmetics: [],
+    equippedCosmetic: null
 };
 
 let currentGame = {
@@ -6848,6 +6850,11 @@ function setupEventListeners() {
         window.gameNavigation.goToSocial();
     }, 'Profile friends count link');
 
+    // Friend search in Social tab
+    safeAddListener('friendSearchBtn', 'click', () => {
+        window.runFriendSearch && window.runFriendSearch();
+    }, 'Friend search button');
+
     window.showProfile = async function(userId) {
         const isOwnProfile = !userId || userId === playerData.id;
         const targetId = isOwnProfile ? playerData.id : userId;
@@ -6930,28 +6937,41 @@ function setupEventListeners() {
             const safeName = (username || '').replace(/'/g, "\\'");
             const safeColor = (data.color || '#4A90E2').replace(/'/g, "\\'");
 
-            // Check friend status — playerData.friends is array of IDs after loadFriendsList
-            const myFriends = playerData.friends || [];
-            const isFriend = Array.isArray(myFriends)
-                ? myFriends.includes(uid)
-                : (typeof myFriends === 'object' && !!myFriends[uid]);
-
-            if (isFriend) {
-                actionsEl.innerHTML = `<button class="btn btn-secondary profile-action-btn" disabled>✓ Friends</button>`;
-            } else if (!uid) {
-                actionsEl.innerHTML = '';
-            } else {
+            if (playerData.isGuest) {
                 actionsEl.innerHTML = `
-                    <button class="btn btn-primary profile-action-btn" id="profileAddFriendBtn"
-                        onclick="window.sendFriendRequestFromProfile('${uid}', '${safeName}', '${safeColor}')">
-                        + Add Friend
-                    </button>
+                    <div class="guest-friend-block">
+                        <span>Create an account to add friends</span>
+                        <button class="btn btn-primary profile-action-btn"
+                            onclick="window.gameNavigation.showScreen('authScreen')">Sign Up Free</button>
+                    </div>
                 `;
+            } else {
+                const myFriends = playerData.friends || [];
+                const isFriend = Array.isArray(myFriends)
+                    ? myFriends.includes(uid)
+                    : (typeof myFriends === 'object' && !!myFriends[uid]);
+
+                if (isFriend) {
+                    actionsEl.innerHTML = `<button class="btn btn-secondary profile-action-btn" disabled>✓ Friends</button>`;
+                } else if (!uid) {
+                    actionsEl.innerHTML = '';
+                } else {
+                    actionsEl.innerHTML = `
+                        <button class="btn btn-primary profile-action-btn" id="profileAddFriendBtn"
+                            onclick="window.sendFriendRequestFromProfile('${uid}', '${safeName}', '${safeColor}')">
+                            + Add Friend
+                        </button>
+                    `;
+                }
             }
         }
     }
 
     window.sendFriendRequestFromProfile = async function(targetId, targetUsername, targetColor) {
+        if (playerData.isGuest) {
+            showToast('Create an account to add friends!', 'error');
+            return;
+        }
         const btn = document.getElementById('profileAddFriendBtn');
         if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
         try {
@@ -7078,16 +7098,19 @@ function setupEventListeners() {
             return aTitle === bTitle ? 0 : aTitle ? -1 : 1;
         });
 
-        displaySearchResults(results.slice(0, 8), normalizedQuery);
+        displaySearchResults(results.slice(0, 7), normalizedQuery, query);
     }
 
-    function displaySearchResults(results, query) {
-        if (results.length === 0) {
+    function displaySearchResults(results, normalizedQuery, rawQuery) {
+        const showUserEntry = rawQuery && rawQuery.trim().length >= 2 && !rawQuery.includes(' ');
+        const safeQueryForAttr = (rawQuery || '').replace(/'/g, "\\'");
+
+        if (results.length === 0 && !showUserEntry) {
             searchResults.innerHTML = `
                 <div class="search-empty">
                     <svg class="search-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    <div class="search-empty-text">No results for "<strong>${query}</strong>"</div>
-                    <div class="search-empty-hint">Try: play, shop, math, settings, friends...</div>
+                    <div class="search-empty-text">No results for "<strong>${normalizedQuery}</strong>"</div>
+                    <div class="search-empty-hint">Try: play, shop, math, settings, or type a username...</div>
                 </div>
             `;
             searchResults.style.display = 'block';
@@ -7101,7 +7124,7 @@ function setupEventListeners() {
         });
 
         const categoryOrder = ['Features', 'Games', 'Game Modes', 'Cosmetics', 'Settings', 'Profile', 'Social', 'Rankings'];
-        const multipleCategories = Object.keys(grouped).length > 1;
+        const multipleCategories = Object.keys(grouped).length > 1 || (Object.keys(grouped).length > 0 && showUserEntry);
         let html = '';
 
         categoryOrder.forEach(cat => {
@@ -7126,9 +7149,68 @@ function setupEventListeners() {
             });
         });
 
+        // Always show "Find user" entry when query is plausibly a username
+        if (showUserEntry) {
+            if (Object.keys(grouped).length > 0) {
+                html += `<div class="search-category-label">Users</div>`;
+            }
+            html += `
+                <div class="search-result-item search-user-lookup" onclick="window.searchForUser('${safeQueryForAttr}')">
+                    <div class="search-result-icon search-result-icon--user">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="12" y1="14" x2="12" y2="20"/><line x1="15" y1="17" x2="9" y2="17"/></svg>
+                    </div>
+                    <div class="search-result-content">
+                        <div class="search-result-title">Find "<strong style="color:#FFD700">${escapeHtml(rawQuery.trim())}</strong>"</div>
+                        <div class="search-result-location">Search by username</div>
+                    </div>
+                    <svg class="search-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+            `;
+        }
+
         searchResults.innerHTML = html;
         searchResults.style.display = 'block';
     }
+
+    // Username lookup — searches Firebase usernames index then opens that profile
+    window.searchForUser = async function(username) {
+        if (!username || !username.trim()) return;
+        const query = username.trim();
+
+        closeSearch();
+
+        // Guest block
+        if (playerData.isGuest) {
+            showToast('Create an account to find and add friends!', 'error');
+            return;
+        }
+
+        showToast('Searching for "' + query + '"…', 'info');
+
+        try {
+            // usernames node stores {uid: username} — query by value to find uid
+            const snap = await database.ref('usernames').orderByValue().equalTo(query).once('value');
+            if (!snap.exists()) {
+                showToast('No user found with username "' + query + '"', 'error');
+                return;
+            }
+            const uid = Object.keys(snap.val())[0];
+            // Show their profile (own profile if it's us)
+            window.showProfile(uid);
+        } catch (e) {
+            console.error('User search failed:', e);
+            showToast('Search failed. Please try again.', 'error');
+        }
+    };
+
+    // Also expose for the Social screen search input
+    window.runFriendSearch = function() {
+        const input = document.getElementById('friendSearchInput');
+        if (!input) return;
+        const query = input.value.trim();
+        if (!query) { showToast('Enter a username to search', 'error'); return; }
+        window.searchForUser(query);
+    };
 
     searchInput.addEventListener('input', (e) => performSearch(e.target.value));
 
