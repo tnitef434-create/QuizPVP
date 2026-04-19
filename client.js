@@ -6806,52 +6806,75 @@ function setupEventListeners() {
     const searchResults = document.getElementById('searchResults');
     const searchClearBtn = document.getElementById('searchClearBtn');
 
-    // Comprehensive searchable database with locations and detailed descriptions
-    window.searchDatabase = [
-        // Main Features (Menu Level)
-        { id: 'play', title: 'Play', location: 'Main Menu', description: 'Start a game, select game type and find opponents', keywords: ['play', 'game', 'start', 'battle', 'matchmaking'], category: 'Features', action: () => window.gameNavigation.goToPlay() },
-        { id: 'social', title: 'Social', location: 'Main Menu', description: 'Connect with friends, manage friend list, send messages, view profiles', keywords: ['social', 'chat', 'friends', 'message', 'people', 'network'], category: 'Features', action: () => window.gameNavigation.goToSocial() },
-        { id: 'shop', title: 'Shop', location: 'Main Menu', description: 'Buy cosmetics, skins, avatars, nameplates, emotes, backgrounds - customize everything', keywords: ['shop', 'buy', 'cosmetics', 'skins', 'avatars', 'items', 'store', 'purchase', 'customize'], category: 'Features', action: () => window.gameNavigation.showScreen('shopScreen') },
-        { id: 'tutorial', title: 'Tutorial', location: 'Main Menu', description: 'Learn how to play, understand game rules, strategies, tips for winning', keywords: ['tutorial', 'learn', 'guide', 'help', 'how', 'rules', 'strategy', 'tips'], category: 'Features', action: () => window.gameNavigation.showScreen('tutorialScreen') },
-        { id: 'settings', title: 'Settings', location: 'Main Menu', description: 'Configure preferences, sound, privacy, theme, account settings', keywords: ['settings', 'preferences', 'config', 'options', 'gear', 'configure', 'adjust'], category: 'Features', action: () => window.gameNavigation.goToSettings() },
+    // Category icons for search results
+    const searchCategoryIcons = {
+        'Features':   '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+        'Games':      '<polygon points="5 3 19 12 5 21 5 3"/>',
+        'Game Modes': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        'Cosmetics':  '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+        'Settings':   '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+        'Profile':    '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+        'Social':     '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+        'Rankings':   '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>',
+    };
 
-        // Game Types
-        { id: 'math', title: 'Math Game', location: 'Play > Game Selection', description: 'Quick math challenges with multiple difficulty levels and multiplayer battles', keywords: ['math', 'puzzle', 'numbers', 'calculation', 'arithmetic', 'brain', 'challenge', 'addition', 'subtraction'], category: 'Games', action: () => window.gameNavigation.goToMathMode() },
-        { id: 'rps', title: 'Rock Paper Scissors', location: 'Play > Game Selection', description: 'Classic RPS battles against opponents in best of 5 rounds', keywords: ['rps', 'rock', 'paper', 'scissors', 'classic', 'hand', 'game', 'duel'], category: 'Games', action: () => window.gameNavigation.goToRPSMode() },
-        { id: 'war', title: 'War Card Game', location: 'Play > Game Selection', description: 'Strategic card game battles with deck management and turn-based combat', keywords: ['war', 'card', 'battle', 'game', 'deck', 'strategy', 'cards', 'combat', 'turn'], category: 'Games', action: () => window.gameNavigation.goToWarMode() },
+    function closeSearch() {
+        searchResults.style.display = 'none';
+        searchInput.value = '';
+        searchClearBtn.style.display = 'none';
+    }
+
+    window.executeSearchAction = function(id) {
+        const item = window.searchDatabase.find(i => i.id === id);
+        if (item) item.action();
+    };
+
+    // Searchable database — every item has a working navigation action
+    window.searchDatabase = [
+        // Main Features
+        { id: 'play',         title: 'Play',               location: 'Main Menu', keywords: ['play', 'game', 'start', 'battle', 'matchmaking'],                                            category: 'Features',   action: () => { closeSearch(); window.gameNavigation.goToPlay(); } },
+        { id: 'social',       title: 'Social',             location: 'Main Menu', keywords: ['social', 'chat', 'friends', 'message', 'people', 'network'],                                  category: 'Features',   action: () => { closeSearch(); window.gameNavigation.goToSocial(); } },
+        { id: 'shop',         title: 'Shop',               location: 'Main Menu', keywords: ['shop', 'buy', 'cosmetics', 'skins', 'avatars', 'store', 'purchase', 'customize'],             category: 'Features',   action: () => { closeSearch(); window.gameNavigation.showScreen('shopScreen'); } },
+        { id: 'tutorial',     title: 'Tutorial',           location: 'Main Menu', keywords: ['tutorial', 'learn', 'guide', 'help', 'how', 'rules', 'tips'],                                 category: 'Features',   action: () => { closeSearch(); window.gameNavigation.showScreen('tutorialScreen'); } },
+        { id: 'settings',     title: 'Settings',           location: 'Main Menu', keywords: ['settings', 'preferences', 'config', 'options', 'configure'],                                  category: 'Features',   action: () => { closeSearch(); window.gameNavigation.goToSettings(); } },
+        { id: 'matchmaking',  title: 'Matchmaking',        location: 'Play',      keywords: ['matchmaking', 'match', 'opponent', 'queue', 'waiting', 'lobby', 'skill'],                     category: 'Features',   action: () => { closeSearch(); window.gameNavigation.goToPlay(); } },
+        { id: 'points',       title: 'Points System',      location: 'Shop',      keywords: ['points', 'coins', 'currency', 'earn', 'spend', 'reward'],                                     category: 'Features',   action: () => { closeSearch(); window.gameNavigation.showScreen('shopScreen'); } },
+        { id: 'guest',        title: 'Guest Mode',         location: 'Login',     keywords: ['guest', 'temporary', 'anonymous', 'no account', 'play', 'free'],                              category: 'Features',   action: () => { closeSearch(); window.gameNavigation.showScreen('authScreen'); } },
+
+        // Games
+        { id: 'math',         title: 'Math Game',          location: 'Play',      keywords: ['math', 'puzzle', 'numbers', 'calculation', 'arithmetic', 'brain', 'addition', 'subtraction'], category: 'Games',      action: () => { closeSearch(); window.gameNavigation.goToMathMode(); } },
+        { id: 'rps',          title: 'Rock Paper Scissors',location: 'Play',      keywords: ['rps', 'rock', 'paper', 'scissors', 'classic', 'hand', 'duel'],                                category: 'Games',      action: () => { closeSearch(); window.gameNavigation.goToRPSMode(); } },
+        { id: 'war',          title: 'War Card Game',      location: 'Play',      keywords: ['war', 'card', 'battle', 'deck', 'strategy', 'cards', 'combat', 'turn'],                       category: 'Games',      action: () => { closeSearch(); window.gameNavigation.goToWarMode(); } },
 
         // Game Modes
-        { id: '1v1', title: '1v1 Mode', location: 'Game Selection', description: 'One-on-one head-to-head competition against single opponent', keywords: ['1v1', 'one', 'versus', 'duel', 'solo', 'single', 'opponent', 'head-to-head'], category: 'Game Modes', action: () => {} },
-        { id: '1v2', title: '1v2 Mode', location: 'Game Selection', description: 'Three player competition in triangular battle format', keywords: ['1v2', 'three', 'players', 'trio', 'multiplayer', 'triangle'], category: 'Game Modes', action: () => {} },
-        { id: '1v3', title: '1v3 Mode', location: 'Game Selection', description: 'Four player battle royale style free-for-all competition', keywords: ['1v3', 'four', 'players', 'squad', 'teams', 'royale'], category: 'Game Modes', action: () => {} },
-        { id: 'bot', title: 'VS Bot Mode', location: 'Game Selection', description: 'Practice against AI opponents without losing rank, perfect for training', keywords: ['bot', 'ai', 'practice', 'training', 'computer', 'npc', 'pve'], category: 'Game Modes', action: () => {} },
+        { id: '1v1',          title: '1v1 Mode',           location: 'Play',      keywords: ['1v1', 'one', 'versus', 'duel', 'solo', 'single', 'opponent'],                                 category: 'Game Modes', action: () => { closeSearch(); window.gameNavigation.goToPlay(); } },
+        { id: '1v2',          title: '1v2 Mode',           location: 'Play',      keywords: ['1v2', 'three', 'players', 'trio', 'multiplayer'],                                             category: 'Game Modes', action: () => { closeSearch(); window.gameNavigation.goToPlay(); } },
+        { id: '1v3',          title: '1v3 Mode',           location: 'Play',      keywords: ['1v3', 'four', 'players', 'squad', 'royale'],                                                  category: 'Game Modes', action: () => { closeSearch(); window.gameNavigation.goToPlay(); } },
+        { id: 'bot',          title: 'VS Bot',             location: 'Play',      keywords: ['bot', 'ai', 'practice', 'training', 'computer', 'npc', 'pve'],                                category: 'Game Modes', action: () => { closeSearch(); window.gameNavigation.goToPlay(); } },
 
-        // Cosmetics & Shop Items
-        { id: 'avatars', title: 'Avatars', location: 'Shop', description: 'Profile picture cosmetics - customize your avatar appearance with unique designs', keywords: ['avatar', 'profile', 'picture', 'icon', 'character', 'appearance', 'cosmetic'], category: 'Cosmetics', action: () => {} },
-        { id: 'skins', title: 'Skins', location: 'Shop', description: 'Game character skins - change visual appearance during gameplay', keywords: ['skin', 'character', 'outfit', 'theme', 'visual', 'costume', 'appearance'], category: 'Cosmetics', action: () => {} },
-        { id: 'backgrounds', title: 'Backgrounds', location: 'Shop', description: 'Menu and game environment backgrounds - personalize your gaming space', keywords: ['background', 'theme', 'environment', 'scenery', 'visual', 'wallpaper'], category: 'Cosmetics', action: () => {} },
-        { id: 'nameplates', title: 'Nameplates', location: 'Shop', description: 'Custom nameplates and frames - show your style with special name displays', keywords: ['nameplate', 'name', 'frame', 'label', 'tag', 'username'], category: 'Cosmetics', action: () => {} },
-        { id: 'emotes', title: 'Emotes', location: 'Shop', description: 'Animated emotes and reactions - express yourself in chat and game', keywords: ['emote', 'emotion', 'reaction', 'animation', 'expression', 'chat', 'sticker'], category: 'Cosmetics', action: () => {} },
-        { id: 'badges', title: 'Badges & Achievements', location: 'Shop', description: 'Achievement badges and status symbols - display your accomplishments', keywords: ['badge', 'achievement', 'accomplishment', 'status', 'reward', 'medal'], category: 'Cosmetics', action: () => {} },
+        // Cosmetics
+        { id: 'avatars',      title: 'Avatars',            location: 'Shop',      keywords: ['avatar', 'profile', 'picture', 'icon', 'character', 'appearance'],                           category: 'Cosmetics',  action: () => { closeSearch(); window.gameNavigation.showScreen('shopScreen'); } },
+        { id: 'skins',        title: 'Skins',              location: 'Shop',      keywords: ['skin', 'character', 'outfit', 'theme', 'visual', 'costume'],                                  category: 'Cosmetics',  action: () => { closeSearch(); window.gameNavigation.showScreen('shopScreen'); } },
+        { id: 'backgrounds',  title: 'Backgrounds',        location: 'Shop',      keywords: ['background', 'theme', 'environment', 'scenery', 'wallpaper'],                                 category: 'Cosmetics',  action: () => { closeSearch(); window.gameNavigation.showScreen('shopScreen'); } },
+        { id: 'nameplates',   title: 'Nameplates',         location: 'Shop',      keywords: ['nameplate', 'name', 'frame', 'label', 'tag', 'username'],                                     category: 'Cosmetics',  action: () => { closeSearch(); window.gameNavigation.showScreen('shopScreen'); } },
+        { id: 'emotes',       title: 'Emotes',             location: 'Shop',      keywords: ['emote', 'emotion', 'reaction', 'animation', 'expression', 'sticker'],                        category: 'Cosmetics',  action: () => { closeSearch(); window.gameNavigation.showScreen('shopScreen'); } },
+        { id: 'badges',       title: 'Badges',             location: 'Shop',      keywords: ['badge', 'achievement', 'accomplishment', 'status', 'reward', 'medal'],                        category: 'Cosmetics',  action: () => { closeSearch(); window.gameNavigation.showScreen('shopScreen'); } },
 
-        // Settings Options
-        { id: 'sound', title: 'Sound Settings', location: 'Settings', description: 'Adjust volume levels for music, sound effects, and notifications', keywords: ['sound', 'audio', 'music', 'volume', 'sfx', 'quiet', 'mute'], category: 'Settings', action: () => {} },
-        { id: 'privacy', title: 'Privacy Settings', location: 'Settings', description: 'Control who can message, add friends, and see your profile information', keywords: ['privacy', 'private', 'visibility', 'block', 'permissions', 'security'], category: 'Settings', action: () => {} },
-        { id: 'notifications', title: 'Notifications', location: 'Settings', description: 'Configure push notifications, alerts for friends, games, messages', keywords: ['notification', 'alert', 'push', 'message', 'reminder', 'popup'], category: 'Settings', action: () => {} },
-        { id: 'theme', title: 'Theme & Appearance', location: 'Settings', description: 'Choose dark mode, light mode, or custom color themes for your interface', keywords: ['theme', 'dark', 'light', 'mode', 'color', 'appearance', 'style'], category: 'Settings', action: () => {} },
-        { id: 'account', title: 'Account Settings', location: 'Settings', description: 'Manage profile, change password, email, delete account, logout', keywords: ['account', 'profile', 'login', 'user', 'username', 'email', 'password'], category: 'Settings', action: () => {} },
+        // Settings
+        { id: 'sound',        title: 'Sound Settings',     location: 'Settings',  keywords: ['sound', 'audio', 'music', 'volume', 'sfx', 'quiet', 'mute'],                                  category: 'Settings',   action: () => { closeSearch(); window.gameNavigation.goToSettings(); } },
+        { id: 'privacy',      title: 'Privacy Settings',   location: 'Settings',  keywords: ['privacy', 'private', 'visibility', 'block', 'permissions', 'security'],                       category: 'Settings',   action: () => { closeSearch(); window.gameNavigation.goToSettings(); } },
+        { id: 'notifications',title: 'Notifications',      location: 'Settings',  keywords: ['notification', 'alert', 'push', 'reminder', 'popup'],                                         category: 'Settings',   action: () => { closeSearch(); window.gameNavigation.goToSettings(); } },
+        { id: 'theme',        title: 'Theme & Appearance', location: 'Settings',  keywords: ['theme', 'dark', 'light', 'mode', 'color', 'appearance', 'style'],                             category: 'Settings',   action: () => { closeSearch(); window.gameNavigation.goToSettings(); } },
+        { id: 'account',      title: 'Account Settings',   location: 'Settings',  keywords: ['account', 'profile', 'login', 'user', 'username', 'email', 'password'],                       category: 'Settings',   action: () => { closeSearch(); window.gameNavigation.goToSettings(); } },
 
-        // User Features
-        { id: 'profile', title: 'User Profile', location: 'Social / Account', description: 'View your profile with stats, level, badges, achievements, and customization', keywords: ['profile', 'stats', 'data', 'information', 'level', 'experience'], category: 'Profile', action: () => {} },
-        { id: 'stats', title: 'Statistics', location: 'User Profile', description: 'Detailed game statistics including win rate, total games, streaks, ranking', keywords: ['statistics', 'stats', 'record', 'wins', 'losses', 'ratio', 'data', 'history'], category: 'Profile', action: () => {} },
-        { id: 'friends', title: 'Friend List', location: 'Social', description: 'Manage your friends with online status, recent activity, and quick messaging', keywords: ['friend', 'list', 'social', 'connection', 'contact', 'buddy', 'network'], category: 'Social', action: () => {} },
-        { id: 'messages', title: 'Direct Messages', location: 'Social', description: 'Chat with friends in real-time, view conversation history, send files', keywords: ['message', 'chat', 'dm', 'direct', 'conversation', 'text', 'inbox'], category: 'Social', action: () => {} },
-        { id: 'leaderboard', title: 'Leaderboard', location: 'Stats / Rankings', description: 'Global rankings showing top players, your position, and seasonal stats', keywords: ['leaderboard', 'ranking', 'rank', 'top', 'scores', 'standings', 'position'], category: 'Rankings', action: () => {} },
+        // Profile
+        { id: 'profile',      title: 'My Profile',         location: 'Profile',   keywords: ['profile', 'stats', 'data', 'information', 'level', 'experience'],                             category: 'Profile',    action: () => { closeSearch(); window.gameNavigation.showScreen('whoAmIScreen'); } },
+        { id: 'stats',        title: 'Statistics',         location: 'Profile',   keywords: ['statistics', 'stats', 'record', 'wins', 'losses', 'ratio', 'data', 'history'],                category: 'Profile',    action: () => { closeSearch(); window.gameNavigation.showScreen('whoAmIScreen'); } },
 
-        // Special Features
-        { id: 'matchmaking', title: 'Matchmaking', location: 'Game Selection', description: 'Automatic fair matching system that finds opponents at your skill level', keywords: ['matchmaking', 'match', 'opponent', 'queue', 'waiting', 'lobby', 'skill'], category: 'Features', action: () => {} },
-        { id: 'points', title: 'Points System', location: 'Profile / Shop', description: 'Earn points from victories and use them to purchase cosmetics', keywords: ['points', 'coins', 'currency', 'earn', 'spend', 'reward', 'money'], category: 'Features', action: () => {} },
-        { id: 'guest', title: 'Guest Mode', location: 'Auth Screen', description: 'Play without account - limited features, data resets on browser close', keywords: ['guest', 'temporary', 'anonymous', 'no account', 'play', 'free'], category: 'Features', action: () => {} },
+        // Social & Rankings
+        { id: 'friends',      title: 'Friend List',        location: 'Social',    keywords: ['friend', 'list', 'social', 'connection', 'contact', 'buddy'],                                 category: 'Social',     action: () => { closeSearch(); window.gameNavigation.goToSocial(); } },
+        { id: 'messages',     title: 'Direct Messages',    location: 'Social',    keywords: ['message', 'chat', 'dm', 'direct', 'conversation', 'text', 'inbox'],                           category: 'Social',     action: () => { closeSearch(); window.gameNavigation.goToSocial(); } },
+        { id: 'leaderboard',  title: 'Leaderboard',        location: 'Social',    keywords: ['leaderboard', 'ranking', 'rank', 'top', 'scores', 'standings', 'position'],                   category: 'Rankings',   action: () => { closeSearch(); window.gameNavigation.goToSocial(); } },
     ];
 
     function performSearch(query) {
@@ -6863,23 +6886,28 @@ function setupEventListeners() {
             return;
         }
 
+        searchClearBtn.style.display = 'block';
+
         const results = window.searchDatabase.filter(item => {
             const titleMatch = item.title.toLowerCase().includes(normalizedQuery);
-            const descMatch = item.description.toLowerCase().includes(normalizedQuery);
             const locationMatch = item.location.toLowerCase().includes(normalizedQuery);
-            const keywordMatch = item.keywords.some(keyword => keyword.includes(normalizedQuery));
-
-            return titleMatch || descMatch || locationMatch || keywordMatch;
+            const keywordMatch = item.keywords.some(k => k.includes(normalizedQuery));
+            return titleMatch || locationMatch || keywordMatch;
         });
 
         results.sort((a, b) => {
+            const aExact = a.title.toLowerCase() === normalizedQuery;
+            const bExact = b.title.toLowerCase() === normalizedQuery;
+            if (aExact !== bExact) return aExact ? -1 : 1;
+            const aStarts = a.title.toLowerCase().startsWith(normalizedQuery);
+            const bStarts = b.title.toLowerCase().startsWith(normalizedQuery);
+            if (aStarts !== bStarts) return aStarts ? -1 : 1;
             const aTitle = a.title.toLowerCase().includes(normalizedQuery);
             const bTitle = b.title.toLowerCase().includes(normalizedQuery);
             return aTitle === bTitle ? 0 : aTitle ? -1 : 1;
         });
 
-        displaySearchResults(results, normalizedQuery);
-        searchClearBtn.style.display = query ? 'block' : 'none';
+        displaySearchResults(results.slice(0, 8), normalizedQuery);
     }
 
     function displaySearchResults(results, query) {
@@ -6887,8 +6915,8 @@ function setupEventListeners() {
             searchResults.innerHTML = `
                 <div class="search-empty">
                     <svg class="search-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    <div>No results found for "<strong>${query}</strong>"</div>
-                    <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.6;">Try: play, shop, chat, cosmetics, friends, settings, math, leaderboard...</div>
+                    <div class="search-empty-text">No results for "<strong>${query}</strong>"</div>
+                    <div class="search-empty-hint">Try: play, shop, math, settings, friends...</div>
                 </div>
             `;
             searchResults.style.display = 'block';
@@ -6901,29 +6929,30 @@ function setupEventListeners() {
             grouped[item.category].push(item);
         });
 
-        let html = '';
         const categoryOrder = ['Features', 'Games', 'Game Modes', 'Cosmetics', 'Settings', 'Profile', 'Social', 'Rankings'];
+        const multipleCategories = Object.keys(grouped).length > 1;
+        let html = '';
 
         categoryOrder.forEach(cat => {
-            if (grouped[cat]) {
+            if (!grouped[cat]) return;
+            const icon = searchCategoryIcons[cat] || '';
+            if (multipleCategories) {
                 html += `<div class="search-category-label">${cat}</div>`;
-                grouped[cat].forEach(item => {
-                    html += `
-                        <div class="search-result-item" onclick="window.searchDatabase.find(i => i.id === '${item.id}').action()">
-                            <div class="search-result-main">
-                                <div class="search-result-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>
-                                </div>
-                                <div class="search-result-content">
-                                    <div class="search-result-title">${item.title}</div>
-                                    <div class="search-result-location">📍 ${item.location}</div>
-                                    <div class="search-result-desc">${item.description}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
             }
+            grouped[cat].forEach(item => {
+                html += `
+                    <div class="search-result-item" onclick="window.executeSearchAction('${item.id}')">
+                        <div class="search-result-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
+                        </div>
+                        <div class="search-result-content">
+                            <div class="search-result-title">${item.title}</div>
+                            <div class="search-result-location">${item.location}</div>
+                        </div>
+                        <svg class="search-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                `;
+            });
         });
 
         searchResults.innerHTML = html;
@@ -6934,17 +6963,13 @@ function setupEventListeners() {
 
     searchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            searchInput.value = '';
-            searchResults.style.display = 'none';
-            searchClearBtn.style.display = 'none';
+            closeSearch();
             searchInput.blur();
         }
     });
 
     searchClearBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        searchResults.style.display = 'none';
-        searchClearBtn.style.display = 'none';
+        closeSearch();
         searchInput.focus();
     });
 
