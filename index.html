@@ -218,7 +218,7 @@
                         type="text"
                         id="searchInput"
                         class="search-input"
-                        placeholder="Search features, games, friends..."
+                        placeholder="Search features or find a player..."
                         autocomplete="off"
                     >
                     <button id="searchClearBtn" class="search-clear-btn" style="display:none;">✕</button>
@@ -677,8 +677,16 @@
                 </div>
 
                 <div id="friendsListContent" class="friends-content">
+                    <div class="friend-search-wrap" id="friendSearchWrap">
+                        <svg class="friend-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="text" id="friendSearchInput" class="friend-search-input"
+                            placeholder="Find a player by username..."
+                            autocomplete="off" maxlength="20"
+                            onkeypress="if(event.key==='Enter') window.runFriendSearch()" />
+                        <button class="friend-search-btn" onclick="window.runFriendSearch()">Search</button>
+                    </div>
                     <div id="friendsList" class="friends-list">
-                        <div class="empty-state">No friends yet. Add friends from chat!</div>
+                        <div class="empty-state">No friends yet. Search for a username above!</div>
                     </div>
                 </div>
 
