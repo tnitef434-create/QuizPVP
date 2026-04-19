@@ -342,8 +342,11 @@
     <!-- RPS Mode Selection -->
     <div id="rpsModeScreen" class="screen">
         <div class="container">
-            <div class="header">
+            <div class="header" style="display:flex;align-items:center;justify-content:space-between;">
                 <h2>Rock Paper Scissors - Select Mode</h2>
+                <button class="screen-profile-btn" onclick="window.showProfile && window.showProfile()" title="View profile">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </button>
             </div>
 
             <div class="mode-selection">
@@ -484,6 +487,7 @@
                 <div class="results-buttons">
                     <button id="rpsPlayAgainBtn" class="btn btn-primary">Play Again</button>
                     <button id="rpsBackToMenuBtn" class="btn btn-secondary">Back to Menu</button>
+                    <button class="btn btn-secondary" onclick="window.showProfile && window.showProfile()">View Profile</button>
                 </div>
             </div>
         </div>
@@ -492,8 +496,11 @@
     <!-- War Mode Selection -->
     <div id="warModeScreen" class="screen">
         <div class="container">
-            <div class="header">
+            <div class="header" style="display:flex;align-items:center;justify-content:space-between;">
                 <h2>War - Select Mode</h2>
+                <button class="screen-profile-btn" onclick="window.showProfile && window.showProfile()" title="View profile">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </button>
             </div>
 
             <div class="mode-selection">
@@ -627,6 +634,7 @@
                 <div class="results-buttons">
                     <button id="warPlayAgainBtn" class="btn btn-primary">Play Again</button>
                     <button id="warBackToMenuBtn" class="btn btn-secondary">Back to Menu</button>
+                    <button class="btn btn-secondary" onclick="window.showProfile && window.showProfile()">View Profile</button>
                 </div>
             </div>
         </div>
@@ -817,6 +825,7 @@
                 <div class="results-buttons">
                     <button id="playAgainBtn" class="btn btn-primary">Play Again</button>
                     <button id="backToMenuBtn" class="btn btn-secondary">Back to Menu</button>
+                    <button class="btn btn-secondary" onclick="window.showProfile && window.showProfile()">View Profile</button>
                 </div>
             </div>
         </div>

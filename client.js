@@ -585,6 +585,7 @@ async function registerWithEmail(username, email, password) {
 
         // Save username and profile to Firebase
         await database.ref('users/' + uid).set({
+            uid: uid,
             username: username,
             email: email,
             points: 0,
@@ -637,7 +638,7 @@ async function registerWithEmail(username, email, password) {
                     return;
                 }
                 await database.ref('users/' + uid).set({
-                    username, email, points: 0, color: '#4A90E2',
+                    uid, username, email, points: 0, color: '#4A90E2',
                     friends: [], friendRequests: [], level: 1, xp: 0,
                     wins: 0, losses: 0, draws: 0, followerCount: 0,
                     ownedCosmetics: [], equippedCosmetic: null,
@@ -709,6 +710,7 @@ async function signInAsGuest() {
 
         // Save guest profile
         await database.ref('users/' + uid).set({
+            uid: uid,
             username: username,
             points: 0,
             color: '#4A90E2',
@@ -1335,6 +1337,7 @@ function savePlayerData() {
     // Also persist to Firebase so data is tied to the account, not the device
     if (isFirebaseReady && typeof auth !== 'undefined' && auth && auth.currentUser) {
         database.ref('users/' + auth.currentUser.uid).update({
+            uid: auth.currentUser.uid,
             points: playerData.points,
             color: playerData.color,
             level: playerData.level || 1,
@@ -6853,7 +6856,7 @@ function setupEventListeners() {
 
         // Optimistically populate own data immediately, then refresh from Firebase
         if (isOwnProfile) {
-            populateProfileUI(playerData, true);
+            populateProfileUI(playerData, true, playerData.id);
         } else {
             // Clear while loading
             document.getElementById('profileDisplayName').textContent = 'Loading...';
@@ -6865,14 +6868,14 @@ function setupEventListeners() {
             const snap = await database.ref('users/' + targetId).once('value');
             const data = snap.val();
             if (!data) { showToast('Profile not found', 'error'); return; }
-            populateProfileUI(data, isOwnProfile);
+            populateProfileUI(data, isOwnProfile, targetId);
         } catch (e) {
             console.error('Error loading profile:', e);
             showToast('Failed to load profile', 'error');
         }
     };
 
-    function populateProfileUI(data, isOwnProfile) {
+    function populateProfileUI(data, isOwnProfile, targetId) {
         const color = data.color || '#4A90E2';
         const username = data.username || 'Unknown';
         const level = data.level || 1;
@@ -6922,22 +6925,25 @@ function setupEventListeners() {
                 <button class="btn btn-secondary profile-action-btn" onclick="window.gameNavigation.goToSettings()">Edit Profile</button>
             `;
         } else {
-            const uid = data.uid || data.id || '';
-            const safeName = escapeHtml(username);
-            // Check friend status
+            // targetId is the definitive uid — data.uid is a fallback for older records
+            const uid = targetId || data.uid || data.id || '';
+            const safeName = (username || '').replace(/'/g, "\\'");
+            const safeColor = (data.color || '#4A90E2').replace(/'/g, "\\'");
+
+            // Check friend status — playerData.friends is array of IDs after loadFriendsList
             const myFriends = playerData.friends || [];
             const isFriend = Array.isArray(myFriends)
                 ? myFriends.includes(uid)
-                : (typeof myFriends === 'object' && myFriends[uid]);
+                : (typeof myFriends === 'object' && !!myFriends[uid]);
 
             if (isFriend) {
-                actionsEl.innerHTML = `
-                    <button class="btn btn-secondary profile-action-btn" disabled>✓ Friends</button>
-                `;
+                actionsEl.innerHTML = `<button class="btn btn-secondary profile-action-btn" disabled>✓ Friends</button>`;
+            } else if (!uid) {
+                actionsEl.innerHTML = '';
             } else {
                 actionsEl.innerHTML = `
                     <button class="btn btn-primary profile-action-btn" id="profileAddFriendBtn"
-                        onclick="sendFriendRequestFromProfile('${uid}', '${safeName}', '${data.color || '#4A90E2'}')">
+                        onclick="window.sendFriendRequestFromProfile('${uid}', '${safeName}', '${safeColor}')">
                         + Add Friend
                     </button>
                 `;
