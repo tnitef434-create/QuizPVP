@@ -192,7 +192,7 @@
                 <h1 class="menu-title">
                     <span class="title-quiz">Quiz</span><span class="title-pvp">PVP</span>
                 </h1>
-                <div class="player-card">
+                <div class="player-card" onclick="window.showProfile && window.showProfile()" style="cursor:pointer;" title="View your profile">
                     <div class="player-name" id="playerNameDisplay">Player</div>
                     <div class="player-stats">
                         <span class="stat-badge">
@@ -856,6 +856,68 @@
                 <div id="whoamiPlayerTurn">Your Turn!</div>
                 <div id="whoamiProgress">Word <span id="whoamiWordNum">1</span>/10</div>
             </div>
+        </div>
+    </div>
+
+    <!-- Profile Screen -->
+    <div id="profileScreen" class="screen">
+        <div class="container">
+            <div class="profile-topbar">
+                <button class="profile-back-btn" id="profileBackBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <span class="profile-topbar-title">Profile</span>
+                <span style="width:70px;"></span>
+            </div>
+
+            <div class="profile-hero">
+                <div class="profile-avatar-ring" id="profileAvatarRing">
+                    <div class="profile-avatar-large" id="profileAvatarLarge">?</div>
+                </div>
+                <div class="profile-name-row">
+                    <h2 class="profile-display-name" id="profileDisplayName">Loading...</h2>
+                    <span class="profile-level-badge" id="profileLevelBadge">Lv.1</span>
+                </div>
+            </div>
+
+            <div class="profile-stats-grid">
+                <div class="profile-stat-card profile-stat-win">
+                    <div class="profile-stat-value" id="profileWins">0</div>
+                    <div class="profile-stat-label">Wins</div>
+                </div>
+                <div class="profile-stat-card profile-stat-loss">
+                    <div class="profile-stat-value" id="profileLosses">0</div>
+                    <div class="profile-stat-label">Losses</div>
+                </div>
+                <div class="profile-stat-card profile-stat-draw">
+                    <div class="profile-stat-value" id="profileDraws">0</div>
+                    <div class="profile-stat-label">Draws</div>
+                </div>
+                <div class="profile-stat-card profile-stat-pts">
+                    <div class="profile-stat-value" id="profilePoints">0</div>
+                    <div class="profile-stat-label">Points</div>
+                </div>
+            </div>
+
+            <div class="profile-winrate-bar-wrap">
+                <div class="profile-winrate-bar" id="profileWinrateBar"></div>
+                <div class="profile-winrate-label" id="profileWinrateLabel">Win rate: 0%</div>
+            </div>
+
+            <div class="profile-social-row">
+                <div class="profile-social-stat" id="profileFriendsBtn" style="cursor:pointer;">
+                    <div class="profile-social-value" id="profileFriendsCount">0</div>
+                    <div class="profile-social-label">Friends</div>
+                </div>
+                <div class="profile-social-divider"></div>
+                <div class="profile-social-stat">
+                    <div class="profile-social-value" id="profileFollowersCount">0</div>
+                    <div class="profile-social-label">Followers</div>
+                </div>
+            </div>
+
+            <div class="profile-actions" id="profileActions"></div>
         </div>
     </div>
 
