@@ -521,6 +521,9 @@ async function loadPlayerDataForUser(user) {
         playerData.level = d.level || 1;
         playerData.xp = d.xp || 0;
         playerData.wins = d.wins || 0;
+        playerData.losses = d.losses || 0;
+        playerData.draws = d.draws || 0;
+        playerData.followerCount = d.followerCount || 0;
         playerData.ownedCosmetics = d.ownedCosmetics || [];
         playerData.equippedCosmetic = d.equippedCosmetic || null;
 
@@ -582,6 +585,7 @@ async function registerWithEmail(username, email, password) {
 
         // Save username and profile to Firebase
         await database.ref('users/' + uid).set({
+            uid: uid,
             username: username,
             email: email,
             points: 0,
@@ -591,6 +595,9 @@ async function registerWithEmail(username, email, password) {
             level: 1,
             xp: 0,
             wins: 0,
+            losses: 0,
+            draws: 0,
+            followerCount: 0,
             ownedCosmetics: [],
             equippedCosmetic: null,
             createdAt: firebase.database.ServerValue.TIMESTAMP
@@ -631,9 +638,10 @@ async function registerWithEmail(username, email, password) {
                     return;
                 }
                 await database.ref('users/' + uid).set({
-                    username, email, points: 0, color: '#4A90E2',
+                    uid, username, email, points: 0, color: '#4A90E2',
                     friends: [], friendRequests: [], level: 1, xp: 0,
-                    wins: 0, ownedCosmetics: [], equippedCosmetic: null,
+                    wins: 0, losses: 0, draws: 0, followerCount: 0,
+                    ownedCosmetics: [], equippedCosmetic: null,
                     createdAt: firebase.database.ServerValue.TIMESTAMP
                 });
                 await database.ref('usernames/' + uid).set(username);
@@ -702,6 +710,7 @@ async function signInAsGuest() {
 
         // Save guest profile
         await database.ref('users/' + uid).set({
+            uid: uid,
             username: username,
             points: 0,
             color: '#4A90E2',
@@ -710,6 +719,9 @@ async function signInAsGuest() {
             level: 1,
             xp: 0,
             wins: 0,
+            losses: 0,
+            draws: 0,
+            followerCount: 0,
             ownedCosmetics: [],
             equippedCosmetic: null,
             isGuest: true,
@@ -1049,7 +1061,10 @@ let playerData = {
     friendRequests: [],
     level: 1,
     xp: 0,
-    wins: 0, // Track total wins for cosmetic unlocks
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    followerCount: 0,
     ownedCosmetics: [], // Array of owned cosmetic IDs
     equippedCosmetic: null // Currently equipped cosmetic ID
 };
@@ -1312,6 +1327,9 @@ function savePlayerData() {
         level: playerData.level || 1,
         xp: playerData.xp || 0,
         wins: playerData.wins || 0,
+        losses: playerData.losses || 0,
+        draws: playerData.draws || 0,
+        followerCount: playerData.followerCount || 0,
         ownedCosmetics: playerData.ownedCosmetics || [],
         equippedCosmetic: playerData.equippedCosmetic || null
     }));
@@ -1319,11 +1337,15 @@ function savePlayerData() {
     // Also persist to Firebase so data is tied to the account, not the device
     if (isFirebaseReady && typeof auth !== 'undefined' && auth && auth.currentUser) {
         database.ref('users/' + auth.currentUser.uid).update({
+            uid: auth.currentUser.uid,
             points: playerData.points,
             color: playerData.color,
             level: playerData.level || 1,
             xp: playerData.xp || 0,
             wins: playerData.wins || 0,
+            losses: playerData.losses || 0,
+            draws: playerData.draws || 0,
+            followerCount: playerData.followerCount || 0,
             ownedCosmetics: playerData.ownedCosmetics || [],
             equippedCosmetic: playerData.equippedCosmetic || null
         }).catch(e => console.warn('Firebase savePlayerData failed:', e));
@@ -2344,10 +2366,11 @@ async function checkTriosGameEnd(game) {
         // Winner gets 100 points + XP
         if (myRank === 1) {
             playerData.points += 100;
-            playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
-            awardXP(50); // Winner gets 50 XP
+            playerData.wins = (playerData.wins || 0) + 1;
+            awardXP(50);
         } else {
-            awardXP(20); // Participants get 20 XP
+            playerData.losses = (playerData.losses || 0) + 1;
+            awardXP(20);
         }
 
         showTriosResults(game.players, myPlayer, myRank);
@@ -2390,10 +2413,11 @@ async function checkSquadGameEnd(game) {
         // Winner gets 100 points + XP
         if (myRank === 1) {
             playerData.points += 100;
-            playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
-            awardXP(60); // Squad winner gets 60 XP (4 players is harder)
+            playerData.wins = (playerData.wins || 0) + 1;
+            awardXP(60);
         } else {
-            awardXP(25); // Participants get 25 XP
+            playerData.losses = (playerData.losses || 0) + 1;
+            awardXP(25);
         }
 
         showSquadResults(game.players, myPlayer, myRank);
@@ -3783,6 +3807,7 @@ function updateFriendsDisplay(friends) {
                     </div>
                 </div>
                 <div class="friend-actions">
+                    <button class="btn btn-secondary btn-small" onclick="window.showProfile('${friend.id}')">Profile</button>
                     <button class="btn btn-primary btn-small" onclick="inviteFriendTo1v1('${friend.id}', '${escapeHtml(friend.username)}')">⚔️ 1v1</button>
                     <button class="btn btn-primary btn-small friend-chat-btn" data-friend-id="${friend.id}" onclick="openFriendChat('${friend.id}')" style="position:relative;">💬 Chat${hasUnread ? '<span class="friend-chat-badge"></span>' : ''}</button>
                     <button class="btn btn-secondary btn-small" onclick="removeFriend('${friend.id}')">Remove</button>
@@ -3855,6 +3880,9 @@ async function acceptFriendRequest(friendId, friendUsername, friendColor) {
 
         // Remove friend request
         await database.ref(`users/${playerData.id}/friendRequests/${friendId}`).remove();
+
+        // The person who sent the request gains a follower (you accepted them)
+        await database.ref(`users/${playerData.id}/followerCount`).transaction(n => (n || 0) + 1);
 
         showToast(`You are now friends with ${friendUsername}!`, 'success');
 
@@ -4412,12 +4440,14 @@ function viewResults() {
     // Award points and XP
     if (gameWon) {
         playerData.points += 100;
-        playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
-        awardXP(40); // Winner gets 40 XP
+        playerData.wins = (playerData.wins || 0) + 1;
+        awardXP(40);
     } else if (gameDraw) {
-        awardXP(20); // Draw gets 20 XP
+        playerData.draws = (playerData.draws || 0) + 1;
+        awardXP(20);
     } else {
-        awardXP(10); // Loser still gets 10 XP for participating
+        playerData.losses = (playerData.losses || 0) + 1;
+        awardXP(10);
     }
 
     showResults(myGameScore, opponentGameScore, gameWon, gameDraw);
@@ -5459,13 +5489,15 @@ function showRPSResults() {
         if (won) {
             pointsEarned = 100;
             xpEarned = 50;
-            playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
+            playerData.wins = (playerData.wins || 0) + 1;
         } else if (draw) {
             pointsEarned = 50;
             xpEarned = 25;
+            playerData.draws = (playerData.draws || 0) + 1;
         } else {
             pointsEarned = 20;
             xpEarned = 20;
+            playerData.losses = (playerData.losses || 0) + 1;
         }
         console.log('🎮 Online game rewards: +' + pointsEarned + ' points, +' + xpEarned + ' XP');
     }
@@ -6159,13 +6191,15 @@ function finishWarGame(gameData) {
         if (won) {
             pointsEarned = 10;
             xpEarned = 20;
-            playerData.wins = (playerData.wins || 0) + 1; // Track wins for cosmetic unlocks
+            playerData.wins = (playerData.wins || 0) + 1;
         } else if (draw) {
             pointsEarned = 3;
             xpEarned = 5;
+            playerData.draws = (playerData.draws || 0) + 1;
         } else {
             pointsEarned = 1;
             xpEarned = 2;
+            playerData.losses = (playerData.losses || 0) + 1;
         }
 
         // Update player data
@@ -6799,6 +6833,143 @@ function setupEventListeners() {
         showScreen('menuScreen');
     }, 'War Back to Menu');
 
+    // === PROFILE SCREEN ===
+    window.gameNavigation.goToProfile = function() {
+        showProfile(playerData.id);
+    };
+
+    // Set up back button - returns to previous screen context
+    safeAddListener('profileBackBtn', 'click', () => {
+        window.gameNavigation.goToMenu();
+    }, 'Profile back button');
+
+    // Click friends count to jump to social
+    safeAddListener('profileFriendsBtn', 'click', () => {
+        window.gameNavigation.goToSocial();
+    }, 'Profile friends count link');
+
+    window.showProfile = async function(userId) {
+        const isOwnProfile = !userId || userId === playerData.id;
+        const targetId = isOwnProfile ? playerData.id : userId;
+
+        window.gameNavigation.showScreen('profileScreen');
+
+        // Optimistically populate own data immediately, then refresh from Firebase
+        if (isOwnProfile) {
+            populateProfileUI(playerData, true, playerData.id);
+        } else {
+            // Clear while loading
+            document.getElementById('profileDisplayName').textContent = 'Loading...';
+            document.getElementById('profileAvatarLarge').textContent = '?';
+            document.getElementById('profileActions').innerHTML = '';
+        }
+
+        try {
+            const snap = await database.ref('users/' + targetId).once('value');
+            const data = snap.val();
+            if (!data) { showToast('Profile not found', 'error'); return; }
+            populateProfileUI(data, isOwnProfile, targetId);
+        } catch (e) {
+            console.error('Error loading profile:', e);
+            showToast('Failed to load profile', 'error');
+        }
+    };
+
+    function populateProfileUI(data, isOwnProfile, targetId) {
+        const color = data.color || '#4A90E2';
+        const username = data.username || 'Unknown';
+        const level = data.level || 1;
+        const wins = data.wins || 0;
+        const losses = data.losses || 0;
+        const draws = data.draws || 0;
+        const points = data.points || 0;
+        const followerCount = data.followerCount || 0;
+
+        // Count friends (Firebase stores as object)
+        const friendsObj = data.friends || {};
+        const friendsCount = typeof friendsObj === 'object' && !Array.isArray(friendsObj)
+            ? Object.keys(friendsObj).length
+            : (Array.isArray(friendsObj) ? friendsObj.length : 0);
+
+        // Avatar
+        const avatarEl = document.getElementById('profileAvatarLarge');
+        const ringEl = document.getElementById('profileAvatarRing');
+        avatarEl.textContent = username[0].toUpperCase();
+        avatarEl.style.background = getColorStyle(color);
+        ringEl.style.borderColor = color;
+
+        // Name + level
+        document.getElementById('profileDisplayName').textContent = username;
+        document.getElementById('profileLevelBadge').textContent = 'Lv. ' + level;
+
+        // Stats
+        document.getElementById('profileWins').textContent = wins.toLocaleString();
+        document.getElementById('profileLosses').textContent = losses.toLocaleString();
+        document.getElementById('profileDraws').textContent = draws.toLocaleString();
+        document.getElementById('profilePoints').textContent = points.toLocaleString();
+
+        // Win rate bar
+        const totalGames = wins + losses + draws;
+        const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+        document.getElementById('profileWinrateBar').style.width = winRate + '%';
+        document.getElementById('profileWinrateLabel').textContent = 'Win rate: ' + winRate + '%' + (totalGames > 0 ? ' (' + totalGames + ' games)' : '');
+
+        // Social counts
+        document.getElementById('profileFriendsCount').textContent = friendsCount;
+        document.getElementById('profileFollowersCount').textContent = followerCount;
+
+        // Action buttons
+        const actionsEl = document.getElementById('profileActions');
+        if (isOwnProfile) {
+            actionsEl.innerHTML = `
+                <button class="btn btn-secondary profile-action-btn" onclick="window.gameNavigation.goToSettings()">Edit Profile</button>
+            `;
+        } else {
+            // targetId is the definitive uid — data.uid is a fallback for older records
+            const uid = targetId || data.uid || data.id || '';
+            const safeName = (username || '').replace(/'/g, "\\'");
+            const safeColor = (data.color || '#4A90E2').replace(/'/g, "\\'");
+
+            // Check friend status — playerData.friends is array of IDs after loadFriendsList
+            const myFriends = playerData.friends || [];
+            const isFriend = Array.isArray(myFriends)
+                ? myFriends.includes(uid)
+                : (typeof myFriends === 'object' && !!myFriends[uid]);
+
+            if (isFriend) {
+                actionsEl.innerHTML = `<button class="btn btn-secondary profile-action-btn" disabled>✓ Friends</button>`;
+            } else if (!uid) {
+                actionsEl.innerHTML = '';
+            } else {
+                actionsEl.innerHTML = `
+                    <button class="btn btn-primary profile-action-btn" id="profileAddFriendBtn"
+                        onclick="window.sendFriendRequestFromProfile('${uid}', '${safeName}', '${safeColor}')">
+                        + Add Friend
+                    </button>
+                `;
+            }
+        }
+    }
+
+    window.sendFriendRequestFromProfile = async function(targetId, targetUsername, targetColor) {
+        const btn = document.getElementById('profileAddFriendBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+        try {
+            await database.ref(`users/${targetId}/friendRequests/${playerData.id}`).set({
+                id: playerData.id,
+                username: playerData.username,
+                color: playerData.color,
+                timestamp: Date.now()
+            });
+            if (btn) { btn.textContent = 'Request Sent'; }
+            showToast(`Friend request sent to ${targetUsername}!`, 'success');
+        } catch (e) {
+            console.error('Error sending friend request:', e);
+            if (btn) { btn.disabled = false; btn.textContent = '+ Add Friend'; }
+            showToast('Failed to send friend request', 'error');
+        }
+    };
+
     // === COMPREHENSIVE SEARCH BAR ===
     console.log('🔍 Setting up advanced search engine...');
 
@@ -6868,8 +7039,8 @@ function setupEventListeners() {
         { id: 'account',      title: 'Account Settings',   location: 'Settings',  keywords: ['account', 'profile', 'login', 'user', 'username', 'email', 'password'],                       category: 'Settings',   action: () => { closeSearch(); window.gameNavigation.goToSettings(); } },
 
         // Profile
-        { id: 'profile',      title: 'My Profile',         location: 'Profile',   keywords: ['profile', 'stats', 'data', 'information', 'level', 'experience'],                             category: 'Profile',    action: () => { closeSearch(); window.gameNavigation.showScreen('whoAmIScreen'); } },
-        { id: 'stats',        title: 'Statistics',         location: 'Profile',   keywords: ['statistics', 'stats', 'record', 'wins', 'losses', 'ratio', 'data', 'history'],                category: 'Profile',    action: () => { closeSearch(); window.gameNavigation.showScreen('whoAmIScreen'); } },
+        { id: 'profile',      title: 'My Profile',         location: 'Profile',   keywords: ['profile', 'stats', 'data', 'information', 'level', 'experience'],                             category: 'Profile',    action: () => { closeSearch(); window.showProfile(playerData.id); } },
+        { id: 'stats',        title: 'Statistics',         location: 'Profile',   keywords: ['statistics', 'stats', 'record', 'wins', 'losses', 'ratio', 'data', 'history'],                category: 'Profile',    action: () => { closeSearch(); window.showProfile(playerData.id); } },
 
         // Social & Rankings
         { id: 'friends',      title: 'Friend List',        location: 'Social',    keywords: ['friend', 'list', 'social', 'connection', 'contact', 'buddy'],                                 category: 'Social',     action: () => { closeSearch(); window.gameNavigation.goToSocial(); } },

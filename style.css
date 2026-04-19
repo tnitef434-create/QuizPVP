@@ -5098,3 +5098,266 @@ body:has(.screen.ap.active) {
         padding: 12px 16px;
     }
 }
+
+/* ───────────────────────────────── PROFILE SCREEN ───────────────────────────────── */
+
+#profileScreen .container {
+    padding-bottom: 40px;
+}
+
+.profile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0 20px;
+}
+
+.profile-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    min-width: 70px;
+}
+
+.profile-back-btn:hover {
+    color: #FFD700;
+    background: rgba(212,175,55,0.08);
+}
+
+.profile-topbar-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* Hero section */
+.profile-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.profile-avatar-ring {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 3px solid #D4AF37;
+    padding: 4px;
+    box-shadow: 0 0 24px rgba(212,175,55,0.25);
+    transition: border-color 0.3s ease;
+}
+
+.profile-avatar-large {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    background: #4A90E2;
+}
+
+.profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-display-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.profile-level-badge {
+    background: rgba(212,175,55,0.15);
+    border: 1px solid rgba(212,175,55,0.4);
+    color: #D4AF37;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+}
+
+/* Stats grid */
+.profile-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.profile-stat-card {
+    background: rgba(26,26,26,0.8);
+    border: 1.5px solid rgba(212,175,55,0.15);
+    border-radius: 14px;
+    padding: 14px 8px;
+    text-align: center;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.profile-stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.profile-stat-win   { border-top: 3px solid #4CAF50; }
+.profile-stat-loss  { border-top: 3px solid #ef5350; }
+.profile-stat-draw  { border-top: 3px solid #78909C; }
+.profile-stat-pts   { border-top: 3px solid #D4AF37; }
+
+.profile-stat-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.profile-stat-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.45);
+}
+
+/* Win rate bar */
+.profile-winrate-bar-wrap {
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 6px;
+    position: relative;
+}
+
+.profile-winrate-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    border-radius: 8px;
+    width: 0%;
+    transition: width 0.6s ease;
+}
+
+.profile-winrate-label {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+    text-align: right;
+    margin-bottom: 20px;
+}
+
+/* Social row */
+.profile-social-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    background: rgba(26,26,26,0.8);
+    border: 1.5px solid rgba(212,175,55,0.15);
+    border-radius: 14px;
+    padding: 16px 0;
+    margin-bottom: 20px;
+}
+
+.profile-social-stat {
+    flex: 1;
+    text-align: center;
+}
+
+.profile-social-stat[style*="cursor:pointer"]:hover .profile-social-value {
+    color: #FFD700;
+}
+
+.profile-social-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ffffff;
+    transition: color 0.2s ease;
+}
+
+.profile-social-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.4);
+    margin-top: 2px;
+}
+
+.profile-social-divider {
+    width: 1px;
+    height: 36px;
+    background: rgba(212,175,55,0.2);
+}
+
+/* Action buttons */
+.profile-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.profile-action-btn {
+    flex: 1;
+    max-width: 200px;
+    padding: 12px 0;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 480px) {
+    .profile-stats-grid {
+        gap: 8px;
+    }
+    .profile-stat-card {
+        padding: 12px 4px;
+    }
+    .profile-stat-value {
+        font-size: 1.15rem;
+    }
+    .profile-stat-label {
+        font-size: 0.6rem;
+    }
+    .profile-display-name {
+        font-size: 1.25rem;
+    }
+}
+
+/* Profile icon button in game screen headers */
+.screen-profile-btn {
+    background: rgba(212,175,55,0.1);
+    border: 1.5px solid rgba(212,175,55,0.3);
+    border-radius: 10px;
+    color: #D4AF37;
+    cursor: pointer;
+    padding: 7px 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.screen-profile-btn:hover {
+    background: rgba(212,175,55,0.2);
+    border-color: #FFD700;
+    color: #FFD700;
+    transform: scale(1.05);
+}
